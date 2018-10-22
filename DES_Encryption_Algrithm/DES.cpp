@@ -1,41 +1,41 @@
-#include"table.h"
+#include"des_table.h"
 using namespace std;
 
-char * HexToBi(char *hexArray); // Ê®Áù½øÖÆµ½¶ş½øÖÆ
-char * toUpper(char * src);     // Ğ¡Ğ´×ÖÄ¸×ª´óĞ´
-char * BiToHex(char *biArray);  // ¶ş½øÖÆµ½Ê®Áù½øÖÆ 64Î» to 4*16×Ö·û
-void InitialPermutation(char * BiMsg);//³õÊ¼ÖÃ»»
-char *DES(char *BiMsg, char *BiKey, int mode); //DESËã·¨£¬mode=0´ú±í¼ÓÃÜ£¬mode=1´ú±í½âÃÜ
+char * HexToBi(char *hexArray); // åå…­è¿›åˆ¶åˆ°äºŒè¿›åˆ¶
+char * toUpper(char * src);     // å°å†™å­—æ¯è½¬å¤§å†™
+char * BiToHex(char *biArray);  // äºŒè¿›åˆ¶åˆ°åå…­è¿›åˆ¶ 64ä½ to 4*16å­—ç¬¦
+void InitialPermutation(char * BiMsg);//åˆå§‹ç½®æ¢
+char *DES(char *BiMsg, char *BiKey, int mode); //DESç®—æ³•ï¼Œmode=0ä»£è¡¨åŠ å¯†ï¼Œmode=1ä»£è¡¨è§£å¯†
 void generateSubKeys(char * BiKey, char subKey[16][49]);
-void LeftShift(char * arr, int n);  //Ñ­»·×óÒÆnÎ»
+void LeftShift(char * arr, int n);  //å¾ªç¯å·¦ç§»nä½
 void Reverse(char *arr, int begin, int end);
 
 
 int main()
 {
 	char HexMsg[17],HexKey[17];
-	cout<<"ÇëÊäÈë16Î»16½øÖÆµÄÃ÷ÎÄºÍÃÜÔ¿\n";
-	cout<<"Input Ã÷ÎÄMessage: "; cin>>HexMsg;
+	cout<<"è¯·è¾“å…¥16ä½16è¿›åˆ¶çš„æ˜æ–‡å’Œå¯†é’¥\n";
+	cout<<"Input æ˜æ–‡Message: "; cin>>HexMsg;
 	char *BiMsg = HexToBi(HexMsg);
-	cout<<"¶ş½øÖÆM: "<<BiMsg<<endl;
+	cout<<"äºŒè¿›åˆ¶M: "<<BiMsg<<endl;
 
-	cout<<"Input ÃÜÔ¿Key: "; cin>>HexKey;
+	cout<<"Input å¯†é’¥Key: "; cin>>HexKey;
 	char *BiKey = HexToBi(HexKey);
-	cout<<"¶ş½øÖÆK: "<<BiKey<<endl;
+	cout<<"äºŒè¿›åˆ¶K: "<<BiKey<<endl;
 	cout<<endl;
 	
 	char *CipherMsg = DES(BiMsg, BiKey, 0);
-	cout<<"¼ÓÃÜºóM: "<<CipherMsg<<endl;
+	cout<<"åŠ å¯†åM: "<<CipherMsg<<endl;
 	cout<<BiToHex(CipherMsg)<<endl;
 
 	char *PlainMsg = DES(CipherMsg, BiKey, 1);
-	cout<<"½âÃÜºóM: "<<PlainMsg<<endl;
+	cout<<"è§£å¯†åM: "<<PlainMsg<<endl;
 	cout<<BiToHex(PlainMsg)<<endl;
 	
 	system("pause");
 }
 
-//16½øÖÆÊı×é×ª2½øÖÆÊı×é
+//16è¿›åˆ¶æ•°ç»„è½¬2è¿›åˆ¶æ•°ç»„
 char * HexToBi(char *hexArray)
 {
 	toUpper(hexArray); 
@@ -64,7 +64,7 @@ char * HexToBi(char *hexArray)
 	return biArray;
 }
 
-//Ğ¡Ğ´×ª´óĞ´
+//å°å†™è½¬å¤§å†™
 char * toUpper(char * src)
 {
     char *p=src;
@@ -77,11 +77,11 @@ char * toUpper(char * src)
     return src; 
 }
 
-//2½øÖÆ×ª16½øÖÆ£¬4Î»1×é
+//2è¿›åˆ¶è½¬16è¿›åˆ¶ï¼Œ4ä½1ç»„
 char * BiToHex(char *biArray)
 {
 	char *result = new char[17]; result[16] = '\0';
-	char temp[5]; temp[4] = '\0'; //4Î»1×é
+	char temp[5]; temp[4] = '\0'; //4ä½1ç»„
 	int index = 0;
 	for(int i = 0; i < 16; i++) 
 	{
@@ -112,7 +112,7 @@ char * BiToHex(char *biArray)
 	return result;
 }
 
-//³õÊ¼ÖÃ»»
+//åˆå§‹ç½®æ¢
 void InitialPermutation(char * BiMsg)
 {
 	char * BiMsgCopy = new char[65];
@@ -125,14 +125,14 @@ void InitialPermutation(char * BiMsg)
 	delete[] BiMsgCopy;
 }
 
-//DESËã·¨
-//ÊäÈë£º64Î»2½øÖÆÃ÷ÎÄ£¬64Î»2½øÖÆÃÜÔ¿£¬¼ÓÃÜ½âÃÜ·½Ê½(mode=0±íÊ¾¼ÓÃÜ£¬mode=1±íÊ¾½âÃÜ)
-//Êä³ö£º¼ÓÃÜºóÃÜÎÄ»òÕß½âÃÜºóÃ÷ÎÄ
+//DESç®—æ³•
+//è¾“å…¥ï¼š64ä½2è¿›åˆ¶æ˜æ–‡ï¼Œ64ä½2è¿›åˆ¶å¯†é’¥ï¼ŒåŠ å¯†è§£å¯†æ–¹å¼(mode=0è¡¨ç¤ºåŠ å¯†ï¼Œmode=1è¡¨ç¤ºè§£å¯†)
+//è¾“å‡ºï¼šåŠ å¯†åå¯†æ–‡æˆ–è€…è§£å¯†åæ˜æ–‡
 char * DES(char * BiMsg, char *BiKey, int mode)
 {
 	InitialPermutation(BiMsg); 
 	char subKey[16][49]; 
-	generateSubKeys(BiKey, subKey); //²úÉú16¸ö×ÓÃÜÔ¿
+	generateSubKeys(BiKey, subKey); //äº§ç”Ÿ16ä¸ªå­å¯†é’¥
 	
 	char *L = new char[33]; L[32] = '\0';
 	char *R = new char[33]; R[32] = '\0';
@@ -142,12 +142,12 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 		R[i] = BiMsg[i + 32];
 	}
 	
-	//16ÂÖµü´ú
+	//16è½®è¿­ä»£
 	for(int k = 0; k < 16; k++) 
 	{
 		char *RCopy = new char[33];
 		memcpy(RCopy, R, 33);
-		//À©Õ¹ÖÃ»»E
+		//æ‰©å±•ç½®æ¢E
 		char * ExtendedR = new char[49]; ExtendedR[48] = '\0';
 		for(int i = 0; i < 48; i++)
 		{
@@ -155,7 +155,7 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 			ExtendedR[i] = R[index];
 		}
 
-		//Òì»ò
+		//å¼‚æˆ–
 		for(int i = 0; i < 48; i++)
 		{
 			char * temp = new char[65]; 
@@ -177,7 +177,7 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 			}
 		}
 
-		//SºĞ±ä»»
+		//Sç›’å˜æ¢
 		int indexR = 0;
 		for(int s = 0; s < 8; s++) 
 		{
@@ -231,7 +231,7 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 			}
 		}
 
-		//PÖÃ»»
+		//Pç½®æ¢
 		char *SR = new char[33];
 		memcpy(SR, R, 33);
 		for(int i = 0; i < 32; i++)
@@ -255,7 +255,7 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 		memcpy(L, RCopy, 33);
 	}
 	
-	//32Î»»¥»»
+	//32ä½äº’æ¢
 	char *RLChange = new char[65];
 	for(int i = 0; i < 32; i++)
 	{
@@ -264,7 +264,7 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 	}
 	RLChange[64] = '\0';
 
-	//Äæ³õÊ¼ÖÃ»»
+	//é€†åˆå§‹ç½®æ¢
 	char *Cipher = new char[65]; Cipher[64] = '\0';
 	for(int i = 0; i < 64; i++)
 	{
@@ -274,19 +274,19 @@ char * DES(char * BiMsg, char *BiKey, int mode)
 	return Cipher;
 }
 
-//64Î»ÃÜÔ¿²úÉú16¸ö48Î»×ÓÃÜÔ¿
+//64ä½å¯†é’¥äº§ç”Ÿ16ä¸ª48ä½å­å¯†é’¥
 void generateSubKeys(char * BiKey, char subKey[16][49])
 {
 	char * realKey = new char[57]; realKey[56] = '\0'; 	
 
-	//ÖÃ»»Ñ¡Ôñ1
+	//ç½®æ¢é€‰æ‹©1
 	for(int i = 0; i < 56; i++)
 	{
 		int index = PC1Table[i] - 1; 
 		realKey[i] = BiKey[index];
 	}
 
-	//CºÍD
+	//Cå’ŒD
 	char *C = new char[29]; C[28] = '\0';
 	char *D = new char[29]; D[28] = '\0';
 	for(int i = 0; i < 28; i++)
@@ -294,10 +294,10 @@ void generateSubKeys(char * BiKey, char subKey[16][49])
 	for(int i = 0, j = 28; i < 28; i++, j++)
 		D[i] = realKey[j];
 
-	//²úÉú16¸ö×ÓÃÜÔ¿
+	//äº§ç”Ÿ16ä¸ªå­å¯†é’¥
 	for(int k = 0; k < 16; k++)
 	{
-		//×óÒÆ
+		//å·¦ç§»
 		LeftShift(C, LeftShiftTable[k]);
 		LeftShift(D, LeftShiftTable[k]);
 		char * CDCombine = new char[57];  CDCombine[56] = '\0';
@@ -307,7 +307,7 @@ void generateSubKeys(char * BiKey, char subKey[16][49])
 			CDCombine[i+28] = D[i];
 		}
 
-		//ÖÃ»»Ñ¡Ôñ2
+		//ç½®æ¢é€‰æ‹©2
 		for(int i = 0; i < 48; i++)
 		{
 			int index  = PC2Table[i] - 1; 
@@ -317,15 +317,15 @@ void generateSubKeys(char * BiKey, char subKey[16][49])
 	}
 }
 
-//Ñ­»·×óÒÆnÎ»
+//å¾ªç¯å·¦ç§»nä½
 void LeftShift(char * arr, int n)
 {
-	Reverse(arr, 0, n - 1); //ÄæĞòÇ°nÎ»
-	Reverse(arr, n, 28 - 1); //ÄæĞòºóËùÓĞÎ»
-	Reverse(arr, 0, 28 - 1); //ÄæĞòËùÓĞÎ»
+	Reverse(arr, 0, n - 1); //é€†åºå‰nä½
+	Reverse(arr, n, 28 - 1); //é€†åºåæ‰€æœ‰ä½
+	Reverse(arr, 0, 28 - 1); //é€†åºæ‰€æœ‰ä½
 }
 
-//ÄæĞòÅÅÁĞ
+//é€†åºæ’åˆ—
 void Reverse(char *arr, int begin, int end)
 {
 	char temp;
