@@ -1,4 +1,4 @@
-# from aetype s import end
+# from aetypes import end
 # removed the outdated lib
 
 import numpy as np
