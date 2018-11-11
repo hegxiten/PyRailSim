@@ -32,12 +32,10 @@ class generate_train:
         self.end = time.mktime(time.strptime(self.end_time, "%Y-%m-%d %H:%M:%S"))
         self.num_train = (self.end - self.begin) / 60 / self.exp_buffer
         self.direction = np.random.randint(0, self.num_train)
-
-    def generate_schedule(self):
+        self.map = {}
+        self.schedule = ''
         num_of_direction = 2
-        n = 1
         prev_direction = 0
-        schedule = ''
         weight = []
         variance = []
         # create weight and variance according to N(5000, 1500) & N(15, 3)
@@ -49,6 +47,7 @@ class generate_train:
             n -= 1
 
         while n < self.num_train:
+            map_value = []
             # train time
             ticks = self.begin
             # direction
@@ -66,10 +65,20 @@ class generate_train:
                     ticks = ticks + variance[n] * 60
             prev_direction = cur_direction
             # fill '0' before n, ex: turn '1' into '0001'
-            m = "%04d" % (n+1)
+            m = "%05d" % (n + 1)
             # get the schedule of every train
             train_time = time.strftime("%Y-%m-%d %H:%M", time.localtime(ticks))
-            schedule = schedule + 'Train ' + str(m) + ' ' + str(train_time) + ' ' + \
-                       train_direction(cur_direction) + ' ' + str(weight[n]) + ' ' + 'Tons' + '\n'
+            map_value.append(m)
+            map_value.append(train_time)
+            map_value.append(train_direction(cur_direction))
+            map_value.append(weight[n])
+            self.map[n] = map_value
+            self.schedule = self.schedule + 'Train ' + str(self.map[n][0]) + ' ' + str(self.map[n][1]) + ' ' + \
+                            self.map[n][2] + ' ' + str(self.map[n][3]) + ' ' + 'Tons' + '\n'
             n += 1
-        return schedule
+
+    def generate_schedule(self):
+        return self.map
+
+    def print_schedule(self):
+        print self.schedule
