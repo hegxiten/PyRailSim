@@ -36,7 +36,7 @@ class generate_train:
         self.schedule = ''
         num_of_direction = 2
         prev_direction = 0
-        weight = []
+        weight = [] 
         variance = []
         # create weight and variance according to N(5000, 1500) & N(15, 3)
         np.random.seed()
