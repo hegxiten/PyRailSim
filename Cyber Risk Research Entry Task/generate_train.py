@@ -80,4 +80,4 @@ class generate_train:
         return self.map
 
     def print_schedule(self):
-        print self.schedule
+        print self.schedule 
