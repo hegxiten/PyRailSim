@@ -70,6 +70,7 @@ class generate_train:
             map_value.append(train_time)
             map_value.append(train_direction(cur_direction))
             map_value.append(weight[n])
+            map_value.append(variance[n])
             self.map[n] = map_value
             self.schedule = self.schedule + 'Train ' + str(self.map[n][0]) + ' ' + str(self.map[n][1]) + ' ' + \
                             self.map[n][2] + ' ' + str(self.map[n][3]) + ' ' + 'Tons' + '\n'
