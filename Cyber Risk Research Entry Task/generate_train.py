@@ -14,14 +14,12 @@ class generate_train:
     Generate N trains.
     Weight of a train is following the standard distribution of: N~(exp_MGT tons, var_MGT tons).
     Incorporate the train minimum spacing buffer: N~(exp_buffer minutes, var_buffer minutes).
-    The jamming DoS lasts for X hours, and recovery needs Y hours
+    
+    the format of start and end time is 'yyyy-mm-dd hh:mm:ss', and it must be a string.
+    ex:begin_time = '2016-05-05 20:28:54'
     """
-
-    # the format of start and end time is 'yyyy-mm-dd hh:mm:ss', and it must be a string.
-    # ex:begin_time = '2016-05-05 20:28:54'
-    def __init__(self, X, Y, exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time):
-        self.X = X
-        self.Y = Y
+    
+    def __init__(self, exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time):
         self.exp_MGT = exp_MGT
         self.var_MGT = var_MGT
         self.exp_buffer = exp_buffer
