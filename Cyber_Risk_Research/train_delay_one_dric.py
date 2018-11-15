@@ -80,7 +80,7 @@ class train_delay_one_dric:
             delay_value['time_arrival'] = orig_schedule[num_first_delay + n - 1]['time_arrival']
             delay_value['time_departure'] = train_time
             delay_value['delay'] = time_diff
-            delay_value['direction'] = 'Dric_A'
+            delay_value['direction'] = 'A'
             delay_value['headway_prev'] = orig_schedule[num_first_delay + n - 1]['headway_prev']
             delay_value['headway_next'] = orig_schedule[num_first_delay + n - 1]['headway_next']
             delay_value['total_weight'] = orig_schedule[num_first_delay + n - 1]['total_weight']

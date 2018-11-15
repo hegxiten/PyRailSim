@@ -24,9 +24,9 @@ print a.print_schedule()
 # Class: write_csv
 from write_csv import write_csv
 from write_csv2 import write_csv2
-from train_delay_one_dric import train_delay_one_dric
+from train_delay_two_dric import train_delay_two_dric
 
-b = train_delay_one_dric(3, 2, '2018-01-02 00:00:00')
+b = train_delay_two_dric(3, 2, '2018-01-02 00:00:00')
 gene1, gene2 = b.print_diff()
 write_csv(gene1)
 #print gene2

@@ -4,12 +4,12 @@ import time
 
 def train_direction(direction):
     if direction == 0:
-        return 'Dric_A'
+        return 'A'
     elif direction == 1:
-        return 'Dric_B'
+        return 'B'
 
 
-class generate_train:
+class generate_train_two_dric:
     """
     Generate N trains.
     Weight of a train is following the standard distribution of: N~(exp_MGT tons, var_MGT tons).
@@ -40,14 +40,15 @@ class generate_train:
 
         # create weight and variance according to N(5000, 1500) & N(15, 3)
         np.random.seed()
-        n = int(self.num_train)
-        while n > 0:
+        n = int(self.num_train) + 100
+        while n >= 0:
             weight.append(int(np.random.normal(self.exp_MGT, self.var_MGT)))
             variance.append(int(np.random.normal(self.exp_buffer, self.var_buffer)))
             n -= 1
 
         ticks = self.begin
-        while n < self.num_train:
+        n = 0
+        while 1:
             map_value = {}
             # train time
             train_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ticks))
@@ -68,7 +69,6 @@ class generate_train:
             # fill '0' before n, ex: turn '1' into '0001'
             m = "%04d" % (n + 1)
             # get the schedule of every train
-
             map_value['time_arrival'] = train_time
             map_value['time_departure'] = train_time
             map_value['delay'] = 0
@@ -85,11 +85,14 @@ class generate_train:
             map_value['train_deceleration'] = None
             map_value['Future_parameters'] = None
             self.map[n+1] = map_value
+            if n == 0:
+                map_value['headway_prev'] = None
             # self.schedule = self.schedule + 'Train ' + str(self.map[n][0]) + ' ' + str(self.map[n][1]) + ' ' + \
             #                 self.map[n][2] + ' ' + str(self.map[n][3]) + ' ' + 'Tons' + '\n'
             n += 1
-        for i in range(len(map)):
-            print map
+            if ticks > time.mktime(time.strptime(self.end_time, "%Y-%m-%d %H:%M:%S")):
+                break
+
     def generate_schedule(self):
         return self.map
 
