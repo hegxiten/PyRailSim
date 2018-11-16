@@ -11,8 +11,11 @@ class train_delay_one_dric:
         self.X = X
         self.Y = Y
         self.DoS_time = DoS_time
+        self.num_first_delay = 1
+        self.delay_schedule = {}
 
     def print_diff(self):
+
         # exp_MGT = input('Expection of weight is: ')
         # var_MGT = input('Variance of weight is: ')
         # exp_buffer = input('Expection of buffer time is: ')
@@ -33,8 +36,6 @@ class train_delay_one_dric:
         a = generate_train_one_dric(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time)
         # map_value = number, train_time, train_direction(cur_direction), weight[n], variance[n]
         orig_schedule = a.generate_schedule()
-        for i in range(len(orig_schedule)):
-            print orig_schedule[i + 1]
 
         # transfer str into int, store it into map
         DoS_ticks = time.mktime(time.strptime(self.DoS_time, "%Y-%m-%d %H:%M:%S"))
@@ -57,14 +58,10 @@ class train_delay_one_dric:
         ticks = DoS_ticks + (self.X + self.Y) * 60 * 60
         print 'Delay happens from Train ' + str(num_first_delay) + '\nSchedule:'
 
-        i = 0
-        while i < num_first_delay:
-            #print 'Train ' + str(orig_schedule[i][0]) + ' ' + str(orig_schedule[i][1]) + ' ' + orig_schedule[i][2] + ' ' + str(orig_schedule[i][3]) + ' Tons' + ' Delay: ' + str(int(orig_schedule[i][5])) + ' mins Headtime: ' + str(orig_schedule[i][4]) + 'mins'
-            i += 1
-
         while 1:
             delay_value = {}
             # train time
+            delay_value['time_departure_ticks'] = (ticks - self.begin) / 60
             train_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ticks))
             ticks += 3 * 60
             # fill '0' before n, ex: turn '1' into '0001'
@@ -92,6 +89,16 @@ class train_delay_one_dric:
             delay_value['train_acceleration'] = None
             delay_value['train_deceleration'] = None
             delay_value['Future_parameters'] = None
+            delay_value['X+Y'] = self.X + self.Y
+            delay_value['Dos_time'] = self.DoS_time
+
+
+            # max delay
+            max_delay = 0
+            for j in range(num_first_delay, num_first_delay + len(delay_schedule)):
+                max_delay = max(max_delay, delay_schedule[j]['delay'])
+
+
 
             delay_schedule[num_first_delay + n - 1] = delay_value
             n += 1
@@ -112,7 +119,16 @@ class train_delay_one_dric:
             ans[k] = orig_schedule[k]
             k += 1
 
+        xy_delay = {}
+        j = num_first_delay
+        for i in range(1, len(delay_schedule)):
+            xy_delay[i] = delay_schedule[j]
+            j += 1
+
         return orig_schedule, ans
+
+
+
 
 
 

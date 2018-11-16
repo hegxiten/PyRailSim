@@ -19,13 +19,19 @@ class train_delay_two_dric:
         # var_buffer = input('Variance of buffer time is: ')
         # begin_time = input('The begin time is(''yyyy-mm-dd hh:mm:ss''): ')
         # end_time = input('The end time is(''yyyy-mm-dd hh:mm:ss''): ')
+        # same_dric_buffer = input('same_dric_buffer is(''yyyy-mm-dd hh:mm:ss''): ')
+        # diff_dric_buffer = input('diff_dric_buffer is(''yyyy-mm-dd hh:mm:ss''): ')
+        # print 'For example: 5000, 1500, 15, 3, ''2018-01-01 00:00:00'', ''2018-01-20 00:00:00'', 3, 28'
+        # exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time, same_dric_buffer, diff_dric_buffer = input('exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time, same_dric_buffer, diff_dric_buffer')
 
         exp_MGT = 5000
         var_MGT = 1500
-        exp_buffer = 15
+        exp_buffer = 25
         var_buffer = 3
         begin_time = '2018-01-01 00:00:00'
-        end_time = '2018-01-05 00:00:00'
+        end_time = '2018-01-15 00:00:00'
+        same_dric_buffer = 3
+        diff_dric_buffer = 28
 
         begin = time.mktime(time.strptime(begin_time, "%Y-%m-%d %H:%M:%S"))
         end = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
@@ -67,9 +73,9 @@ class train_delay_two_dric:
                 prev_direction = orig_schedule[n - 1]['direction']
 
                 if cur_direction != prev_direction:
-                    ticks += 28 * 60
+                    ticks += diff_dric_buffer * 60
                 elif cur_direction == prev_direction:
-                    ticks += 3 * 60
+                    ticks += same_dric_buffer * 60
 
             # get diff time between 'orig' and 'delay'
             orig_time = orig_schedule[num_first_delay + n - 1]['time_arrival']
@@ -97,6 +103,8 @@ class train_delay_two_dric:
             delay_value['train_acceleration'] = None
             delay_value['train_deceleration'] = None
             delay_value['Future_parameters'] = None
+            delay_value['X+Y'] = self.X + self.Y
+            delay_value['Dos_time'] = self.DoS_time
 
             delay_schedule[num_first_delay + n - 1] = delay_value
             n += 1

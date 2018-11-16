@@ -51,6 +51,7 @@ class generate_train_two_dric:
         while 1:
             map_value = {}
             # train time
+            map_value['departure_ticks'] = (ticks - self.begin) / 60
             train_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ticks))
             # direction
             cur_direction = np.random.randint(0, num_of_direction)
@@ -84,6 +85,9 @@ class generate_train_two_dric:
             map_value['train_acceleration'] = None
             map_value['train_deceleration'] = None
             map_value['Future_parameters'] = None
+            map_value['X+Y'] = 0
+            map_value['Dos_time'] = 'null'
+
             self.map[n+1] = map_value
             if n == 0:
                 map_value['headway_prev'] = None
