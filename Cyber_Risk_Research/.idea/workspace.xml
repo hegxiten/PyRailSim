@@ -2,19 +2,26 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0fed8d0e-64fc-4e85-96de-1346ee17305a" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/xy_maxdelay.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/simpy_training.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Cyber Risk Research Entry Task.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Cyber Risk Research Entry Task.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/X_Y_maxDelayNum.py" beforeDir="false" afterPath="$PROJECT_DIR$/X_Y_maxDelayNum.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/delay_schedule.csv" beforeDir="false" afterPath="$PROJECT_DIR$/delay_schedule.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generate_train_one_dric.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate_train_one_dric.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generate_train_two_dric.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate_train_two_dric.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/XY_delay.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/XY_delay.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/X_Y_maxDelayNum.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orig_schedule.csv" beforeDir="false" afterPath="$PROJECT_DIR$/orig_schedule.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pickle.txt" beforeDir="false" afterPath="$PROJECT_DIR$/pickle.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_delay_one_dric.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_delay_one_dric.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_delay_two_dric.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_delay_two_dric.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/write_csv.py" beforeDir="false" afterPath="$PROJECT_DIR$/write_csv.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/write_csv2.py" beforeDir="false" afterPath="$PROJECT_DIR$/write_csv2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/max_delay.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pickle copy.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/task01.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/task02.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/task03.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/taskSolution.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/xy_maxdelay.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../delay_schedule.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../max_delay.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../untitled folder/单向_X+Y_delayNum_headway15.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../untitled folder/双向_X+Y_delayNum_headway20.csv" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -24,7 +31,7 @@
   </component>
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/Cyber_Risk_Research$XY_delay.coverage" NAME="XY_delay Coverage Results" MODIFIED="1542328894341" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/Cyber_Risk_Research$main.coverage" NAME="main Coverage Results" MODIFIED="1542347405505" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Cyber_Risk_Research$main.coverage" NAME="simpy_training Coverage Results" MODIFIED="1542511326027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Cyber_Risk_Research_Entry_Task$main.coverage" NAME="main Coverage Results" MODIFIED="1542157876266" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FUSProjectUsageTrigger">
@@ -62,30 +69,30 @@
           <entry key="project.closed" value="6" />
           <entry key="project.open.time.1" value="3" />
           <entry key="project.open.time.4" value="1" />
-          <entry key="project.open.time.5" value="2" />
-          <entry key="project.opened" value="6" />
+          <entry key="project.open.time.5" value="3" />
+          <entry key="project.opened" value="7" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
-          <entry key="csv" value="1" />
-          <entry key="py" value="51" />
+          <entry key="csv" value="2" />
+          <entry key="py" value="54" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
-          <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="51" />
+          <entry key="PLAIN_TEXT" value="2" />
+          <entry key="Python" value="54" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="3630" />
+          <entry key="py" value="3765" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="3630" />
+          <entry key="Python" value="3765" />
         </counts>
       </usages-collector>
     </session>
@@ -95,48 +102,17 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-990">
-              <caret line="28" lean-forward="true" selection-start-line="28" selection-end-line="28" />
-              <folding>
-                <element signature="e#2184#2197#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/train_delay_two_dric.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="290">
-              <caret line="28" column="23" selection-start-line="28" selection-start-column="23" selection-end-line="28" selection-end-column="23" />
-              <folding>
-                <element signature="e#0#11#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/X_Y_maxDelayNum.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="544">
-              <caret line="40" column="18" lean-forward="true" selection-start-line="40" selection-start-column="18" selection-end-line="40" selection-end-column="18" />
-              <folding>
-                <element signature="e#0#53#0" expanded="true" />
-                <marker date="1542319139933" expanded="true" signature="418:427" ph="..." />
-              </folding>
+            <state relative-caret-position="90">
+              <caret line="56" column="11" selection-start-line="56" selection-start-column="11" selection-end-line="56" selection-end-column="11" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/xy_maxdelay.py">
+        <entry file="file://$PROJECT_DIR$/simpy_training.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="118">
-              <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
-              <folding>
-                <element signature="e#0#11#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="-133">
+              <caret line="3" column="11" lean-forward="true" selection-start-line="3" selection-start-column="11" selection-end-line="3" selection-end-column="11" />
             </state>
           </provider>
         </entry>
@@ -144,8 +120,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/max_delay.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-30">
-              <caret line="11" column="38" lean-forward="true" selection-start-line="11" selection-start-column="38" selection-end-line="11" selection-end-column="38" />
+            <state relative-caret-position="165">
+              <caret line="11" column="38" selection-start-line="11" selection-start-column="38" selection-end-line="11" selection-end-column="38" />
             </state>
           </provider>
         </entry>
@@ -173,7 +149,6 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/generate_train.py" />
-        <option value="$PROJECT_DIR$/X_Y_maxDelayNum.py" />
         <option value="$PROJECT_DIR$/write_csv2.py" />
         <option value="$PROJECT_DIR$/venv/(X+Y)_(delay).py" />
         <option value="$PROJECT_DIR$/(X+Y)_(delay).py" />
@@ -183,10 +158,13 @@
         <option value="$PROJECT_DIR$/train_delay_one_dric.py" />
         <option value="$PROJECT_DIR$/generate_train_two_dric.py" />
         <option value="$PROJECT_DIR$/write_csv.py" />
-        <option value="$PROJECT_DIR$/train_delay_two_dric.py" />
         <option value="$PROJECT_DIR$/max_delay.py" />
-        <option value="$PROJECT_DIR$/main.py" />
         <option value="$PROJECT_DIR$/xy_maxdelay.py" />
+        <option value="$PROJECT_DIR$/X_Y_maxDelayNum.py" />
+        <option value="$PROJECT_DIR$/networkX_training.py" />
+        <option value="$PROJECT_DIR$/main.py" />
+        <option value="$PROJECT_DIR$/train_delay_two_dric.py" />
+        <option value="$PROJECT_DIR$/simpy_training.py" />
       </list>
     </option>
   </component>
@@ -208,6 +186,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -224,7 +203,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -251,7 +229,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.main">
+  <component name="RunManager" selected="Python.simpy_training">
     <configuration name="XY_delay" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Cyber Risk Research Entry Task" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -274,20 +252,20 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="simpy_training" type="PythonConfigurationType" factoryName="Python">
       <module name="Cyber Risk Research Entry Task" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
-      <option name="SDK_HOME" value="$USER_HOME$/PycharmProjects/ATCS_task/venv/bin/python" />
+      <option name="SDK_HOME" value="/anaconda3/bin/python3.6" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simpy_training.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -297,12 +275,11 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.main" />
+      <item itemvalue="Python.simpy_training" />
       <item itemvalue="Python.XY_delay" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.main" />
         <item itemvalue="Python.XY_delay" />
       </list>
     </recent_temporary>
@@ -324,12 +301,12 @@
     <frame x="90" y="59" width="1135" height="677" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.27721867" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.28179324" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.32991454" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.32991454" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -343,7 +320,7 @@
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="right" id="SciView" order="3" weight="0.3293687" />
+      <window_info anchor="right" id="SciView" order="3" weight="0.49405307" />
       <window_info anchor="right" id="Database" order="4" />
     </layout>
   </component>
@@ -378,20 +355,7 @@
     <entry file="file://$PROJECT_DIR$/orig_schedule.csv" />
     <entry file="file://$PROJECT_DIR$/venv/(X+Y)_(delay).py" />
     <entry file="file://$PROJECT_DIR$/(X+Y)_(delay).py" />
-    <entry file="file://$PROJECT_DIR$/maxDelay.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="69">
-          <caret line="6" column="11" selection-start-line="6" selection-start-column="11" selection-end-line="6" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/XY_delay.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="107">
-          <caret line="9" column="27" lean-forward="true" selection-start-line="9" selection-start-column="27" selection-end-line="9" selection-end-column="27" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/maxDelay.py" />
     <entry file="file://$PROJECT_DIR$/train_delay_one_dric.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="112">
@@ -442,51 +406,74 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/X_Y_maxDelayNum.py">
+    <entry file="file://$PROJECT_DIR$/max_delay.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="544">
-          <caret line="40" column="18" lean-forward="true" selection-start-line="40" selection-start-column="18" selection-end-line="40" selection-end-column="18" />
+        <state relative-caret-position="165">
+          <caret line="11" column="38" selection-start-line="11" selection-start-column="38" selection-end-line="11" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/XY_delay.csv">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/xy_maxdelay.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-415">
+          <caret line="21" selection-start-line="21" selection-end-line="21" />
           <folding>
-            <element signature="e#0#53#0" expanded="true" />
-            <marker date="1542319139933" expanded="true" signature="418:427" ph="..." />
+            <element signature="e#0#11#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/max_delay.py">
+    <entry file="file://$PROJECT_DIR$/XY_delay.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-30">
-          <caret line="11" column="38" lean-forward="true" selection-start-line="11" selection-start-column="38" selection-end-line="11" selection-end-column="38" />
+        <state relative-caret-position="-60">
+          <caret line="9" column="27" selection-start-line="9" selection-start-column="27" selection-end-line="9" selection-end-column="27" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/train_delay_two_dric.py">
+    <entry file="file://$PROJECT_DIR$/X_Y_maxDelayNum.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="290">
-          <caret line="28" column="23" selection-start-line="28" selection-start-column="23" selection-end-line="28" selection-end-column="23" />
+        <state relative-caret-position="189">
+          <caret line="19" selection-start-line="19" selection-end-line="19" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#53#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/networkX_training.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="10" lean-forward="true" selection-start-line="7" selection-start-column="10" selection-end-line="7" selection-end-column="10" />
+          <folding>
+            <element signature="e#0#21#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-990">
-          <caret line="28" lean-forward="true" selection-start-line="28" selection-end-line="28" />
+        <state relative-caret-position="90">
+          <caret line="56" column="11" selection-start-line="56" selection-start-column="11" selection-end-line="56" selection-end-column="11" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train_delay_two_dric.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="64" lean-forward="true" selection-start-line="64" selection-end-line="64" />
           <folding>
-            <element signature="e#2184#2197#0" expanded="true" />
+            <element signature="e#0#11#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/xy_maxdelay.py">
+    <entry file="file://$PROJECT_DIR$/simpy_training.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="118">
-          <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="-133">
+          <caret line="3" column="11" lean-forward="true" selection-start-line="3" selection-start-column="11" selection-end-line="3" selection-end-column="11" />
         </state>
       </provider>
     </entry>

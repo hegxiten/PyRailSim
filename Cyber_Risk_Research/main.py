@@ -52,54 +52,12 @@ a.print_diff()
 '''
 
 '''
-from matplotlib import pyplot as plt
-import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-from X_Y_maxDelayNum import X_Y_maxDelayNum
-from write_csv import write_csv
-import csv
-
-a = X_Y_maxDelayNum('2018-01-01 00:00:00')
-gene = a.drawA_B()
-write_csv(gene)
-fig = plt.figure()
-ax = Axes3D(fig)
-
-X = [0, 1.1, 1.8, 3.1, 4.0]
-Y = [2, 2.4, 4.3, 3.5, 2.5]
-X, Y = np.meshgrid(X, Y)
-Z = [2, 2.4, 4.3, 3.5, 2.5]
-
-csvFile = open("train_schedule.csv", "r")
-reader = csv.reader(csvFile)
-
-result = {}
-for item in reader:
-    if reader.line_num == 1:
-        continue
-    X.append(item[0])
-    Y.append(item[1])
-    X, Y = np.meshgrid(X, Y)
-    Z.append(item[2])
-
-csvFile.close()
-print(result)
-
-ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap='rainbow')
-
-plt.draw()
-plt.pause(10)
-plt.savefig('3D.jpg')
-plt.close()
-#'''
-
-'''
 from X_Y_maxDelayNum import X_Y_maxDelayNum
 a = X_Y_maxDelayNum('2018-01-02 00:00:00')
 a.drawA_B()
-'''
-
 #'''
+
+'''
 # Class: (X+Y)_(delay)
 import pickle
 from max_delay import max_delay
@@ -109,4 +67,4 @@ b = xy_maxdelay(3, 2, '2018-01-02 00:00:00')
 a = b.print_diff()
 #pickle.dump(gene2, open("pickle.txt", "w"))
 max_delay(a)
-#'''
+'''
