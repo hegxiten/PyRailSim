@@ -1,5 +1,6 @@
 import time
-from generate_train_two_dric import generate_train_two_dric
+#from generate_train_two_dric import generate_train_two_dric
+from generate_a_train import generate_a_train
 
 
 class train_delay_two_dric:
@@ -36,9 +37,25 @@ class train_delay_two_dric:
         begin = time.mktime(time.strptime(begin_time, "%Y-%m-%d %H:%M:%S"))
         end = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
         num_train = (end - begin) / 60 / exp_buffer
-        general_train = generate_train_two_dric(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time)
-        # map_value contains [number, train_time, train_direction(cur_direction), weight[n], variance[n]]
-        orig_schedule = general_train.generate_schedule()
+
+        no_delay_schedule = {}
+        delay_schedule = {}
+        number = 1
+        g = generate_a_train(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, begin_time, end_time, 0,
+                             0, number)
+        while 1:
+            no_delay_schedule[number] = g.generate_a_train()
+            cur_time = g.get_cur_time()
+            prev_headway = g.get_prev_headway()
+            number = g.get_number()
+            prev_dric = g.get_prev_dric()
+            cur_ticks = time.mktime(time.strptime(cur_time, "%Y-%m-%d %H:%M:%S"))
+            end_ticks = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
+            if cur_ticks > end_ticks:
+                break
+            g = generate_a_train(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, cur_time, end_time, prev_dric,
+                             prev_headway, number)
+
 
         # transfer time stamp into ticks
         DoS_ticks = time.mktime(time.strptime(self.DoS_time, "%Y-%m-%d %H:%M:%S"))
@@ -53,24 +70,24 @@ class train_delay_two_dric:
         ticks_first_delay = begin
 
         while ticks_first_delay < DoS_ticks:
-            ticks_first_delay = time.mktime(time.strptime(orig_schedule[num_first_delay]['time_arrival'], "%Y-%m-%d %H:%M:%S"))
+            ticks_first_delay = time.mktime(time.strptime(no_delay_schedule[num_first_delay]['time_arrival'], "%Y-%m-%d %H:%M:%S"))
             num_first_delay += 1
         num_first_delay -= 1
 
         # calculate delay schedule. num_delay is the number of delay trains.
-        delay_schedule = {}
+
         n = 1
         ticks = DoS_ticks + (self.X + self.Y) * 60 * 60
         print 'Delay happens from Train ' + str(num_first_delay) + '\nSchedule:'
 
-        cur_direction = orig_schedule[1]['direction']
+        cur_direction = no_delay_schedule[1]['direction']
         while 1:
             delay_value = {}
             # train time
             if n > 1:
                 # direction
-                cur_direction = orig_schedule[n]['direction']
-                prev_direction = orig_schedule[n - 1]['direction']
+                cur_direction = no_delay_schedule[n]['direction']
+                prev_direction = no_delay_schedule[n - 1]['direction']
 
                 if cur_direction != prev_direction:
                     ticks += diff_dric_buffer * 60
@@ -78,7 +95,7 @@ class train_delay_two_dric:
                     ticks += same_dric_buffer * 60
 
             # get diff time between 'orig' and 'delay'
-            orig_time = orig_schedule[num_first_delay + n - 1]['time_arrival']
+            orig_time = no_delay_schedule[num_first_delay + n - 1]['time_arrival']
             orig_ticks = time.mktime(time.strptime(orig_time, "%Y-%m-%d %H:%M:%S"))
             time_diff = int((ticks - orig_ticks) / 60)
             if time_diff < 0:
@@ -88,14 +105,14 @@ class train_delay_two_dric:
             # get the schedule of every delay train
             train_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ticks))
 
-            delay_value['time_arrival'] = orig_schedule[num_first_delay + n - 1]['time_arrival']
+            delay_value['time_arrival'] = no_delay_schedule[num_first_delay + n - 1]['time_arrival']
             delay_value['time_departure'] = train_time
             delay_value['delay'] = time_diff
             delay_value['direction'] = cur_direction
-            delay_value['headway_prev'] = orig_schedule[num_first_delay + n - 1]['headway_prev']
-            delay_value['headway_next'] = orig_schedule[num_first_delay + n - 1]['headway_next']
-            delay_value['total_weight'] = orig_schedule[num_first_delay + n - 1]['total_weight']
-            delay_value['index'] = orig_schedule[num_first_delay + n - 1]['index']
+            delay_value['headway_prev'] = no_delay_schedule[num_first_delay + n - 1]['headway_prev']
+            delay_value['headway_next'] = no_delay_schedule[num_first_delay + n - 1]['headway_next']
+            delay_value['total_weight'] = no_delay_schedule[num_first_delay + n - 1]['total_weight']
+            delay_value['index'] = no_delay_schedule[num_first_delay + n - 1]['index']
             delay_value['misrouted'] = 'False'
             delay_value['train_type'] = 'Default'
             delay_value['train_length'] = None
@@ -108,13 +125,13 @@ class train_delay_two_dric:
 
             delay_schedule[num_first_delay + n - 1] = delay_value
             n += 1
-            if num_first_delay + n - 1 > len(orig_schedule):
+            if num_first_delay + n - 1 > len(no_delay_schedule):
                 break
 
         i = 1
         ans = {}
         while i < num_first_delay:
-            ans[i] = orig_schedule[i]
+            ans[i] = no_delay_schedule[i]
             i += 1
 
         j = num_first_delay
@@ -123,8 +140,8 @@ class train_delay_two_dric:
             j += 1
 
         k = num_first_delay + len(delay_schedule) - 1
-        while k < len(orig_schedule):
-            ans[k] = orig_schedule[k]
+        while k < len(no_delay_schedule):
+            ans[k] = no_delay_schedule[k]
             k += 1
 
-        return orig_schedule, ans
+        return no_delay_schedule, ans

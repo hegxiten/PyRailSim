@@ -20,7 +20,7 @@ a = generate_train(5000, 1500, 15, 3, '2018-01-01 00:00:00', '2019-01-01 00:00:0
 print a.print_schedule()
 '''
 
-'''
+#'''
 # Class: write_csv
 import pickle
 from write_csv import write_csv
@@ -32,7 +32,7 @@ gene1, gene2 = b.print_diff()
 #pickle.dump(gene2, open("pickle.txt", "w"))
 write_csv(gene1)
 write_csv2(gene2)
-'''
+#'''
 
 '''
 from write_csv_delay import write_csv_delay
