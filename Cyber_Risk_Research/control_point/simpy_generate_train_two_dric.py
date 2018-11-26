@@ -32,7 +32,7 @@ class simpy_generate_train_two_dric:
         self.begin = time.mktime(time.strptime(self.begin_time, "%Y-%m-%d %H:%M:%S"))
         self.end = time.mktime(time.strptime(self.end_time, "%Y-%m-%d %H:%M:%S"))
         self.num_train = (self.end - self.begin) / 60 / self.exp_buffer
-        self.map = {}
+        self.dic = {}
         self.schedule = ''
         env = simpy.Environment()
         env.process(self.generate_train_two_dric(env))
@@ -45,23 +45,23 @@ class simpy_generate_train_two_dric:
         cur_time = self.begin_time
         number = 1
 
-
         while True:
             # create weight and variance according to N(5000, 1500) & N(15, 3)
             np.random.seed()
             headway = int(np.random.normal(self.exp_buffer, self.var_buffer))
 
-            a = generate_a_train(self.exp_MGT, self.var_MGT, self.exp_buffer, self.var_buffer, self.begin_time, cur_time, self.end_time, prev_dirc, prev_headway, headway, number)
+            a = generate_a_train(self.exp_MGT, self.var_MGT, self.exp_buffer, self.var_buffer, self.begin_time,
+                                 cur_time, self.end_time, prev_dirc, prev_headway, headway, number)
             prev_dirc = a.get_prev_dric()
             prev_headway = a.get_prev_headway()
             cur_time = a.get_cur_time()
             number = a.get_number()
-            self.map[number] = a.generate_a_train()
+            self.dic[number] = a.generate_a_train()
             number += 1
             yield env.timeout(headway * 60)
 
     def generate_schedule(self):
-        return self.map
+        return self.dic
 
     def print_schedule(self):
         print self.schedule
