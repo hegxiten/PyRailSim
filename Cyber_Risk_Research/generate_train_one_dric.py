@@ -74,8 +74,7 @@ class generate_train_one_dric:
             map_value['Dos_time'] = 'null'
             map_value['max_delay'] = 'null'
             self.map[n + 1] = map_value
-            # self.schedule = self.schedule + 'Train ' + str(self.map[n][0]) + ' ' + str(self.map[n][1]) + ' ' + \
-            #                 self.map[n][2] + ' ' + str(self.map[n][3]) + ' ' + 'Tons' + '\n'
+            #self.schedule = self.schedule + 'Train ' + str(self.map[n][0]) + ' ' + str(self.map[n][1]) + ' ' + self.map[n][2] + ' ' + str(self.map[n][3]) + ' ' + 'Tons' + '\n'
             n += 1
         # for i in range(len(self.map)):
         #     print self.map[i+2]

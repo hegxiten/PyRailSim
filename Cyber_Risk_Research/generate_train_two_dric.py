@@ -33,6 +33,8 @@ class generate_train_two_dric:
         self.num_train = (self.end - self.begin) / 60 / self.exp_buffer
         self.map = {}
         self.schedule = ''
+
+    # def generate_train_two_dric(self, env):
         num_of_direction = 2
         prev_direction = 0
         weight = []
@@ -97,6 +99,9 @@ class generate_train_two_dric:
             n += 1
             if ticks > time.mktime(time.strptime(self.end_time, "%Y-%m-%d %H:%M:%S")):
                 break
+        # env = simpy.Environment()
+        # env.process(self.generate_train_two_dric(env))
+        # env.run(until=15)
 
     def generate_schedule(self):
         return self.map

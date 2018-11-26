@@ -20,7 +20,7 @@ a = generate_train(5000, 1500, 15, 3, '2018-01-01 00:00:00', '2019-01-01 00:00:0
 print a.print_schedule()
 '''
 
-#'''
+'''
 # Class: write_csv
 import pickle
 from write_csv import write_csv
@@ -32,7 +32,7 @@ gene1, gene2 = b.print_diff()
 #pickle.dump(gene2, open("pickle.txt", "w"))
 write_csv(gene1)
 write_csv2(gene2)
-#'''
+'''
 
 '''
 from write_csv_delay import write_csv_delay
@@ -68,3 +68,23 @@ a = b.print_diff()
 #pickle.dump(gene2, open("pickle.txt", "w"))
 max_delay(a)
 '''
+
+'''
+from networkX import drawnet
+a = drawnet()
+
+'''
+
+'''
+from generate_train_one_dric import generate_train_one_dric
+a = generate_train_one_dric(1500,500,15,3,'2018-01-01 00:00:00','2018-01-02 00:00:00')
+b = a.generate_schedule()
+print b
+'''
+
+#'''
+from simpy_generate_train_two_dric import simpy_generate_train_two_dric
+a = simpy_generate_train_two_dric(5000,1500,15,3,'2018-01-01 00:00:00','2018-01-01 03:00:00')
+b = a.generate_schedule()
+print b
+#'''
