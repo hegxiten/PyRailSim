@@ -1,9 +1,9 @@
 import time
-from generate_train_two_dric import generate_train_two_dric
+from generate_train_two_dirc import generate_train_two_dirc
 
 
 class xy_maxdelay:
-    'delay 1 dric'
+    'delay 1 dirc'
 
     # the format of DoS time is 'yyyy-mm-dd hh:mm:ss', and it must be a string.
     # ex: DoS_time = '2016-05-05 20:28:54'
@@ -32,7 +32,7 @@ class xy_maxdelay:
             self.begin = time.mktime(time.strptime(begin_time, "%Y-%m-%d %H:%M:%S"))
             self.end = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
             num_train = (self.end - self.begin) / 60 / exp_headway
-            a = generate_train_two_dric(exp_MGT, var_MGT, exp_headway, var_buffer, begin_time, end_time)
+            a = generate_train_two_dirc(exp_MGT, var_MGT, exp_headway, var_buffer, begin_time, end_time)
             # map_value = number, train_time, train_direction(cur_direction), weight[n], variance[n]
             orig_schedule = a.generate_schedule()
 

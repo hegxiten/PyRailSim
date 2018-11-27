@@ -12,10 +12,10 @@ def train_direction(direction):
 class generate_a_train:
     """
     Generate one train.
-    Be used at class "simpy_generate_train_two_dric"
+    Be used at class "simpy_generate_train_two_dirc"
     """
 
-    def __init__(self, exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, cur_time, end_time, prev_dric, prev_headway,
+    def __init__(self, exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, cur_time, end_time, prev_dirc, prev_headway,
                  headway, number):
         self.exp_MGT = exp_MGT
         self.var_MGT = var_MGT
@@ -26,28 +26,28 @@ class generate_a_train:
         self.end_time = end_time
         self.cur_ticks = time.mktime(time.strptime(self.cur_time, "%Y-%m-%d %H:%M:%S"))
         self.end_ticks = time.mktime(time.strptime(self.end_time, "%Y-%m-%d %H:%M:%S"))
-        self.prev_dric = prev_dric
+        self.prev_dirc = prev_dirc
         self.prev_headway = prev_headway
         self.number = number
-        self.map = {}
+        self.dic = {}
         self.headway = headway
 
         num_of_direction = 2
-        prev_direction = self.prev_dric
+        prev_direction = self.prev_dirc
 
         # create weight and variance according to N(5000, 1500) & N(15, 3)
         np.random.seed()
         weight = int(np.random.normal(self.exp_MGT, self.var_MGT))
         cur_direction = np.random.randint(0, num_of_direction)
-        self.cur_dric = cur_direction
+        self.cur_dirc = cur_direction
 
         ticks = self.cur_ticks
 
-        self.map_value = {}
+        self.dic_value = {}
         # train time
 
         if self.number > 1:
-            if cur_direction != self.prev_dric:
+            if cur_direction != self.prev_dirc:
                 if prev_headway + headway < 28:
                     ticks = ticks + (28 + 28 - prev_headway - headway) * 60
                 else:
@@ -66,34 +66,34 @@ class generate_a_train:
         # fill '0' before n, ex: turn '1' into '0001'
         m = "%04d" % self.number
         # get the schedule of every train
-        self.map_value['time_arrival'] = train_time
-        self.map_value['time_departure'] = train_time
-        self.map_value['delay'] = 0
-        self.map_value['direction'] = train_direction(cur_direction)
-        self.map_value['headway_prev'] = prev_headway
-        self.map_value['headway_next'] = headway
-        self.map_value['total_weight'] = weight
-        self.map_value['index'] = m
-        self.map_value['misrouted'] = 'False'
-        self.map_value['train_type'] = 'Default'
-        self.map_value['train_length'] = None
-        self.map_value['train_speed'] = None
-        self.map_value['train_acceleration'] = None
-        self.map_value['train_deceleration'] = None
-        self.map_value['Future_parameters'] = None
-        self.map_value['X+Y'] = 0
-        self.map_value['Dos_time'] = 'null'
+        self.dic_value['time_arrival'] = train_time
+        self.dic_value['time_departure'] = train_time
+        self.dic_value['delay'] = 0
+        self.dic_value['direction'] = train_direction(cur_direction)
+        self.dic_value['headway_prev'] = prev_headway
+        self.dic_value['headway_next'] = headway
+        self.dic_value['total_weight'] = weight
+        self.dic_value['index'] = m
+        self.dic_value['misrouted'] = 'False'
+        self.dic_value['train_type'] = 'Default'
+        self.dic_value['train_length'] = None
+        self.dic_value['train_speed'] = None
+        self.dic_value['train_acceleration'] = None
+        self.dic_value['train_deceleration'] = None
+        self.dic_value['Future_parameters'] = None
+        self.dic_value['X+Y'] = 0
+        self.dic_value['Dos_time'] = 'null'
 
-        self.map[self.number] = self.map_value
+        self.dic[self.number] = self.dic_value
 
     def generate_a_train(self):
-        return self.map_value
+        return self.dic_value
 
     def get_cur_time(self):
         return self.train_time
 
-    def get_prev_dric(self):
-        return self.cur_dric
+    def get_prev_dirc(self):
+        return self.cur_dirc
 
     def get_prev_headway(self):
         return self.headway

@@ -4,12 +4,12 @@ import time
 
 def train_direction(direction):
     if direction == 0:
-        return 'Dric_A'
+        return 'dirc_A'
     elif direction == 1:
-        return 'Dric_B'
+        return 'dirc_B'
 
 
-class generate_train_one_dric:
+class generate_train_one_dirc:
     """
     Generate N trains.
     Weight of a train is following the standard distribution of: N~(exp_MGT tons, var_MGT tons).
@@ -31,7 +31,7 @@ class generate_train_one_dric:
         self.end = time.mktime(time.strptime(self.end_time, "%Y-%m-%d %H:%M:%S"))
         self.num_train = (self.end - self.begin) / 60 / self.exp_buffer
         self.direction = np.random.randint(0, self.num_train)
-        self.map = {}
+        self.dic = {}
         self.schedule = ''
         num_of_direction = 2
         prev_direction = 0
@@ -47,7 +47,7 @@ class generate_train_one_dric:
         ticks = self.begin - variance[0] * 60
 
         while n < self.num_train:
-            map_value = {}
+            dic_value = {}
             # train time
 
             ticks = ticks + variance[n] * 60
@@ -55,33 +55,33 @@ class generate_train_one_dric:
             m = "%04d" % (n + 1)
             # get the schedule of every train
             train_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ticks))
-            map_value['time_arrival'] = train_time
-            map_value['time_departure'] = train_time
-            map_value['delay'] = 0
-            map_value['direction'] = 'A'
-            map_value['headway_prev'] = variance[n - 1]
-            map_value['headway_next'] = variance[n]
-            map_value['total_weight'] = weight[n]
-            map_value['index'] = m
-            map_value['misrouted'] = 'False'
-            map_value['train_type'] = 'Default'
-            map_value['train_length'] = None
-            map_value['train_speed'] = None
-            map_value['train_acceleration'] = None
-            map_value['train_deceleration'] = None
-            map_value['Future_parameters'] = None
-            map_value['X+Y'] = 'null'
-            map_value['Dos_time'] = 'null'
-            map_value['max_delay'] = 'null'
-            self.map[n + 1] = map_value
-            #self.schedule = self.schedule + 'Train ' + str(self.map[n][0]) + ' ' + str(self.map[n][1]) + ' ' + self.map[n][2] + ' ' + str(self.map[n][3]) + ' ' + 'Tons' + '\n'
+            dic_value['time_arrival'] = train_time
+            dic_value['time_departure'] = train_time
+            dic_value['delay'] = 0
+            dic_value['direction'] = 'A'
+            dic_value['headway_prev'] = variance[n - 1]
+            dic_value['headway_next'] = variance[n]
+            dic_value['total_weight'] = weight[n]
+            dic_value['index'] = m
+            dic_value['misrouted'] = 'False'
+            dic_value['train_type'] = 'Default'
+            dic_value['train_length'] = None
+            dic_value['train_speed'] = None
+            dic_value['train_acceleration'] = None
+            dic_value['train_deceleration'] = None
+            dic_value['Future_parameters'] = None
+            dic_value['X+Y'] = 'null'
+            dic_value['Dos_time'] = 'null'
+            dic_value['max_delay'] = 'null'
+            self.dic[n + 1] = dic_value
+            #self.schedule = self.schedule + 'Train ' + str(self.dic[n][0]) + ' ' + str(self.dic[n][1]) + ' ' + self.dic[n][2] + ' ' + str(self.dic[n][3]) + ' ' + 'Tons' + '\n'
             n += 1
-        # for i in range(len(self.map)):
-        #     print self.map[i+2]
+        # for i in range(len(self.dic)):
+        #     print self.dic[i+2]
 
 
     def generate_schedule(self):
-        return self.map
+        return self.dic
 
     def print_schedule(self):
         print self.schedule

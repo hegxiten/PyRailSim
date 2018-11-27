@@ -1,4 +1,4 @@
-from one_dric import one_dric
+from single_train_schedule import single_train_schedule
 
-a = one_dric('2018-01-01 00:00:00')
-print a.genetate_all()
+a = single_train_schedule('2018-01-01 00:00:00')
+print a.generate_all()

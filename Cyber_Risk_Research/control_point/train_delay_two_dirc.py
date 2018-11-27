@@ -1,9 +1,9 @@
 import time
-#from generate_train_two_dric import generate_train_two_dric
+#from generate_train_two_dirc import generate_train_two_dirc
 from generate_a_train import generate_a_train
 
 
-class train_delay_two_dric:
+class train_delay_two_dirc:
     'delay'
 
     # the format of DoS time is 'yyyy-mm-dd hh:mm:ss', and it must be a string.
@@ -20,10 +20,10 @@ class train_delay_two_dric:
         # var_buffer = input('Variance of buffer time is: ')
         # begin_time = input('The begin time is(''yyyy-mm-dd hh:mm:ss''): ')
         # end_time = input('The end time is(''yyyy-mm-dd hh:mm:ss''): ')
-        # same_dric_buffer = input('same_dric_buffer is(''yyyy-mm-dd hh:mm:ss''): ')
-        # diff_dric_buffer = input('diff_dric_buffer is(''yyyy-mm-dd hh:mm:ss''): ')
+        # same_dirc_buffer = input('same_dirc_buffer is(''yyyy-mm-dd hh:mm:ss''): ')
+        # diff_dirc_buffer = input('diff_dirc_buffer is(''yyyy-mm-dd hh:mm:ss''): ')
         # print 'For example: 5000, 1500, 15, 3, ''2018-01-01 00:00:00'', ''2018-01-20 00:00:00'', 3, 28'
-        # exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time, same_dric_buffer, diff_dric_buffer = input('exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time, same_dric_buffer, diff_dric_buffer')
+        # exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time, same_dirc_buffer, diff_dirc_buffer = input('exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time, same_dirc_buffer, diff_dirc_buffer')
 
         exp_MGT = 5000
         var_MGT = 1500
@@ -31,8 +31,8 @@ class train_delay_two_dric:
         var_buffer = 3
         begin_time = '2018-01-01 00:00:00'
         end_time = '2018-01-15 00:00:00'
-        same_dric_buffer = 3
-        diff_dric_buffer = 28
+        same_dirc_buffer = 3
+        diff_dirc_buffer = 28
 
         begin = time.mktime(time.strptime(begin_time, "%Y-%m-%d %H:%M:%S"))
         end = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
@@ -48,12 +48,12 @@ class train_delay_two_dric:
             cur_time = g.get_cur_time()
             prev_headway = g.get_prev_headway()
             number = g.get_number()
-            prev_dric = g.get_prev_dric()
+            prev_dirc = g.get_prev_dirc()
             cur_ticks = time.mktime(time.strptime(cur_time, "%Y-%m-%d %H:%M:%S"))
             end_ticks = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
             if cur_ticks > end_ticks:
                 break
-            g = generate_a_train(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, cur_time, end_time, prev_dric,
+            g = generate_a_train(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, cur_time, end_time, prev_dirc,
                              prev_headway, number)
 
 
@@ -90,9 +90,9 @@ class train_delay_two_dric:
                 prev_direction = no_delay_schedule[n - 1]['direction']
 
                 if cur_direction != prev_direction:
-                    ticks += diff_dric_buffer * 60
+                    ticks += diff_dirc_buffer * 60
                 elif cur_direction == prev_direction:
-                    ticks += same_dric_buffer * 60
+                    ticks += same_dirc_buffer * 60
 
             # get diff time between 'orig' and 'delay'
             orig_time = no_delay_schedule[num_first_delay + n - 1]['time_arrival']

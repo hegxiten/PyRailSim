@@ -1,12 +1,12 @@
-from generate_train_one_dric import generate_train_one_dric
+from generate_train_one_dirc import generate_train_one_dirc
 import time
 import simpy
 
-class temp_one_dric_station:
+class temp_one_dirc_station:
     'dynamic train in networkX'
 
     def name(self):
-        a = generate_train_one_dric(5000,1500,15,3,'2018-01-01 00:00:00', '2018-01-02 00:00:00')
+        a = generate_train_one_dirc(5000,1500,15,3,'2018-01-01 00:00:00', '2018-01-02 00:00:00')
         train = a.generate_schedule()
         station = 1
         for i in xrange(1, len(train)):

@@ -1,4 +1,4 @@
-from train_delay_one_dric import train_delay_one_dric
+from train_delay_one_dirc import train_delay_one_dirc
 from matplotlib import pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
@@ -12,7 +12,7 @@ list_delayNum = []
 for X in range(0, 20):
     Ya = []
     for Y in range(0, 20):
-        a = train_delay_one_dric(X, Y, '2018-01-02 00:00:00')
+        a = train_delay_one_dirc(X, Y, '2018-01-02 00:00:00')
         b, c, d = a.print_diff()
         Ya.append(d)
     list_delayNum.append(Ya)

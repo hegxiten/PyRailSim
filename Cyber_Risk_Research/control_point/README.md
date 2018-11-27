@@ -4,8 +4,8 @@ package: numpy, pickle, matplotlib, cvs
 1. Class: main.py
 	# call all classes
 
-2. Class: generate_train_one_dric.py
-	# generate schedule of two drictions
+2. Class: generate_train_one_dirc.py
+	# generate schedule of two dirctions
 	1)input(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time)
 		the format of start and end time is 'yyyy-mm-dd hh:mm:ss', and it must be a string. ex:begin_time = '2016-05-05 20:28:54'
 	2)Function
@@ -14,8 +14,8 @@ package: numpy, pickle, matplotlib, cvs
     	def print_schedule(self):
         	print # a string which is schedule of train schedule
         	
-3. Class: generate_train_two_dric.py
-	# generate schedule of two drictions
+3. Class: generate_train_two_dirc.py
+	# generate schedule of two dirctions
 	1)input(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time)
 		the format of start and end time is 'yyyy-mm-dd hh:mm:ss', and it must be a string. ex:begin_time = '2016-05-05 20:28:54'
 	2)Function
@@ -24,7 +24,7 @@ package: numpy, pickle, matplotlib, cvs
     	def print_schedule(self):
         	print # a string which is schedule of train schedule
         	
-4. Class: train_delay_one_dric.py
+4. Class: train_delay_one_dirc.py
 	# generate schdule after the DoS attack
 	1)input(X, Y, DoS_time)
 		the format of DoS_time is 'yyyy-mm-dd hh:mm:ss', and it must be a string. ex:DoS_time = '2016-05-05 20:28:54'
@@ -32,7 +32,7 @@ package: numpy, pickle, matplotlib, cvs
 		return #orig_schedule, delay_schedule
 		it will return two schedule, both of them are dic{dic{}}.
 
-5. Class: train_delay_two_dric.py
+5. Class: train_delay_two_dirc.py
 	# generate schdule after the DoS attack
 	1)input(X, Y, DoS_time)
 		the format of DoS_time is 'yyyy-mm-dd hh:mm:ss', and it must be a string. ex:DoS_time = '2016-05-05 20:28:54'

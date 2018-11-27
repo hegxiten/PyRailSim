@@ -11,7 +11,7 @@ def train_direction(direction):
         return 'B'
 
 
-class simpy_generate_train_two_dric:
+class simpy_generate_train_two_dirc:
     """
     Generate N trains.
     Weight of a train is following the standard distribution of: N~(exp_MGT tons, var_MGT tons).
@@ -35,11 +35,11 @@ class simpy_generate_train_two_dric:
         self.dic = {}
         self.schedule = ''
         env = simpy.Environment()
-        env.process(self.generate_train_two_dric(env))
+        env.process(self.generate_train_two_dirc(env))
         schedule_time = self.end - self.begin
         env.run(until=schedule_time)
 
-    def generate_train_two_dric(self, env):
+    def generate_train_two_dirc(self, env):
         prev_dirc = 0
         prev_headway = 15
         cur_time = self.begin_time
@@ -52,7 +52,7 @@ class simpy_generate_train_two_dric:
 
             a = generate_a_train(self.exp_MGT, self.var_MGT, self.exp_buffer, self.var_buffer, self.begin_time,
                                  cur_time, self.end_time, prev_dirc, prev_headway, headway, number)
-            prev_dirc = a.get_prev_dric()
+            prev_dirc = a.get_prev_dirc()
             prev_headway = a.get_prev_headway()
             cur_time = a.get_cur_time()
             number = a.get_number()

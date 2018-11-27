@@ -1,9 +1,9 @@
 import time
-from generate_train_one_dric import generate_train_one_dric
+from generate_train_one_dirc import generate_train_one_dirc
 
 
-class train_delay_one_dric:
-    'delay 1 dric'
+class train_delay_one_dirc:
+    'delay 1 dirc'
 
     # the format of DoS time is 'yyyy-mm-dd hh:mm:ss', and it must be a string.
     # ex: DoS_time = '2016-05-05 20:28:54'
@@ -33,11 +33,11 @@ class train_delay_one_dric:
         self.begin = time.mktime(time.strptime(begin_time, "%Y-%m-%d %H:%M:%S"))
         self.end = time.mktime(time.strptime(end_time, "%Y-%m-%d %H:%M:%S"))
         num_train = (self.end - self.begin) / 60 / exp_buffer
-        a = generate_train_one_dric(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time)
-        # map_value = number, train_time, train_direction(cur_direction), weight[n], variance[n]
+        a = generate_train_one_dirc(exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, end_time)
+        # dic_value = number, train_time, train_direction(cur_direction), weight[n], variance[n]
         orig_schedule = a.generate_schedule()
 
-        # transfer str into int, store it into map
+        # transfer str into int, store it into dic
         DoS_ticks = time.mktime(time.strptime(self.DoS_time, "%Y-%m-%d %H:%M:%S"))
 
         if DoS_ticks > self.end or DoS_ticks < self.begin:
@@ -137,9 +137,9 @@ class train_delay_one_dric:
 
 from write_csv import write_csv
 from write_csv2 import write_csv2
-from train_delay_one_dric import train_delay_one_dric
+from train_delay_one_dirc import train_delay_one_dirc
 
-b = train_delay_one_dric(3,2,'2018-01-02 00:00:00')
+b = train_delay_one_dirc(3,2,'2018-01-02 00:00:00')
 gene1, gene2 = b.print_diff()
 write_csv(gene1)
 write_csv2(gene2)
