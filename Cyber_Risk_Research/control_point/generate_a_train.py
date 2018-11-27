@@ -11,7 +11,8 @@ def train_direction(direction):
 
 class generate_a_train:
     """
-    Generate 1 train with SimPy.
+    Generate one train.
+    Be used at class "simpy_generate_train_two_dric"
     """
 
     def __init__(self, exp_MGT, var_MGT, exp_buffer, var_buffer, begin_time, cur_time, end_time, prev_dric, prev_headway,

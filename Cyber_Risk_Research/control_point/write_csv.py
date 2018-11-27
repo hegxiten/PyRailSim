@@ -1,11 +1,15 @@
 import pandas as pd
 
-
 # important: the header of csv is [Train, Time, Direction, Weight, headway]
 # Its input data come from Class: generate_train.generate_schedule
 # the tyoe of input is "dictionary"
 class write_csv:
-    'write csv'
+    '''
+    since I want to output original schedule and delay schedule in one class,
+    two "white_csv" classes are needed,
+    "write_csv' output the original schedule
+    and "write_csv2" output the delay schedule
+    '''
 
     def __init__(self, In):
         self.In = In

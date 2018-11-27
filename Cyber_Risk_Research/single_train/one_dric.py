@@ -3,7 +3,10 @@ import numpy as np
 import time
 
 class one_dric:
-    'schedule of one train'
+    '''
+    many trains are generated from one control point,
+    here I want to output schedule of each train.
+    '''
 
     def __init__(self, begin):
         self.all_schedule = {}
