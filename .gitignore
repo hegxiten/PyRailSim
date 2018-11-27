@@ -9,6 +9,7 @@
 *.swo
 *.swp
 
+*.pyc
 venv/
 /Document/
 
