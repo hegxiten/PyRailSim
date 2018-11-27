@@ -1,2 +1,6 @@
 /.project
 /.pydevproject
+*.pyc
+venv/
+__pycache__/
+*.pdf
