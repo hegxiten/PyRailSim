@@ -1,2 +1,14 @@
+# pycharm configs
+.idea/
 
-.idea/*.xml
+# eclipse configs
+*.project
+*.pydevproject
+
+# vim temp files
+*.swo
+*.swp
+
+venv/
+/Document/
+
