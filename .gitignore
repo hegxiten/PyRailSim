@@ -10,6 +10,9 @@
 *.swp
 
 *.pyc
+*.pdf
+.DS_Store
+
 venv/
 /Document/
-
+__pycache__/
