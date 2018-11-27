@@ -1,3 +1,6 @@
+# Python风格规范
+https://zh-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules/
+
 # Description of all Classes
 package: numpy, pickle, matplotlib, cvs
 
