@@ -1,6 +1,18 @@
-/.project
-/.pydevproject
+# pycharm configs
+.idea/
+
+# eclipse configs
+*.project
+*.pydevproject
+
+# vim temp files
+*.swo
+*.swp
+
 *.pyc
-venv/
-__pycache__/
 *.pdf
+.DS_Store
+
+venv/
+/Document/
+__pycache__/
