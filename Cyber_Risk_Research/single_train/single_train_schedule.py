@@ -9,51 +9,56 @@ class single_train_schedule:
     here I want to output the schedule of each train.
     '''
 
-    def __init__(self, begin):
+    def __init__(self, begin, end):
+        self.buffer = 3
         self.all_schedule = {}
         self.begin = begin
+        self.end = end
         self.T = time
         self.begin_ticks = time.mktime(time.strptime(self.begin, "%Y-%m-%d %H:%M:%S"))
+        self.end_ticks = time.mktime(time.strptime(self.end, "%Y-%m-%d %H:%M:%S"))
+        self.number = 1
+        self.one_schedule = {}
+        self.one_detail = {}
+        self.speed = {}
+        self.distance = {}
+        self.time = {}
+        self.time[1] = self.begin_ticks
         env = simpy.Environment()
         env.process(self.train(env))
-        env.run(until=1000)
+        duration = self.end_ticks - self.begin_ticks
+        env.run(until=duration)
 
     def train(self, env):
-        time_ticks = self.begin_ticks
-        number = 1
-        one_schedule = {}
-        one_detail = {}
-        speed = {}
-        distance = {}
-        time = {}
         # n is used for create many "one_detail", otherwise all "one_schedule" will be the same
         n = 0
 
         while True:
             np.random.seed()
-            time[number] = 0
-            speed[number] = int(np.random.normal(3, 1)) # 180 miles per second
-            headway = int(np.random.normal(15, 3))
-            time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(time_ticks))
-            self.all_schedule[number] = {}
+            self.speed[self.number] = np.random.normal(3, 0.5) # miles per second
+            headway = np.random.normal(15, 3)
+            self.all_schedule[self.number] = {}
+            self.time[self.number] = self.begin_ticks
 
-            for i in xrange(1, number+1):
-                one_detail[n] = {}
-                time[i] += headway * 60
-                distance[i] = speed[i] * time[i]
+            for i in xrange(1, self.number+1):
+                self.one_detail[n] = {}
+                self.time[i] += headway * 60
+                # print(i, self.time[i] - self.begin_ticks)
+                self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60
+                # print(self.speed[i], self.time[i] - self.begin_ticks)
                 if i > 1:
-                    if distance[i] > distance[i-1] - speed[i-1] * 3 * 60:
-                        distance[i] = distance[i-1] - speed[i-1] * 3 * 60
-                one_detail[n]['speed'] = speed[i]
-                one_detail[n]['distance'] = distance[i]
-                one_detail[n]['headway'] = headway
-                one_schedule[time_standard] = one_detail[n]
-                print one_schedule
-                self.all_schedule[i][time_standard] = one_schedule[time_standard]
+                    if self.distance[i] > self.distance[i-1] - self.speed[i-1] * self.buffer:
+                        self.distance[i] = self.distance[i-1] - self.speed[i-1] * self.buffer
+                self.one_detail[n]['speed(mils/min)'] = round(self.speed[i], 2)
+                self.one_detail[n]['distance(miles)'] = round(self.distance[i], 2)
+                self.one_detail[n]['headway(mins)'] = round(headway, 2)
+                time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[i]))
+                self.one_schedule[time_standard] = self.one_detail[n]
+                self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
-            number += 1
-
+            self.number += 1
             yield env.timeout(headway * 60)
+
 
     def generate_all(self):
         return self.all_schedule
