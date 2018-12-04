@@ -82,9 +82,17 @@ b = a.generate_schedule()
 print b
 '''
 
-#'''
+'''
 from simpy_generate_train_two_dirc import simpy_generate_train_two_dirc
 a = simpy_generate_train_two_dirc(5000,1500,15,3,'2018-01-01 00:00:00','2018-01-01 03:00:00')
 b = a.generate_schedule()
 print b
+'''
+
 #'''
+# code in main class
+import networkX_w_r
+networkX_w_r.networkX_write()
+networkX_w_r.networkX_read()
+#'''
+
