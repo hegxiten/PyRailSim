@@ -1,3 +1,6 @@
+# Python风格规范
+https://zh-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules/
+
 # Description of all Classes
 package: numpy, pickle, matplotlib, cvs
 
@@ -54,3 +57,11 @@ package: numpy, pickle, matplotlib, cvs
 # condition 2: B点产生的火车到达A点，同上，在A站前等待
 # condition 3: A点产生的火车，与B点产生的火车相向而行，此情况较复杂：
 #			con 3.1: A和B都产生很多火车，会不断的相遇，也会不断发生避让的情况，后车又不能超越前车，后车也可能会停，并且会不断增加停车数量
+
+2018.11.26
+
+10. 弱化one_dirc函数的功能，使用two_dirc.py的功能去涵盖one_dirc的功能。
+	10.1. two_dirc内部方向占比需要滑动可调
+11. dirc拼写错误
+12. 自定义class名称第一字母大写
+
