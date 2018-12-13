@@ -11,7 +11,8 @@
 
 *.pyc
 *.pdf
-.DS_Store
+*.DS_Store
+*.gpickle
 
 venv/
 /Document/
