@@ -8,18 +8,27 @@ def networkX_write():
     '''
     number = 30
     G = nx.Graph()
-    pos = collections.deque()
+
+    # define the position of all nodes, it should be a dictionary
+    pos = {}
+
     for i in range(1, number+1):
-        pos.append([i, i])
+        col = ((i-1) % 10) + 1 if ((i-1) // 10) % 2 == 0 else 10 - (i-1) % 10
+        row = i // 10 if i % 10 != 0 else i // 10 - 1
+        pos[i] = [col, row]
+
     nodes = []
     edges = []
-    for i in range(number):
-        nodes.append(i + 1)
-        if i < number - 1:
-            edges.append((i+1, i+2))
+    for i in range(1, number+1):
+        nodes.append(i)
+        if i < number:
+            edges.append((i, i+1))
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
-    pos = nx.spring_layout(G)
+    print pos
+    print nodes
+    print edges
+    #pos = nx.spring_layout(G)
     nx.set_node_attributes(G, pos, 'pos')
     nx.write_gpickle(G, "a.gpickle")
 
@@ -39,18 +48,18 @@ def networkX_read():
     #plt.ion()
     for index in range(len(ncolor)):
         plt.cla()
-
         ncolor[index] = 'g'
         if index > 0:
             ncolor[index-1] = 'r'
         nx.draw_networkx_nodes(G, pos, node_color = ncolor)
-        nx.draw_networkx_labels(G, pos, font_size=16)
+        nx.draw_networkx_labels(G, pos, font_size=1)
         nx.draw_networkx_edges(G, pos)
 
-        plt.pause(0.1)
+        plt.pause(0.05)
     #plt.ioff()
     plt.show()
-    plt.pause(1)
+    plt.pause(0.2)
+    plt.cla()
     plt.close('all')
     return
 

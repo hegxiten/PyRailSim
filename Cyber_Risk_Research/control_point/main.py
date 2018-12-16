@@ -93,6 +93,6 @@ print b
 # code in main class
 import networkX_w_r
 networkX_w_r.networkX_write()
-networkX_w_r.networkX_read()
+# networkX_w_r.networkX_read()
 #'''
 

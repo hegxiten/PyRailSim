@@ -57,12 +57,20 @@ class single_train:
                 for m in range(self.number):
                     if self.distance[i] > m * 25:
                         k = m
+
+                # set the color of train node
                 self.ncolor[k] = 'g'
                 if k > 0:
                     self.ncolor[k - 1] = 'r'
+
+                plt.ion()
+                # draw the train map
                 nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor)
-                nx.draw_networkx_labels(self.G, self.pos, font_size=16)
+                # nx.draw_networkx_labels(self.G, self.pos, font_size=10)
                 nx.draw_networkx_edges(self.G, self.pos)
+                # plt.xlim(0, 30)
+                # plt.ylim(0, 30)
+                plt.ioff()
 
                 if i > 1:
                     if self.distance[i] > self.distance[i-1] - self.speed[i-1] * self.buffer:
