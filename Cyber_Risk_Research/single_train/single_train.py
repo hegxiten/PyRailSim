@@ -3,6 +3,7 @@ import numpy as np
 import time
 import networkx as nx
 import matplotlib.pyplot as plt
+import collections
 
 
 class single_train:
@@ -28,8 +29,9 @@ class single_train:
         self.G = nx.read_gpickle("a.gpickle")
         self.pos = nx.get_node_attributes(self.G, 'pos')
         self.ncolor = []
-        for i in range(len(self.pos)):
-            self.ncolor.append('r')
+        # self.labels = collections.defaultdict()
+        self.labels = {}
+        self.pos_labels = {}
         env = simpy.Environment()
         env.process(self.train(env))
         duration = self.end_ticks - self.begin_ticks
@@ -40,16 +42,26 @@ class single_train:
         n = 0
 
         while True:
+            plt.close('all')
+            self.labels.clear()
+            self.pos_labels.clear()
+            self.ncolor = []
+            for i in range(len(self.pos)):
+                self.ncolor.append('r')
             np.random.seed()
-            self.speed[self.number] = np.random.normal(3, 0.5) # miles per second
+            self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
             headway = np.random.normal(15, 3)
             self.all_schedule[self.number] = {}
             self.time[self.number] = self.begin_ticks
 
-            for i in xrange(1, self.number+1):
+            for i in xrange(1, self.number + 1):
                 self.one_detail[n] = {}
                 self.time[i] += headway * 60
                 self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60
+
+                if i > 1:
+                    if self.distance[i] > self.distance[i - 1] - self.speed[i - 1] * self.buffer:
+                        self.distance[i] = self.distance[i - 1] - self.speed[i - 1] * self.buffer
 
                 # dynamic color of networkX
                 k = 0
@@ -60,21 +72,11 @@ class single_train:
 
                 # set the color of train node
                 self.ncolor[k] = 'g'
-                if k > 0:
-                    self.ncolor[k - 1] = 'r'
 
-                plt.ion()
-                # draw the train map
-                nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor)
-                # nx.draw_networkx_labels(self.G, self.pos, font_size=10)
-                nx.draw_networkx_edges(self.G, self.pos)
-                # plt.xlim(0, 30)
-                # plt.ylim(0, 30)
-                plt.ioff()
+                if len(self.pos) > k > 0:
+                    self.labels[k+1] = i
+                    self.pos_labels[k+1] = self.pos[k+1]
 
-                if i > 1:
-                    if self.distance[i] > self.distance[i-1] - self.speed[i-1] * self.buffer:
-                        self.distance[i] = self.distance[i-1] - self.speed[i-1] * self.buffer
                 self.one_detail[n]['speed(mils/min)'] = round(self.speed[i], 2)
                 self.one_detail[n]['distance(miles)'] = round(self.distance[i], 2)
                 self.one_detail[n]['headway(mins)'] = round(headway, 2)
@@ -82,12 +84,17 @@ class single_train:
                 self.one_schedule[time_standard] = self.one_detail[n]
                 self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
+
+            # draw the train map
+            nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor)
+            nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
+            nx.draw_networkx_edges(self.G, self.pos)
+
             self.number += 1
 
             # networkX pause 0.1 seconds
-            plt.pause(1)
+            plt.pause(0.5)
             yield env.timeout(headway * 60)
-
 
     def generate_all(self):
         return self.all_schedule

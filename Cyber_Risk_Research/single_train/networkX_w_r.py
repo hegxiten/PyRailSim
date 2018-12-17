@@ -25,10 +25,6 @@ def networkX_write():
             edges.append((i, i+1))
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
-    print pos
-    print nodes
-    print edges
-    #pos = nx.spring_layout(G)
     nx.set_node_attributes(G, pos, 'pos')
     nx.write_gpickle(G, "a.gpickle")
 
@@ -52,13 +48,13 @@ def networkX_read():
         if index > 0:
             ncolor[index-1] = 'r'
         nx.draw_networkx_nodes(G, pos, node_color = ncolor)
-        nx.draw_networkx_labels(G, pos, font_size=1)
+        nx.draw_networkx_labels(G, pos, font_size=16)
         nx.draw_networkx_edges(G, pos)
 
         plt.pause(0.05)
     #plt.ioff()
     plt.show()
-    plt.pause(0.2)
+    #plt.pause(0.2)
     plt.cla()
     plt.close('all')
     return
