@@ -13,6 +13,8 @@ class single_train:
 
     def __init__(self, begin, end):
         self.buffer = 3
+        self.block = 5
+        self.refresh = 2
         self.all_schedule = {}
         self.begin = begin
         self.end = end
@@ -38,33 +40,42 @@ class single_train:
     def train(self, env):
         # n is used for create many "one_detail", otherwise all "one_schedule" will be the same
         n = 0
-
+        temp = 0
+        np.random.seed()
+        self.speed[1] = np.random.normal(3, 0.5)
+        headway = np.random.normal(15, 3)
         while True:
+            # initialize label and color
             plt.close('all')
             self.labels.clear()
             self.pos_labels.clear()
             self.ncolor = []
             for i in range(len(self.pos)):
                 self.ncolor.append('g')
-            np.random.seed()
-            self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
-            headway = np.random.normal(15, 3)
-            self.all_schedule[self.number] = {}
-            self.time[self.number] = self.begin_ticks
 
+            if temp < headway:
+                temp += self.refresh
+            else:
+                temp = headway % self.refresh
+                self.number += 1
+                self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
+                self.time[self.number] = self.begin_ticks
+                headway = np.random.normal(15, 3)
+
+            self.all_schedule[self.number] = {}
             for i in xrange(1, self.number + 1):
                 self.one_detail[n] = {}
-                self.time[i] += headway * 60
+                self.time[i] += self.refresh * 60
                 self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60
 
                 if i > 1:
                     if self.distance[i] > self.distance[i - 1] - self.speed[i - 1] * self.buffer:
                         self.distance[i] = self.distance[i - 1] - self.speed[i - 1] * self.buffer
 
-                # dynamic color of networkX
+                # dynamic color of networkX, define which block a train in
                 k = 0
-                for m in range(self.number):
-                    if self.distance[i] > m * 25:
+                for m in range(len(self.pos)):
+                    if self.distance[i] > m * self.block:
                         k = m
                     else:
                         break
@@ -83,16 +94,17 @@ class single_train:
                 self.one_schedule[time_standard] = self.one_detail[n]
                 self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
-
+                plt.pause(0.1)
+            # print self.pos_labels
             # draw the train map
             nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
             nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
             nx.draw_networkx_edges(self.G, self.pos)
+            # t += 5 * 60  # five minutes
 
-            self.number += 1
 
             # networkX pause 0.1 seconds
-            plt.pause(0.005)
+            plt.pause(0.1)
             yield env.timeout(headway * 60)
 
     def generate_all(self):
