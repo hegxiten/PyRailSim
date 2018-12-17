@@ -3,7 +3,6 @@ import numpy as np
 import time
 import networkx as nx
 import matplotlib.pyplot as plt
-import collections
 
 
 class single_train:
@@ -28,7 +27,6 @@ class single_train:
         self.time = {1: self.begin_ticks}
         self.G = nx.read_gpickle("a.gpickle")
         self.pos = nx.get_node_attributes(self.G, 'pos')
-        self.ncolor = []
         # self.labels = collections.defaultdict()
         self.labels = {}
         self.pos_labels = {}
@@ -47,7 +45,7 @@ class single_train:
             self.pos_labels.clear()
             self.ncolor = []
             for i in range(len(self.pos)):
-                self.ncolor.append('r')
+                self.ncolor.append('g')
             np.random.seed()
             self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
             headway = np.random.normal(15, 3)
@@ -65,13 +63,14 @@ class single_train:
 
                 # dynamic color of networkX
                 k = 0
-                plt.cla()
                 for m in range(self.number):
                     if self.distance[i] > m * 25:
                         k = m
+                    else:
+                        break
 
                 # set the color of train node
-                self.ncolor[k] = 'g'
+                self.ncolor[k] = 'r'
 
                 if len(self.pos) > k > 0:
                     self.labels[k+1] = i
@@ -86,14 +85,14 @@ class single_train:
                 n += 1
 
             # draw the train map
-            nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor)
+            nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
             nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
             nx.draw_networkx_edges(self.G, self.pos)
 
             self.number += 1
 
             # networkX pause 0.1 seconds
-            plt.pause(0.5)
+            plt.pause(0.005)
             yield env.timeout(headway * 60)
 
     def generate_all(self):

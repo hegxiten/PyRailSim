@@ -6,15 +6,15 @@ def networkX_write():
     '''
     generate a network graph and output it into 'gpickle' file
     '''
-    number = 30
+    number = 80
     G = nx.Graph()
 
     # define the position of all nodes, it should be a dictionary
     pos = {}
 
     for i in range(1, number+1):
-        col = ((i-1) % 10) + 1 if ((i-1) // 10) % 2 == 0 else 10 - (i-1) % 10
-        row = i // 10 if i % 10 != 0 else i // 10 - 1
+        col = ((i-1) % 20) + 1 if ((i-1) // 20) % 2 == 0 else 20 - (i-1) % 20
+        row = i // 20 if i % 20 != 0 else i // 20 - 1
         pos[i] = [col, row]
 
     nodes = []
@@ -47,11 +47,11 @@ def networkX_read():
         ncolor[index] = 'g'
         if index > 0:
             ncolor[index-1] = 'r'
-        nx.draw_networkx_nodes(G, pos, node_color = ncolor)
+        nx.draw_networkx_nodes(G, pos, node_color=ncolor)
         nx.draw_networkx_labels(G, pos, font_size=16)
         nx.draw_networkx_edges(G, pos)
 
-        plt.pause(0.05)
+        # plt.pause(0.01)
     #plt.ioff()
     plt.show()
     #plt.pause(0.2)
