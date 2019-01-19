@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import simpy
 import numpy as np
 import time
+import collections
 from collections import defaultdict
 
 def networkX_write():
@@ -41,6 +42,7 @@ def networkX_read():
     read "gpickle" file
     dynamic display the node: change the color of a node from red to green every second.
     '''
+
 
     G = nx.read_gpickle("a.gpickle")
     pos = nx.get_node_attributes(G, 'pos')
@@ -111,16 +113,22 @@ class single_train:
         # self.labels = collections.defaultdict()
         self.labels = {}
         self.pos_labels = {}
-        # fix_distance is used for siding surpass. I cannot display the right block without this parameter
-        self.fix_dis = defaultdict(int)
         # define which siding that late/fast train surpass previous/slow trains
         self.isPass = defaultdict(lambda: float('inf'))
+        # in order to solve problem: the number of trains is not the rank of trains. I use dict rank[n]
+        self.rank = collections.defaultdict(int)
+
+        # use simpy library to define the process of train system
         env = simpy.Environment()
         env.process(self.train(env))
         duration = self.end_ticks - self.begin_ticks
         env.run(until=duration)
 
     def train(self, env):
+        # ranking is used for find which train will be surpass next
+        rank = {}
+        for i in range(10000):
+            rank[i] = i
         # define the serial number of block which have siding
         Number_siding = []
         for c in self.siding:
@@ -137,8 +145,12 @@ class single_train:
             self.labels.clear()
             self.pos_labels.clear()
             self.ncolor = []
+            # default empty block to 'green'
             for i in range(len(self.pos)):
                 self.ncolor.append('g')
+            # default block which have siding to 'black'
+            for i in Number_siding:
+                self.ncolor[i] = 'black'
 
             if temp < headway:
                 temp += self.refresh
@@ -150,22 +162,39 @@ class single_train:
                 headway = np.random.normal(10, 3)
 
             self.all_schedule[self.number] = {}
-            for i in xrange(1, self.number + 1):
+
+            for i in xrange(1, rank[self.number + 1]):
                 self.one_detail[n] = {}
                 self.time[i] += self.refresh * 60
-                self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60
+                self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60 - fix[i]
 
-                # late trains occupy the block which behind the previous one, unless there is a siding.
-                if i > 1 and self.distance[i] < self.isPass[i]:
+                # # late trains occupy the block which behind the previous one, unless there is a siding.
+                # if i > 1 and self.distance[rank[i]] < self.isPass[rank[i]]:
+                #     if self.distance[rank[i]] > self.distance[rank[i - 1]] - self.block:
+                #         for c in self.siding:
+                #             if self.distance[rank[i]] < c:
+                #                 self.isPass[rank[i]] = c
+                #                 break
+                #         self.distance[rank[i]] = self.distance[rank[i] - 1] - self.block
+                # '''
+                #
+                # '''
+                # elif i > 1 and self.distance[rank[i]] > self.isPass[rank[i]] and rank:
+                #     rank[i] = i
+
+                '''
+                Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
+                Unless there is a siding.
+                '''
+                if i > 1:
                     if self.distance[i] > self.distance[i - 1] - self.block:
-                        for c in self.siding:
-                            if self.distance[i] < c:
-                                self.isPass[i] = c
+                        for n in Number_siding:
+                            m = int(self.distance[i-1] / self.block)
+                            if m == n:
+                                rank[i], rank[i - 1] = rank[i - 1], rank[i]
                                 break
-                        self.distance[i] = self.distance[i - 1] - self.block
-
-                    #self.distance[i] = min(self.distance[i], self.distance[i - 1] - self.block)
-
+                            else:
+                                self.distance[i] = self.distance[i - 1] - self.block
 
                 # define which block a train in. Then change the color of networkX node
                 k = 0
@@ -174,9 +203,6 @@ class single_train:
                         k = m
                     else:
                         break
-
-                # fast train can surpass slow one if there is siding.
-
 
                 # set the color of train node
                 self.ncolor[k] = 'r'
