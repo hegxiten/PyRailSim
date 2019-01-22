@@ -117,6 +117,7 @@ class single_train:
         self.isPass = defaultdict(lambda: float('inf'))
         # in order to solve problem: the number of trains is not the rank of trains. I use dict rank[n]
         self.rank = collections.defaultdict(int)
+        self.fix = collections.defaultdict(int)
 
         # use simpy library to define the process of train system
         env = simpy.Environment()
@@ -134,7 +135,7 @@ class single_train:
         for c in self.siding:
             Number_siding.append(int(c / self.block))
         # n is used for create many "one_detail", otherwise all "one_schedule" will be the same
-        n = 0
+        n = 1
         temp = 0
         np.random.seed()
         self.speed[1] = np.random.normal(3, 0.5)
@@ -165,8 +166,9 @@ class single_train:
 
             for i in xrange(1, rank[self.number + 1]):
                 self.one_detail[n] = {}
+                # {'speed(mils/min)':0, 'distance(miles)':0, 'headway(mins)':0}
                 self.time[i] += self.refresh * 60
-                self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60 - fix[i]
+                self.distance[i] = (self.speed[i] * (self.time[i] - self.begin_ticks)) / 60 - self.fix[i]
 
                 # # late trains occupy the block which behind the previous one, unless there is a siding.
                 # if i > 1 and self.distance[rank[i]] < self.isPass[rank[i]]:
@@ -186,15 +188,21 @@ class single_train:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
-                if i > 1:
-                    if self.distance[i] > self.distance[i - 1] - self.block:
-                        for n in Number_siding:
-                            m = int(self.distance[i-1] / self.block)
-                            if m == n:
-                                rank[i], rank[i - 1] = rank[i - 1], rank[i]
-                                break
-                            else:
-                                self.distance[i] = self.distance[i - 1] - self.block
+                # if i > 1:
+                #     if self.distance[i] > self.distance[i - 1] - self.block:
+                #         # print(self.one_detail[80])
+                #         print(round(self.speed[i], 2))
+                #         print(round(self.distance[i], 2))
+                #         print(round(headway, 2))
+                #         for n in Number_siding:
+                #             m = int(self.distance[i-1] / self.block)
+                #             if m == n:
+                #                 rank[i], rank[i - 1] = rank[i - 1], rank[i]
+                #                 break
+                #             elif n == Number_siding[-1]:
+                #                 self.distance[i] = self.distance[i - 1] - self.block
+                #                 if self.speed[i] - self.speed[i - 1] > 0:
+                #                     self.fix[i] += (self.speed[i] - self.speed[i - 1]) * self.block
 
                 # define which block a train in. Then change the color of networkX node
                 k = 0
@@ -228,7 +236,7 @@ class single_train:
             # t += 5 * 60  # five minutes
 
             # networkX pause 0.01 seconds
-            plt.pause(0.05)
+            plt.pause(0.01)
             yield env.timeout(headway * 60)
 
     def generate_all(self):

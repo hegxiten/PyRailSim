@@ -4,7 +4,7 @@ import sum
 from sum import single_train
 sum.networkX_write()
 
-a = single_train('2018-01-01 00:00:00', '2018-01-03 00:00:00', [200, 400, 600, 800])
+a = single_train('2018-01-01 00:00:00', '2018-01-05 00:00:00', [200, 400, 600, 800])
 print a.generate_all()
 #'''
 
