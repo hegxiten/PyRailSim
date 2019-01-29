@@ -5,6 +5,7 @@ import numpy as np
 import time
 import collections
 from collections import defaultdict
+# import pandas as pd
 
 def networkX_write():
     '''
@@ -42,7 +43,6 @@ def networkX_read():
     read "gpickle" file
     dynamic display the node: change the color of a node from red to green every second.
     '''
-
 
     G = nx.read_gpickle("a.gpickle")
     pos = nx.get_node_attributes(G, 'pos')
@@ -85,7 +85,7 @@ class single_train:
     here I want to output the schedule of each train.
     '''
 
-    def __init__(self, begin, end, siding):
+    def __init__(self, begin, end, is_DoS, DoS_begin, DoS_end, DoS_pos, siding):
         # the position of siding. ps: siding is a list of integer
         self.siding = siding
         # self.block is the length of each block
@@ -93,12 +93,15 @@ class single_train:
         self.refresh = 2
         self.all_schedule = {}
         # begin and end are string, the format is '2018-01-01 00:00:00'
-        self.begin = begin
-        self.end = end
         self.T = time
         # turn begin and end into the number ticks from 1970 to now.
-        self.begin_ticks = time.mktime(time.strptime(self.begin, "%Y-%m-%d %H:%M:%S"))
-        self.end_ticks = time.mktime(time.strptime(self.end, "%Y-%m-%d %H:%M:%S"))
+        self.begin_ticks = time.mktime(time.strptime(begin, "%Y-%m-%d %H:%M:%S"))
+        self.end_ticks = time.mktime(time.strptime(end, "%Y-%m-%d %H:%M:%S"))
+        # information of DoS
+        self.is_DoS = is_DoS
+        self.DoS_begin_ticks = time.mktime(time.strptime(DoS_begin, "%Y-%m-%d %H:%M:%S"))
+        self.DoS_end_ticks = time.mktime(time.strptime(DoS_end, "%Y-%m-%d %H:%M:%S"))
+        self.DoS_pos = DoS_pos
         # self.number is the number of refresh.
         self.number = 1
         # we get a new self.one_schedule after each refresh
@@ -139,6 +142,8 @@ class single_train:
         temp = 0
         np.random.seed()
         self.speed[1] = np.random.normal(3, 0.5)
+        self.weight[1] = np.random.randint(1, 4)
+        self.distance[1] = 0
         headway = np.random.normal(15, 3)
         while True:
             # initialize label and color
@@ -160,29 +165,30 @@ class single_train:
                 temp = headway % self.refresh
                 self.number += 1
                 self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
-                self.time[self.number] = self.begin_ticks
+                self.time[self.number] = self.begin_ticks + temp * 60
                 self.weight[self.number] = np.random.randint(1, 4)
+                self.distance[self.number] += self.speed[self.number] * temp * 60
                 headway = np.random.normal(10, 3)
 
             self.all_schedule[self.number] = {}
 
-            for x in xrange(1, self.number):
+            for x in xrange(1, self.number + 1):
                 i = rank[x]
-                self.one_detail[n] = {}
+                self.one_detail = {}
                 self.time[i] += self.refresh * 60
-                self.distance[i] += self.speed[i] * self.refresh
 
-                # # late trains occupy the block which behind the previous one, unless there is a siding.
-                # if i > 1 and self.distance[rank[i]] < self.isPass[rank[i]]:
-                #     if self.distance[rank[i]] > self.distance[rank[i - 1]] - self.block:
-                #         for c in self.siding:
-                #             if self.distance[rank[i]] < c:
-                #                 self.isPass[rank[i]] = c
-                #                 break
-                #         self.distance[rank[i]] = self.distance[rank[i] - 1] - self.block
+                if self.is_DoS is True:
+                    # self.time[n] is (the time for a train to move) + (begin time), so self.train[1] is current time.
+                    if self.DoS_begin_ticks < self.time[1] < self.DoS_end_ticks:
+                        cur_block = int(self.distance[i] / self.block)
+                        DoS_block = int(self.DoS_pos / self.block)
+                        if cur_block != DoS_block:
+                            self.distance[i] += self.speed[i] * self.refresh
+                    else:
+                        self.distance[i] += self.speed[i] * self.refresh
 
-                # elif i > 1 and self.distance[rank[i]] > self.isPass[rank[i]] and rank:
-                #     rank[i] = i
+                elif self.is_DoS is False:
+                    self.distance[i] += self.speed[i] * self.refresh
 
                 '''
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
@@ -194,7 +200,7 @@ class single_train:
                         for n in Number_siding:
                             if m == n:
                                 rank[x], rank[x - 1] = rank[x - 1], rank[x]
-                                self.distance[rank[x - 1]] -= self.speed[rank[x - 1]] * self.refresh
+                                self.distance[rank[x]] -= self.speed[rank[x]] * self.refresh
                                 break
                             elif n == Number_siding[-1]:
                                 self.distance[rank[x]] = self.distance[rank[x-1]] - self.block
@@ -214,12 +220,12 @@ class single_train:
                     self.labels[k+1] = i
                     self.pos_labels[k+1] = self.pos[k+1]
 
-                self.one_detail[n]['speed(mils/min)'] = round(self.speed[i], 2)
-                self.one_detail[n]['distance(miles)'] = round(self.distance[i], 2)
-                self.one_detail[n]['headway(mins)'] = round(headway, 2)
-                self.one_detail[n]['weight(1-3)'] = self.weight[i]
+                self.one_detail['speed(mils/min)'] = round(self.speed[i], 2)
+                self.one_detail['distance(miles)'] = round(self.distance[i], 2)
+                self.one_detail['headway(mins)'] = round(headway, 2)
+                self.one_detail['weight(1-3)'] = self.weight[i]
                 time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[i]))
-                self.one_schedule[time_standard] = self.one_detail[n]
+                self.one_schedule[time_standard] = self.one_detail
                 self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
 
@@ -229,10 +235,27 @@ class single_train:
             nx.draw_networkx_edges(self.G, self.pos)
 
             # networkX pause 0.01 seconds
-            plt.pause(0.05)
+            plt.pause(0.02)
             yield env.timeout(headway * 60)
 
     def generate_all(self):
+        x = []
+        y = []
+        # for i in self.all_schedule:
+        #     for j in self.all_schedule[i]:
+        #         x[int(i)].append(j)
+        #         y[int(i)].append(int(self.all_schedule[i][j]['distance(miles)'] / self.block))
+
+        print x[1], y[1]
+        plt.title('Result Analysis')
+        plt.plot([1, 2, 3, 4], [1, 2, 3, 4], color='green', label='training accuracy')
+
+        plt.legend()
+
+        plt.xlabel('iteration times')
+        plt.ylabel('rate')
+        plt.show()
+
         return self.all_schedule
 
 '''
@@ -256,13 +279,11 @@ class multi_dirc:
         # define parameters
         self.buffer = 3
         self.all_schedule_A = {}
-        self.begin = begin
-        self.end = end
         self.dis = dis_miles
         self.buffer_list = buffer_list
         self.T = time
-        self.begin_ticks = time.mktime(time.strptime(self.begin, "%Y-%m-%d %H:%M:%S"))
-        self.end_ticks = time.mktime(time.strptime(self.end, "%Y-%m-%d %H:%M:%S"))
+        self.begin_ticks = time.mktime(time.strptime(begin, "%Y-%m-%d %H:%M:%S"))
+        self.end_ticks = time.mktime(time.strptime(end, "%Y-%m-%d %H:%M:%S"))
         self.number = 1
         self.one_schedule_A = {}
         self.one_schedule_B = {}
@@ -340,3 +361,5 @@ from multi_dirc import multi_dirc
 a = multi_dirc('2018-01-01 00:00:00', '2018-01-02 00:00:00', 1000, [500, 1000, 1500, 2000, 2500])
 print a.generate_all()
 '''
+
+
