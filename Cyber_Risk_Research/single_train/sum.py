@@ -5,6 +5,7 @@ import numpy as np
 import time
 import collections
 from collections import defaultdict
+import heapq
 # import pandas as pd
 
 def networkX_write():
@@ -89,7 +90,7 @@ class single_train:
         # the position of siding. ps: siding is a list of integer
         self.siding = siding
         # self.block is the length of each block
-        self.block = 10
+        self.block = 25
         self.refresh = 2
         self.all_schedule = {}
         # begin and end are string, the format is '2018-01-01 00:00:00'
@@ -144,7 +145,7 @@ class single_train:
         self.speed[1] = np.random.normal(3, 0.5)
         self.weight[1] = np.random.randint(1, 4)
         self.distance[1] = 0
-        headway = np.random.normal(15, 3)
+        headway = np.random.normal(20, 5)
         while True:
             # initialize label and color
             plt.close('all')
@@ -168,7 +169,8 @@ class single_train:
                 self.time[self.number] = self.begin_ticks + temp * 60
                 self.weight[self.number] = np.random.randint(1, 4)
                 self.distance[self.number] += self.speed[self.number] * temp * 60
-                headway = np.random.normal(10, 3)
+                # headway = np.random.normal(10, 3)
+                headway = np.random.normal(20, 5)
 
             self.all_schedule[self.number] = {}
 
@@ -220,42 +222,59 @@ class single_train:
                     self.labels[k+1] = i
                     self.pos_labels[k+1] = self.pos[k+1]
 
+                self.one_detail['time'] = round(self.speed[i], 2)
                 self.one_detail['speed(mils/min)'] = round(self.speed[i], 2)
                 self.one_detail['distance(miles)'] = round(self.distance[i], 2)
                 self.one_detail['headway(mins)'] = round(headway, 2)
                 self.one_detail['weight(1-3)'] = self.weight[i]
-                time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[i]))
+                time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[1]))
                 self.one_schedule[time_standard] = self.one_detail
                 self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
 
-            # draw the train map
-            nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
-            nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
-            nx.draw_networkx_edges(self.G, self.pos)
+            # # draw the train map
+            # nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
+            # nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
+            # nx.draw_networkx_edges(self.G, self.pos)
 
             # networkX pause 0.01 seconds
             plt.pause(0.02)
             yield env.timeout(headway * 60)
 
     def generate_all(self):
-        x = []
-        y = []
-        # for i in self.all_schedule:
-        #     for j in self.all_schedule[i]:
-        #         x[int(i)].append(j)
-        #         y[int(i)].append(int(self.all_schedule[i][j]['distance(miles)'] / self.block))
+        x = []; y = []
+        for i in self.all_schedule:
+            x.append([])
+            y.append([])
 
-        print x[1], y[1]
+            for j in self.all_schedule[i]:
+                x[i-1].append(time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.begin_ticks)
+                y[i-1].append(self.all_schedule[i][j]['distance(miles)'])
+
+            x[i-1].sort()
+            y[i-1].sort()
+
         plt.title('Result Analysis')
-        plt.plot([1, 2, 3, 4], [1, 2, 3, 4], color='green', label='training accuracy')
+        for n in range(len(x)):
+            # if n % 2 == 0:
+            #     plt.plot(y[n], x[n], color='green')
+            # if n % 2 == 1:
+            #     plt.plot(y[n], x[n], color='blue')
+            if n % 4 == 0:
+                plt.plot(x[n], y[n], color='green')
+            if n % 4 == 1:
+                plt.plot(x[n], y[n], color='blue')
+            if n % 4 == 2:
+                plt.plot(x[n], y[n], color='red')
+            if n % 4 == 3:
+                plt.plot(x[n], y[n], color='black')
 
         plt.legend()
-
-        plt.xlabel('iteration times')
-        plt.ylabel('rate')
+        plt.xlabel('time')
+        plt.ylabel('distance')
         plt.show()
 
+        # print self.all_schedule
         return self.all_schedule
 
 '''
@@ -307,7 +326,7 @@ class multi_dirc:
         while True:
             np.random.seed()
             self.speed_A[self.number] = np.random.normal(3, 0.5) # miles per minute
-            headway = np.random.normal(50, 3)
+            headway = np.random.normal(20, 5)
             self.all_schedule_A[self.number] = {}
             self.time[self.number] = self.begin_ticks
             self.distance_A[self.number] = 0
