@@ -148,7 +148,8 @@ class single_train:
         headway = np.random.normal(20, 5)
         while True:
             # initialize label and color
-            plt.close('all')
+            # plt.close('all')
+            # plt.clf()
             self.labels.clear()
             self.pos_labels.clear()
             self.ncolor = []
@@ -197,15 +198,18 @@ class single_train:
                 Unless there is a siding.
                 '''
                 if x > 1:
-                    if self.distance[rank[x]] >= self.distance[rank[x - 1]] - self.block:
-                        m = int(self.distance[rank[x - 1]] / self.block)
+                    # The block position of prev train and current train
+                    block_prev = int(self.distance[rank[x - 1]] / self.block)
+                    block_curr = int(self.distance[rank[x]] / self.block)
+
+                    if block_prev <= block_curr:
                         for n in Number_siding:
-                            if m == n:
+                            if block_prev == n:
                                 rank[x], rank[x - 1] = rank[x - 1], rank[x]
                                 self.distance[rank[x]] -= self.speed[rank[x]] * self.refresh
                                 break
                             elif n == Number_siding[-1]:
-                                self.distance[rank[x]] = self.distance[rank[x-1]] - self.block
+                                self.distance[rank[x]] = (block_curr - 1) * self.block
 
                 # define which block a train in. Then change the color of networkX node
                 k = 0
@@ -256,10 +260,6 @@ class single_train:
 
         plt.title('Result Analysis')
         for n in range(len(x)):
-            # if n % 2 == 0:
-            #     plt.plot(y[n], x[n], color='green')
-            # if n % 2 == 1:
-            #     plt.plot(y[n], x[n], color='blue')
             if n % 4 == 0:
                 plt.plot(x[n], y[n], color='green')
             if n % 4 == 1:
