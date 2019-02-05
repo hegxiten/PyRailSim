@@ -86,12 +86,12 @@ class single_train:
     here I want to output the schedule of each train.
     '''
 
-    def __init__(self, begin, end, is_DoS, DoS_begin, DoS_end, DoS_pos, siding):
+    def __init__(self, begin, end, is_DoS, DoS_begin, DoS_end, DoS_block, siding, block):
         # the position of siding. ps: siding is a list of integer
         self.siding = siding
         # self.block is the length of each block
-        self.block = 25
-        self.refresh = 2
+        self.block = block
+        self.refresh = 1
         self.all_schedule = {}
         # begin and end are string, the format is '2018-01-01 00:00:00'
         self.T = time
@@ -102,7 +102,7 @@ class single_train:
         self.is_DoS = is_DoS
         self.DoS_begin_ticks = time.mktime(time.strptime(DoS_begin, "%Y-%m-%d %H:%M:%S"))
         self.DoS_end_ticks = time.mktime(time.strptime(DoS_end, "%Y-%m-%d %H:%M:%S"))
-        self.DoS_pos = DoS_pos
+        self.DoS_block = DoS_block
         # self.number is the number of refresh.
         self.number = 1
         # we get a new self.one_schedule after each refresh
@@ -111,6 +111,8 @@ class single_train:
         self.speed = {}
         # distance of each train
         self.distance = collections.defaultdict(int)
+        self.cur_block = collections.defaultdict(int)
+        self.sum_block_dis = collections.defaultdict(int)
         self.time = {1: self.begin_ticks}
         self.G = nx.read_gpickle("a.gpickle")
         self.pos = nx.get_node_attributes(self.G, 'pos')
@@ -123,6 +125,7 @@ class single_train:
         self.rank = collections.defaultdict(int)
         self.weight = collections.defaultdict(int)
 
+
         # use simpy library to define the process of train system
         env = simpy.Environment()
         env.process(self.train(env))
@@ -134,17 +137,24 @@ class single_train:
         rank = {}
         for i in range(1000):
             rank[i] = i
+
         # define the serial number of block which have siding
         Number_siding = []
         for c in self.siding:
-            Number_siding.append(int(c / self.block))
+            sum_block = 0
+            for n in range(len(self.block)):
+                sum_block += self.block[n]
+                if c < sum_block:
+                    Number_siding.append(n)
+                    break
+
         # n is used for create many "one_detail", otherwise all "one_schedule" will be the same
         n = 1
         temp = 0
         np.random.seed()
         self.speed[1] = np.random.normal(3, 0.5)
         self.weight[1] = np.random.randint(1, 4)
-        self.distance[1] = 0
+        # self.distance[1] = 0
         headway = np.random.normal(20, 5)
         while True:
             # initialize label and color
@@ -169,7 +179,18 @@ class single_train:
                 self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
                 self.time[self.number] = self.begin_ticks + temp * 60
                 self.weight[self.number] = np.random.randint(1, 4)
+
+                # update the [distance] and [number of block] of the new generated train
                 self.distance[self.number] += self.speed[self.number] * temp * 60
+                for n in range(len(self.block)):
+                    self.sum_block_dis[self.number] += self.block[n]
+                    if self.distance[self.number] < self.sum_block_dis[self.number]:
+                        break
+                    self.cur_block[self.number] += 1
+                # while self.distance[self.number] > self.sum_block_dis[self.number]:
+                #     self.sum_block_dis[self.number] += self.block[self.number]
+                #     self.cur_block[self.number] += 1
+
                 # headway = np.random.normal(10, 3)
                 headway = np.random.normal(20, 5)
 
@@ -183,9 +204,10 @@ class single_train:
                 if self.is_DoS is True:
                     # self.time[n] is (the time for a train to move) + (begin time), so self.train[1] is current time.
                     if self.DoS_begin_ticks < self.time[1] < self.DoS_end_ticks:
+
                         cur_block = int(self.distance[i] / self.block)
-                        DoS_block = int(self.DoS_pos / self.block)
-                        if cur_block != DoS_block:
+
+                        if cur_block != self.DoS_block:
                             self.distance[i] += self.speed[i] * self.refresh
                     else:
                         self.distance[i] += self.speed[i] * self.refresh
@@ -252,7 +274,7 @@ class single_train:
             y.append([])
 
             for j in self.all_schedule[i]:
-                x[i-1].append(time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.begin_ticks)
+                x[i-1].append((time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.begin_ticks) / 3600)
                 y[i-1].append(self.all_schedule[i][j]['distance(miles)'])
 
             x[i-1].sort()
