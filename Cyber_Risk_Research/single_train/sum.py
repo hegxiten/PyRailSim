@@ -10,12 +10,12 @@ import heapq
 
 def networkX_write():
     '''
-    generate a network graph and output it into 'gpickle' file
+    ## generate a network graph in simple grids and save it into 'gpickle' file.
     '''
     number = 120
     G = nx.MultiGraph()
 
-    # define the position of all nodes, it should be a dictionary
+    ## define the position of all nodes, it should be a dictionary
     pos = {}
 
     for i in range(1, number+1):
@@ -29,15 +29,19 @@ def networkX_write():
         nodes.append(i)
         if i < number:
             edges.append((i, i+1))
-    siding = [15, 35, 55, 75]
+    
+    siding = [15, 35, 55, 75]    
     for c in siding:
         nodes.append(c)
         G.add_path((c - 1, c + 1))
-
+    
+    ## define siding locations in the grids and add corresponding links to the graph generated 
+     
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
     nx.set_node_attributes(G, pos, 'pos')
     nx.write_gpickle(G, "a.gpickle")
+    
 
 def networkX_read():
     '''
@@ -90,8 +94,8 @@ class single_train:
         # the position of siding. ps: siding is a list of integer
         self.siding = siding
         # self.block is the length of each block
-        self.block = block
-        self.refresh = 1
+        self.block = 50
+        self.refresh = 2
         self.all_schedule = {}
         # begin and end are string, the format is '2018-01-01 00:00:00'
         self.T = time
@@ -110,10 +114,15 @@ class single_train:
         self.one_detail = {}
         self.speed = {}
         # distance of each train
+        ## distance means x-axis coordinates
         self.distance = collections.defaultdict(int)
         self.cur_block = collections.defaultdict(int)
         self.sum_block_dis = collections.defaultdict(int)
+        ## trick to avoid KeyError when the key is not existed. 
+        ## distance is the dictionary for trains with the Key Value as train indices (integers)
+
         self.time = {1: self.begin_ticks}
+        ## time is the dictionary for trains with with the Key Value as train indices (integers) 
         self.G = nx.read_gpickle("a.gpickle")
         self.pos = nx.get_node_attributes(self.G, 'pos')
         # self.labels = collections.defaultdict()
