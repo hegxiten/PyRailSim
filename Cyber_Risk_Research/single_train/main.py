@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 
 sum.networkX_write()
 
-a = single_train('2018-01-01 00:00:00', '2018-01-03 20:00:00', True, '2018-01-01 04:00:00', '2018-01-01 07:00:00', 23, [100, 200, 300, 400], [0] + [5] * 1000)
-a.generate_all()
+a = single_train('2018-01-01 00:00:00', '2018-01-05 00:00:00', False, '2018-01-01 04:00:00', '2018-01-01 07:00:00', 23, [10, 20, 30, 40], [10] * 1000)
+print(a.generate_all())
 
 # gene = b.generate_schedule() 
 # write_csv(gene)
