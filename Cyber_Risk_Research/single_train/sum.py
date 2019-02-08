@@ -119,8 +119,8 @@ class single_train:
         # distance of each train
         ## distance means x-axis coordinates
         self.distance = collections.defaultdict(int)
-        self.cur_block = collections.defaultdict(int)
-        self.sum_block_dis = collections.defaultdict(int)
+        self.cur_block = collections.defaultdict(lambda: 1)
+        self.sum_block_dis = collections.defaultdict(lambda: self.block[0])
         ## trick to avoid KeyError when the key is not existed. 
         ## distance is the dictionary for trains with the Key Value as train indices (integers)
 
@@ -145,9 +145,16 @@ class single_train:
 
     def train(self, env):
         def get_sum_and_cur_block(number):
-            while self.distance[number] >= self.sum_block_dis[number]:
-                self.sum_block_dis[number] += self.block[self.cur_block[number]]
-                self.cur_block[number] += 1
+            # if (distance > block_begin), block go further; if (distance < block_end), block go close.
+            while not (self.sum_block_dis[number]- self.block[self.cur_block[number]]) < self.distance[number] <= (self.sum_block_dis[number]):
+                print 'go_def'
+                if self.distance[number] >= self.sum_block_dis[number]:
+                    self.sum_block_dis[number] += self.block[self.cur_block[number]]
+                    self.cur_block[number] += 1
+
+                elif self.distance[number] < (self.sum_block_dis[number] - self.block[self.cur_block[number]]):
+                    self.sum_block_dis[number] -= self.block[self.cur_block[number]]
+                    self.cur_block[number] -= 1
 
         # ranking is used for find which train will be surpass next
         rank = {}
@@ -199,6 +206,7 @@ class single_train:
             self.all_schedule[self.number] = {}
 
             for x in xrange(1, self.number + 1):
+                print 'go_rank'
                 i = rank[x]
                 self.one_detail = {}
                 self.time[i] += self.refresh * 60
@@ -227,6 +235,7 @@ class single_train:
                 Unless there is a siding.
                 '''
                 if x > 1:
+                    print 'go_>1'
                     # The block position of prev train and current train
                     block_prev = self.cur_block[rank[x - 1]]    # int(self.distance[rank[x - 1]] / self.block)
                     block_curr = self.cur_block[rank[x]]    # int(self.distance[rank[x]] / self.block)
@@ -241,14 +250,8 @@ class single_train:
                             elif j == self.siding[-1]:
                                 self.distance[rank[x]] = self.sum_block_dis[rank[x]] - self.block[self.cur_block[rank[x]]]
                                 get_sum_and_cur_block(i)
-
-                # define which block a train in. Then change the color of networkX node
-                # k = 0
-                # for m in range(len(self.pos)):
-                #     if self.distance[i] > m * self.block:
-                #         k = m
-                #     else:
-                #         break
+                                if self.cur_block[rank[x - 1]] == self.cur_block[rank[x]]:
+                                    print 'shit'
 
                 k = self.cur_block[i]
 
@@ -280,6 +283,7 @@ class single_train:
             yield env.timeout(headway)
 
     def generate_all(self):
+        # # draw the train working diagram
         # x = []; y = []
         # for i in self.all_schedule:
         #     x.append([])
