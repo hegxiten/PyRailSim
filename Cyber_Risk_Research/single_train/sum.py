@@ -5,6 +5,7 @@ import numpy as np
 import time
 import collections
 from collections import defaultdict
+from scipy.interpolate import interp1d
 import heapq
 # import pandas as pd
 
@@ -114,7 +115,7 @@ class single_train:
         self.one_detail = {}
         self.speed = {}
         # parameter of headway
-        self.headway_exp = 10
+        self.headway_exp = 30
         self.headway_dev = 5
         # distance of each train
         ## distance means x-axis coordinates
@@ -146,13 +147,12 @@ class single_train:
     def train(self, env):
         def get_sum_and_cur_block(number):
             # if (distance > block_begin), block go further; if (distance < block_end), block go close.
-            while not (self.sum_block_dis[number]- self.block[self.cur_block[number]]) < self.distance[number] <= (self.sum_block_dis[number]):
-                print 'go_def'
+            while not (self.sum_block_dis[number] - self.block[self.cur_block[number]]) < self.distance[number] <= (self.sum_block_dis[number]):
                 if self.distance[number] >= self.sum_block_dis[number]:
                     self.sum_block_dis[number] += self.block[self.cur_block[number]]
                     self.cur_block[number] += 1
 
-                elif self.distance[number] < (self.sum_block_dis[number] - self.block[self.cur_block[number]]):
+                elif self.distance[number] <= (self.sum_block_dis[number] - self.block[self.cur_block[number]]):
                     self.sum_block_dis[number] -= self.block[self.cur_block[number]]
                     self.cur_block[number] -= 1
 
@@ -196,9 +196,6 @@ class single_train:
                 # update the [distance] and [number of block] of the new generated train
                 self.distance[self.number] += self.speed[self.number] * temp
                 get_sum_and_cur_block(self.number)
-                # while self.distance[self.number] > self.sum_block_dis[self.number]:
-                #     self.sum_block_dis[self.number] += self.block[self.cur_block[self.number]]
-                #     self.cur_block[self.number] += 1
 
                 # headway = np.random.normal(10, 3)
                 headway = np.random.normal(self.headway_exp, self.headway_dev)
@@ -206,7 +203,6 @@ class single_train:
             self.all_schedule[self.number] = {}
 
             for x in xrange(1, self.number + 1):
-                print 'go_rank'
                 i = rank[x]
                 self.one_detail = {}
                 self.time[i] += self.refresh * 60
@@ -214,44 +210,41 @@ class single_train:
                 if self.is_DoS is True:
                     # self.time[n] is (the time for a train to move) + (begin time), so self.train[1] is current time.
                     if self.DoS_begin_ticks < self.time[1] < self.DoS_end_ticks:
-                        get_sum_and_cur_block(i)
-                        # while self.distance[i] > self.sum_block_dis[i]:
-                        #     self.sum_block_dis[i] += self.block[self.cur_block[i]]
-                        #     self.cur_block[i] += 1
                         if self.cur_block[i] != self.DoS_block:
                             self.distance[i] += self.speed[i] * self.refresh
+                            get_sum_and_cur_block(i)
                     else:
                         self.distance[i] += self.speed[i] * self.refresh
+                        get_sum_and_cur_block(i)
 
                 elif self.is_DoS is False:
                     self.distance[i] += self.speed[i] * self.refresh
                     get_sum_and_cur_block(i)
-                    # while self.distance[i] > self.sum_block_dis[i]:
-                    #     self.sum_block_dis[i] += self.block[self.cur_block[i]]
-                    #     self.cur_block[i] += 1
 
                 '''
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
                 if x > 1:
-                    print 'go_>1'
                     # The block position of prev train and current train
-                    block_prev = self.cur_block[rank[x - 1]]    # int(self.distance[rank[x - 1]] / self.block)
-                    block_curr = self.cur_block[rank[x]]    # int(self.distance[rank[x]] / self.block)
-                    if block_prev <= block_curr:
+                    '''
+                    Overtake Policy:
+                    
+                    # when block small enough and speed large enough, there would be a bug
+                    '''
+                    if self.cur_block[rank[x - 1]] <= self.cur_block[rank[x]] + 1:
                         for j in self.siding:
-                            if block_prev == j:
-                                rank[x], rank[x - 1] = rank[x - 1], rank[x]
-                                self.distance[rank[x]] -= self.speed[rank[x]] * self.refresh
-                                get_sum_and_cur_block(i)
+                            if self.cur_block[rank[x - 1]] == j:
+                                if self.speed[rank[x-1]] < self.speed[rank[x]]:
+                                    rank[x], rank[x - 1] = rank[x - 1], rank[x]
+                                    self.distance[rank[x]] -= self.speed[rank[x]] * self.refresh
+                                    get_sum_and_cur_block(i)
                                 break
 
                             elif j == self.siding[-1]:
                                 self.distance[rank[x]] = self.sum_block_dis[rank[x]] - self.block[self.cur_block[rank[x]]]
+                                self.distance[rank[x]] = max(0, self.distance[rank[x]])
                                 get_sum_and_cur_block(i)
-                                if self.cur_block[rank[x - 1]] == self.cur_block[rank[x]]:
-                                    print 'shit'
 
                 k = self.cur_block[i]
 
@@ -273,44 +266,44 @@ class single_train:
                 self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
 
-            # draw the train map
-            nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
-            nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
-            nx.draw_networkx_edges(self.G, self.pos)
-
-            # networkX pause 0.01 seconds
-            plt.pause(0.05)
-            yield env.timeout(headway)
+            # # draw the train map
+            # nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
+            # nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
+            # nx.draw_networkx_edges(self.G, self.pos)
+            #
+            # # networkX pause 0.01 seconds
+            # plt.pause(0.05)
+            yield env.timeout(self.refresh*60)
 
     def generate_all(self):
-        # # draw the train working diagram
-        # x = []; y = []
-        # for i in self.all_schedule:
-        #     x.append([])
-        #     y.append([])
-        #
-        #     for j in self.all_schedule[i]:
-        #         x[i-1].append((time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.begin_ticks) / 3600)
-        #         y[i-1].append(self.all_schedule[i][j]['distance(miles)'])
-        #
-        #     x[i-1].sort()
-        #     y[i-1].sort()
-        #
-        # plt.title('Result Analysis')
-        # for n in range(len(x)):
-        #     if n % 4 == 0:
-        #         plt.plot(x[n], y[n], color='green')
-        #     if n % 4 == 1:
-        #         plt.plot(x[n], y[n], color='blue')
-        #     if n % 4 == 2:
-        #         plt.plot(x[n], y[n], color='red')
-        #     if n % 4 == 3:
-        #         plt.plot(x[n], y[n], color='black')
-        #
-        # plt.legend()
-        # plt.xlabel('time')
-        # plt.ylabel('distance')
-        # plt.show()
+        # draw the train working diagram
+        x = []; y = []
+        for i in self.all_schedule:
+            x.append([])
+            y.append([])
+
+            for j in self.all_schedule[i]:
+                x[i-1].append((time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.begin_ticks) / 3600)
+                y[i-1].append(self.all_schedule[i][j]['distance(miles)'])
+
+            x[i-1].sort()
+            y[i-1].sort()
+
+        plt.title('Result Analysis')
+        for n in range(len(x)-1):
+            if n % 4 == 0:
+                plt.plot(x[n], y[n], color='green')
+            if n % 4 == 1:
+                plt.plot(x[n], y[n], color='blue')
+            if n % 4 == 2:
+                plt.plot(x[n], y[n], color='red')
+            if n % 4 == 3:
+                plt.plot(x[n], y[n], color='black')
+
+        plt.legend()
+        plt.xlabel('time /hours')
+        plt.ylabel('distance /miles')
+        plt.show()
 
         # print self.all_schedule
         return self.all_schedule
@@ -373,7 +366,6 @@ class multi_dirc:
                 self.one_detail_A[n] = {}
                 self.time[i] += headway * 60
                 self.distance_A[i] += self.speed_A[i] * headway
-                #print(i, self.distance_A[i])
                 distance_B = (self.speed_B * (self.time[1] - self.begin_ticks)) / 60
                 if i > 1:
                     if self.distance_A[i] > self.distance_A[i-1] - self.speed_A[i-1] * self.buffer:
