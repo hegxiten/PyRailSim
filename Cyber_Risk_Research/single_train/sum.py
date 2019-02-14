@@ -171,7 +171,6 @@ class single_train:
         headway = np.random.normal(self.headway_exp, self.headway_dev)
         while True:
             # initialize label and color
-            # plt.close('all')
             plt.clf()
             self.labels.clear()
             self.pos_labels.clear()
@@ -187,6 +186,7 @@ class single_train:
             if temp < headway:
                 temp += self.refresh
             else:
+                ## generate a new train
                 temp = headway % self.refresh
                 self.number += 1
                 self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
@@ -277,6 +277,7 @@ class single_train:
 
     def generate_all(self):
         # draw the train working diagram
+        '''begin comment__train stringline diagram'''
         x = []; y = []
         for i in self.all_schedule:
             x.append([])
@@ -304,6 +305,7 @@ class single_train:
         plt.xlabel('time /hours')
         plt.ylabel('distance /miles')
         plt.show()
+        '''end comment__train stringline diagram'''
 
         # print self.all_schedule
         return self.all_schedule
