@@ -16,7 +16,7 @@ def networkX_write():
     number = 120
     G = nx.MultiGraph()
 
-    ## define the position of all nodes, it should be a dictionary
+    ## define the position (coordinates on the graph) of all nodes represented on the graph, it should be a dictionary
     pos = {}
 
     for i in range(1, number+1):
@@ -47,7 +47,7 @@ def networkX_write():
 def networkX_read():
     '''
     read "gpickle" file
-    dynamic display the node: change the color of a node from red to green every second.
+    dynamically display the node: change the color of a node from red to green every second.
     '''
 
     G = nx.read_gpickle("a.gpickle")
@@ -92,19 +92,19 @@ class single_train:
     '''
 
     def __init__(self, begin, end, is_DoS, DoS_begin, DoS_end, DoS_block, siding, block):
+        ## begin and end are string for time, the format is '2018-01-01 00:00:00'
         # the position of siding. ps: siding is a list of integer
         self.siding = siding
         # self.block is the length of each block
         self.block = block
         self.refresh = 2
         self.all_schedule = {}
-        # begin and end are string, the format is '2018-01-01 00:00:00'
         self.T = time
         # turn begin and end into the number ticks from 1970 to now.
         self.begin_ticks = time.mktime(time.strptime(begin, "%Y-%m-%d %H:%M:%S"))
         self.end_ticks = time.mktime(time.strptime(end, "%Y-%m-%d %H:%M:%S"))
-        # information of DoS
-        self.is_DoS = is_DoS
+        ## dummy information of DoS (if DoS is in-place or not)
+        self.is_DoS = is_DoS    
         self.DoS_begin_ticks = time.mktime(time.strptime(DoS_begin, "%Y-%m-%d %H:%M:%S"))
         self.DoS_end_ticks = time.mktime(time.strptime(DoS_end, "%Y-%m-%d %H:%M:%S"))
         self.DoS_block = DoS_block
