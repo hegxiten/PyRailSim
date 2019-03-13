@@ -45,8 +45,9 @@ def networkX_write():
 
 def networkX_read():
     '''
-    read "gpickle" file
+    read "gpickle" file (basemap + data features 'pos')
     dynamically display the node: change the color of a node from red to green every second.
+    data are stored in gpickle file together with the basemap
     '''
 
     G = nx.read_gpickle("a.gpickle")
@@ -81,8 +82,47 @@ networkX_w_r.networkX_write()
 networkX_w_r.networkX_read()
 '''
 
+## Update starts here 20190313
+class RailNetwork:
+    '''
+    Class RailNetwork serves as the base map where the trains are operating on.
+    '''
+    def __init__(self, G = nx.Graph()):
+        self.G = G
+    
+    @property    
+    def single_track_init(self, block_length = [0.5]*100):
+        corridor_path = range(length(block_length))
+        self.G.add_path(corridor_path)
+        for i in range(length(block_length)+1):
+                    self.G[i-1][i]['dist'] = block_length[i-1]
+                    self.G[i-1][i]['attr'] = None    
+        
+    def siding_init(self, siding = [10, 20, 30, 40, 50, 60, 70, 80, 90]):
+            for i in siding:
+                if isinstance(i, int):
+                    self.G[i-1][i]['attr'] = 'siding'
+                else:
+                    self.G[i[0]][i[1]]['attr'] = 'siding'
 
+class Simulator:
+    def __init__(self, strt_t, stop_t, speed, time_log):
+        ## define the feature parameters of a train object
+        self.refresh = 2
+        self.all_schedule = {}
+        self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
+        self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
+    
+    def scheduling(self):
+    
+    def attack_DoS(self, DoS_strt_t, DoS_stop_t, DoS_block):
 
+class Train_generator:
+    def __init__(self):
+        
+        
+            
+            
 
 class single_train:
     '''
@@ -90,8 +130,8 @@ class single_train:
     here I want to output the schedule of each train.
     '''
 
-    def __init__(self, begin, end, is_DoS, DoS_begin, DoS_end, DoS_block, siding, block):
-        ## begin and end are string for time, the format is '2018-01-01 00:00:00'
+    def __init__(self, strt_t, stop_t, is_DoS, DoS_strt_t, DoS_stop_t, DoS_block, siding, block):
+        ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
         # the position of siding. ps: siding is a list of integer
         self.siding = siding
         # self.block is the length of each block
@@ -99,13 +139,13 @@ class single_train:
         self.refresh = 2
         self.all_schedule = {}
         self.T = time
-        # turn begin and end into the number ticks from 1970 to now.
-        self.begin_ticks = time.mktime(time.strptime(begin, "%Y-%m-%d %H:%M:%S"))
-        self.end_ticks = time.mktime(time.strptime(end, "%Y-%m-%d %H:%M:%S"))
+        # turn strt_t and stop_t into the number ticks from 1970 to now.
+        self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
+        self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
         ## dummy information of DoS (if DoS is in-place or not)
         self.is_DoS = is_DoS    
-        self.DoS_begin_ticks = time.mktime(time.strptime(DoS_begin, "%Y-%m-%d %H:%M:%S"))
-        self.DoS_end_ticks = time.mktime(time.strptime(DoS_end, "%Y-%m-%d %H:%M:%S"))
+        self.DoS_strt_t_ticks = time.mktime(time.strptime(DoS_strt_t, "%Y-%m-%d %H:%M:%S"))
+        self.DoS_stop_t_ticks = time.mktime(time.strptime(DoS_stop_t, "%Y-%m-%d %H:%M:%S"))
         self.DoS_block = DoS_block
         # self.number is the number of refresh.
         self.number = 0
@@ -124,7 +164,7 @@ class single_train:
         ## trick to avoid KeyError when the key is not existed. 
         ## distance is the dictionary for trains with the Key Value as train indices (integers)
 
-        self.time = {1: self.begin_ticks}
+        self.time = {1: self.strt_t_ticks}
         ## time is the dictionary for trains with with the Key Value as train indices (integers) 
         self.G = nx.read_gpickle("a.gpickle")
         self.pos = nx.get_node_attributes(self.G, 'pos')
@@ -140,7 +180,7 @@ class single_train:
         # use simpy library to define the process of train system
         env = simpy.Environment()
         env.process(self.train(env))
-        duration = self.end_ticks - self.begin_ticks
+        duration = self.stop_t_ticks - self.strt_t_ticks
         env.run(until=duration)
 
     def train(self, env):
@@ -189,7 +229,7 @@ class single_train:
                 temp = headway % self.refresh
                 self.number += 1
                 self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
-                self.time[self.number] = self.begin_ticks + temp * 60
+                self.time[self.number] = self.strt_t_ticks + temp * 60
                 self.weight[self.number] = np.random.randint(1, 4)
 
                 # update the [distance] and [number of block] of the new generated train
@@ -207,8 +247,8 @@ class single_train:
                 self.time[i] += self.refresh * 60
 
                 if self.is_DoS is True:
-                    # self.time[n] is (the time for a train to move) + (begin time), so self.train[1] is current time.
-                    if self.DoS_begin_ticks < self.time[1] < self.DoS_end_ticks:
+                    # self.time[n] is (the time for a train to move) + (strt_t time), so self.train[1] is current time.
+                    if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
                         if self.cur_block[i] != self.DoS_block:
                             self.distance[i] += self.speed[i] * self.refresh
                             get_sum_and_cur_block(i)
@@ -265,16 +305,16 @@ class single_train:
                 self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
                 n += 1
 
-            # # draw the train map
+            # draw the train map
             # nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
             # nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
             # nx.draw_networkx_edges(self.G, self.pos)
-            #
-            # # networkX pause 0.01 seconds
+            
+            # networkX pause 0.01 seconds
             # plt.pause(0.05)
             yield env.timeout(self.refresh*60)
 
-    def generate_all(self):
+    def string_diagram(self):
         # draw the train working diagram
         '''begin comment__train stringline diagram'''
         x = []; y = []
@@ -283,7 +323,7 @@ class single_train:
             y.append([])
 
             for j in self.all_schedule[i]:
-                x[i-1].append((time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.begin_ticks) / 3600)
+                x[i-1].append((time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.strt_t_ticks) / 3600)
                 y[i-1].append(self.all_schedule[i][j]['distance(miles)'])
 
             x[i-1].sort()
@@ -317,7 +357,7 @@ import networkX_w_r
 networkX_w_r.networkX_write()
 
 a = single_train('2018-01-01 00:00:00', '2018-01-03 00:00:00', [200, 400, 600, 800])
-print a.generate_all()
+print a.string_diagram()
 '''
 
 class multi_dirc:
@@ -326,15 +366,15 @@ class multi_dirc:
     here I want to output the schedule of each train.
     '''
 
-    def __init__(self, begin, end, dis_miles, buffer_list):
+    def __init__(self, strt_t, stop_t, dis_miles, buffer_list):
         # define parameters
         self.buffer = 3
         self.all_schedule_A = {}
         self.dis = dis_miles
         self.buffer_list = buffer_list
         self.T = time
-        self.begin_ticks = time.mktime(time.strptime(begin, "%Y-%m-%d %H:%M:%S"))
-        self.end_ticks = time.mktime(time.strptime(end, "%Y-%m-%d %H:%M:%S"))
+        self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
+        self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
         self.number = 1
         self.one_schedule_A = {}
         self.one_schedule_B = {}
@@ -343,10 +383,10 @@ class multi_dirc:
         self.speed_A = {}
         self.speed_B = np.random.normal(3, 0.5)
         self.distance_A = {1: 0}
-        self.time = {1: self.begin_ticks}
+        self.time = {1: self.strt_t_ticks}
         env = simpy.Environment()
         env.process(self.train(env))
-        duration = self.end_ticks - self.begin_ticks
+        duration = self.stop_t_ticks - self.strt_t_ticks
         env.run(until=duration)
 
     def train(self, env):
@@ -360,14 +400,14 @@ class multi_dirc:
             self.speed_A[self.number] = np.random.normal(3, 0.5) # miles per minute
             headway = np.random.normal(20, 5)
             self.all_schedule_A[self.number] = {}
-            self.time[self.number] = self.begin_ticks
+            self.time[self.number] = self.strt_t_ticks
             self.distance_A[self.number] = 0
 
             for i in xrange(1, self.number+1):
                 self.one_detail_A[n] = {}
                 self.time[i] += headway * 60
                 self.distance_A[i] += self.speed_A[i] * headway
-                distance_B = (self.speed_B * (self.time[1] - self.begin_ticks)) / 60
+                distance_B = (self.speed_B * (self.time[1] - self.strt_t_ticks)) / 60
                 if i > 1:
                     if self.distance_A[i] > self.distance_A[i-1] - self.speed_A[i-1] * self.buffer:
                         self.distance_A[i] = self.distance_A[i-1] - self.speed_A[i-1] * self.buffer
@@ -401,7 +441,7 @@ class multi_dirc:
             self.number += 1
             yield env.timeout(headway * 60)
 
-    def generate_all(self):
+    def string_diagram(self):
         return self.all_schedule_A
 
 '''
@@ -409,7 +449,7 @@ class multi_dirc:
 
 from multi_dirc import multi_dirc
 a = multi_dirc('2018-01-01 00:00:00', '2018-01-02 00:00:00', 1000, [500, 1000, 1500, 2000, 2500])
-print a.generate_all()
+print a.string_diagram()
 '''
 
 
