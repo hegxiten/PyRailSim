@@ -6,7 +6,50 @@ import time
 import collections
 from collections import defaultdict
 import heapq
+from Simpy.Simulation import *
 # import pandas as pd
+
+class RailNetwork:
+    '''
+    Class RailNetwork serves as the base map where the trains are operating on.
+    '''
+    def __init__(self, G = nx.Graph()):
+        self.G = G
+    
+    @property    
+    def single_track_init(self, block_length = [0.5]*100):
+        corridor_path = range(length(block_length))
+        self.G.add_path(corridor_path)
+        for i in range(length(block_length)+1):
+                    self.G[i-1][i]['dist'] = block_length[i-1]
+                    self.G[i-1][i]['attr'] = None    
+        
+    def siding_init(self, siding = [10, 20, 30, 40, 50, 60, 70, 80, 90]):
+            for i in siding:
+                if isinstance(i, int):
+                    self.G[i-1][i]['attr'] = 'siding'
+                else:
+                    self.G[i[0]][i[1]]['attr'] = 'siding'
+
+class Simulator:
+    def __init__(self, strt_t, stop_t, speed, time_log):
+        ## define the feature parameters of a train object
+        self.refresh = 2
+        self.all_schedule = {}
+        self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
+        self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
+    
+    def scheduling(self):
+    
+    def attack_DoS(self, DoS_strt_t, DoS_stop_t, DoS_block):
+
+class Train_generator:
+    def __init__(self):
+
+class Train_Process(Process):
+    
+    
+        
 
 def networkX_write():
     '''
@@ -82,46 +125,7 @@ networkX_w_r.networkX_write()
 networkX_w_r.networkX_read()
 '''
 
-## Update starts here 20190313
-class RailNetwork:
-    '''
-    Class RailNetwork serves as the base map where the trains are operating on.
-    '''
-    def __init__(self, G = nx.Graph()):
-        self.G = G
-    
-    @property    
-    def single_track_init(self, block_length = [0.5]*100):
-        corridor_path = range(length(block_length))
-        self.G.add_path(corridor_path)
-        for i in range(length(block_length)+1):
-                    self.G[i-1][i]['dist'] = block_length[i-1]
-                    self.G[i-1][i]['attr'] = None    
-        
-    def siding_init(self, siding = [10, 20, 30, 40, 50, 60, 70, 80, 90]):
-            for i in siding:
-                if isinstance(i, int):
-                    self.G[i-1][i]['attr'] = 'siding'
-                else:
-                    self.G[i[0]][i[1]]['attr'] = 'siding'
-
-class Simulator:
-    def __init__(self, strt_t, stop_t, speed, time_log):
-        ## define the feature parameters of a train object
-        self.refresh = 2
-        self.all_schedule = {}
-        self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
-        self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
-    
-    def scheduling(self):
-    
-    def attack_DoS(self, DoS_strt_t, DoS_stop_t, DoS_block):
-
-class Train_generator:
-    def __init__(self):
-        
-        
-            
+## Update starts here 20190313       
             
 
 class single_train:
