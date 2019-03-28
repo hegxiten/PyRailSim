@@ -32,16 +32,16 @@ class Train(Process):
 
     def roll(self, route):
         # A Train action traveling along provided route, route as an iterator 
-        here = route.next()     
+        curr_node = route.next()     
         # starting node, route iterates the instances of TrackNode class
         for dest in route:
             # travel to next node
-            print "{:.1f}s: {} leaving {} for {}".format(self.sim.now(), self.name, here, dest)
-            yield hold, self, timeTo(self.accel, self.max_spd, here.distanceTo[dest])
+            print "{:.1f}s: {} leaving {} for {}".format(self.sim.now(), self.name, curr_node, dest)
+            yield hold, self, timeTo(self.accel, self.max_spd, curr_node.distanceTo[dest])
             # arrive at next node
-            here = dest
-            print "{:.1f}s: {} at {}".format(self.sim.now(), self.name, here)
-            yield hold, self, here.arrive(self)
+            curr_node = dest
+            print "{:.1f}s: {} at {}".format(self.sim.now(), self.name, curr_node)
+            yield hold, self, curr_node.arrive(self)
 
     def getOff(self, num):
         if self.p >= num:
@@ -57,9 +57,9 @@ class Train(Process):
             print "  {} passengers got on".format(num)
             self.p += num
         else:
-            num = self.maxp - self.p
+            num = self.maxP - self.p
             print "  train is full - only {} passengers got on".format(num)
-            self.p = self.maxp
+            self.p = self.maxP
 
 class TrackNode(object):
     def __init__(self, name, delay=5.0):
@@ -111,7 +111,7 @@ class SampleRailroad(Simulation):
 
 def main():
     rr = SampleRailroad()
-    rr.run(800.0)
+    rr.run(800000.0)
 
 if __name__=="__main__":
     main()
