@@ -5,14 +5,23 @@ from SimPy.Simulation import *
 from math import sqrt
 from random import randint
 from itertools import cycle
+import networkx as nx
+
+
+'''
+重点是分化TrackNode和block，提取block运行时间，作为delay/hold输入进process里
+继承networkx里的node, edge对象（TrackNode, Block）
+'''
+
+
 
 def timeTo(acc_const, max_spd, dist):
     """
     Given a trapezoidal velocity envelope defined by
     acc_const      constant acceleration, m/s/s
     max_spd        maximum velocity, m/s
-    return time in seconds required to travel
     dist           distance, m
+    return time in seconds required to travel
     """
     tA = float(max_spd)/acc_const           # time to accelerate to max_spd
     dA = acc_const*tA*tA                    # distance traveled during acceleration from 0 to max_spd and back to 0
@@ -30,6 +39,9 @@ class Train(Process):
         self.p     = passengers
         self.maxP  = maxPassengers
 
+    def acc_dec(self, acc, brake_acc, target_spd):
+        pass
+    
     def roll(self, route):
         # A Train action traveling along provided route, route as an iterator 
         curr_node = route.next()     
@@ -42,7 +54,7 @@ class Train(Process):
             curr_node = dest
             print "{:.1f}s: {} at {}".format(self.sim.now(), self.name, curr_node)
             yield hold, self, curr_node.arrive(self)
-
+    
     def getOff(self, num):
         if self.p >= num:
             print "  {} passengers got off".format(num)
@@ -61,6 +73,13 @@ class Train(Process):
             print "  train is full - only {} passengers got on".format(num)
             self.p = self.maxP
 
+class RailNetwork(nx.Graph):
+    def __init__(self, sim_data=None, **attr):  #sim_data is designed as a dictionary containing simulation setting information for the RailNetwork
+        super(RailNetwork, self).__init__()
+        self.sim_data = sim_data
+
+
+
 class TrackNode(object):
     def __init__(self, name, delay=5.0):
         self.name = name
@@ -71,17 +90,32 @@ class TrackNode(object):
     def __str__(self):
         return self.name
 
+class Siding(TrackNode):
+    def main(self, train):
+        pass
+    def diverge(self, train):
+        pass
+        
+class ControlPoint(TrackNode):
+    def stop(self, train):
+        pass
+    def approach(self, train):
+        pass
+    def clear(self, train):
+        pass
+    
+class Switch(ControlPoint):
+    def arrive(self, train):
+        print("  switching tracks")
+        return self.delay
+
 class Station(TrackNode):
     def arrive(self, train):
         train.getOff(randint(1,15))
         train.getOn(randint(1,15))
         return self.delay
-
-class Switch(TrackNode):
-    def arrive(self, train):
-        print("  switching tracks")
-        return self.delay
-
+    
+        
 class SampleRailroad(Simulation):
     def run(self, maxTime=100.0):
         self.initialize()

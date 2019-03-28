@@ -1,12 +1,11 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-import simpy
 import numpy as np
 import time
-import collections
 from collections import defaultdict
 import heapq
-from Simpy.Simulation import *
+import simpy
+# from simpy.Simulation import *
 # import pandas as pd
 
 class RailNetwork:
@@ -40,13 +39,13 @@ class Simulator:
         self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
     
     def scheduling(self):
-    
+        pass
     def attack_DoS(self, DoS_strt_t, DoS_stop_t, DoS_block):
-
+        pass
 class Train_generator:
     def __init__(self):
+        pass
 
-class Train_Process(Process):
     
     
         
@@ -135,50 +134,50 @@ class single_train:
     '''
 
     def __init__(self, strt_t, stop_t, is_DoS, DoS_strt_t, DoS_stop_t, DoS_block, siding, block):
-        ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
-        # the position of siding. ps: siding is a list of integer
-        self.siding = siding
-        # self.block is the length of each block
-        self.block = block
-        self.refresh = 2
         self.all_schedule = {}
+        
+        ## load the rail network
+        self.G = nx.read_gpickle("a.gpickle")   
+        self.pos = nx.get_node_attributes(self.G, 'pos')
+        self.labels = {}
+        self.pos_labels = {}
+        
+        self.siding = siding    # self.siding is the position of siding. ps: siding is a list of integer
+        self.block = block      # self.block is the length of each block
+        self.refresh = 2
+        
+        ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
         self.T = time
-        # turn strt_t and stop_t into the number ticks from 1970 to now.
         self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
         self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
-        ## dummy information of DoS (if DoS is in-place or not)
-        self.is_DoS = is_DoS    
+        self.is_DoS = is_DoS    # dummy information of DoS (if DoS is in-place or not)
         self.DoS_strt_t_ticks = time.mktime(time.strptime(DoS_strt_t, "%Y-%m-%d %H:%M:%S"))
         self.DoS_stop_t_ticks = time.mktime(time.strptime(DoS_stop_t, "%Y-%m-%d %H:%M:%S"))
         self.DoS_block = DoS_block
-        # self.number is the number of refresh.
-        self.number = 0
-        # we get a new self.one_schedule after each refresh
-        self.one_schedule = {}
+        
+        self.number = 0         ## self.number is the number of refreshes.
+        
+        self.one_schedule = {}  # we get a new self.one_schedule after each refresh
         self.one_detail = {}
         self.speed = {}
-        # parameter of headway
-        self.headway_exp = 30
-        self.headway_dev = 5
-        # distance of each train
-        ## distance means x-axis coordinates
-        self.distance = collections.defaultdict(int)
-        self.cur_block = collections.defaultdict(lambda: 1)
-        self.sum_block_dis = collections.defaultdict(lambda: self.block[0])
-        ## trick to avoid KeyError when the key is not existed. 
+        
+        self.headway_exp = 30   # parameter of headway
+        self.headway_dev = 5    # standard deviation of headway
+        
+        self.distance = defaultdict(lambda: 0)                  ## distance means x-axis coordinates, default value is 0
+        self.curr_block = defaultdict(lambda: 1)                ## 1 is the default value for any key in this dictionary
+        self.sum_block_dis = defaultdict(lambda: self.block[0]) ## using the cumulative distance to determine the current block, default value is the  
+         
         ## distance is the dictionary for trains with the Key Value as train indices (integers)
 
         self.time = {1: self.strt_t_ticks}
         ## time is the dictionary for trains with with the Key Value as train indices (integers) 
-        self.G = nx.read_gpickle("a.gpickle")
-        self.pos = nx.get_node_attributes(self.G, 'pos')
-        self.labels = {}
-        self.pos_labels = {}
+        
         # define which siding that late/fast train surpass previous/slow trains
         self.isPass = defaultdict(lambda: float('inf'))
         # in order to solve problem: the number of trains is not the rank of trains. I use dict rank[n]
-        self.rank = collections.defaultdict(int)
-        self.weight = collections.defaultdict(int)
+        self.rank = defaultdict(lambda: 0)
+        self.weight = defaultdict(lambda: 0)
 
 
         # use simpy library to define the process of train system
@@ -188,28 +187,31 @@ class single_train:
         env.run(until=duration)
 
     def train(self, env):
-        def get_sum_and_cur_block(number):
+        def get_sum_and_curr_block(number):
+            """Explains for this function.
+            """
+        
             # if (distance > block_begin), block go further; if (distance < block_end), block go close.
-            while not (self.sum_block_dis[number] - self.block[self.cur_block[number]]) < self.distance[number] <= (self.sum_block_dis[number]):
+            while not (self.sum_block_dis[number] - self.block[self.curr_block[number]]) < self.distance[number] <= (self.sum_block_dis[number]):
                 if self.distance[number] >= self.sum_block_dis[number]:
-                    self.sum_block_dis[number] += self.block[self.cur_block[number]]
-                    self.cur_block[number] += 1
+                    self.sum_block_dis[number] += self.block[self.curr_block[number]]
+                    self.curr_block[number] += 1
 
-                elif self.distance[number] <= (self.sum_block_dis[number] - self.block[self.cur_block[number]]):
-                    self.sum_block_dis[number] -= self.block[self.cur_block[number]]
-                    self.cur_block[number] -= 1
+                elif self.distance[number] <= (self.sum_block_dis[number] - self.block[self.curr_block[number]]):
+                    self.sum_block_dis[number] -= self.block[self.curr_block[number]]
+                    self.curr_block[number] -= 1
 
-        # ranking is used for find which train will be surpass next
+        # ranking is used to find which train will be surpassed next
         rank = {}
-        for i in range(1000):
+        for i in range(1000):   #1000 is a temporary use for max number of trains
             rank[i] = i
 
-        # n is used for create many "one_detail", otherwise all "one_schedule" will be the same
+        # n is the counter used to create many "one_detail", otherwise all "one_schedule" will be the same
         n = 1
         temp = 0
         np.random.seed()
-        self.speed[1] = np.random.normal(3, 0.5)
-        self.weight[1] = np.random.randint(1, 4)
+        self.speed[1] = np.random.normal(0.8, 0.2)    # miles per minute
+        self.weight[1] = np.random.randint(1, 4)    
         # self.distance[1] = 0
         headway = np.random.normal(self.headway_exp, self.headway_dev)
         while True:
@@ -232,13 +234,13 @@ class single_train:
                 ## generate a new train
                 temp = headway % self.refresh
                 self.number += 1
-                self.speed[self.number] = np.random.normal(3, 0.5)  # miles per second
+                self.speed[self.number] = np.random.normal(0.8, 0.2)  
                 self.time[self.number] = self.strt_t_ticks + temp * 60
                 self.weight[self.number] = np.random.randint(1, 4)
 
                 # update the [distance] and [number of block] of the new generated train
                 self.distance[self.number] += self.speed[self.number] * temp
-                get_sum_and_cur_block(self.number)
+                get_sum_and_curr_block(self.number)
 
                 # headway = np.random.normal(10, 3)
                 headway = np.random.normal(self.headway_exp, self.headway_dev)
@@ -251,18 +253,19 @@ class single_train:
                 self.time[i] += self.refresh * 60
 
                 if self.is_DoS is True:
-                    # self.time[n] is (the time for a train to move) + (strt_t time), so self.train[1] is current time.
+                    # self.time[n] is (the time for a train has been traveling) + (strt_t time) 
+                    # so self.time[1] is current time.
                     if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
-                        if self.cur_block[i] != self.DoS_block:
+                        if self.curr_block[i] != self.DoS_block:
                             self.distance[i] += self.speed[i] * self.refresh
-                            get_sum_and_cur_block(i)
+                            get_sum_and_curr_block(i)
                     else:
                         self.distance[i] += self.speed[i] * self.refresh
-                        get_sum_and_cur_block(i)
+                        get_sum_and_curr_block(i)
 
                 elif self.is_DoS is False:
                     self.distance[i] += self.speed[i] * self.refresh
-                    get_sum_and_cur_block(i)
+                    get_sum_and_curr_block(i)
 
                 '''
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
@@ -275,21 +278,21 @@ class single_train:
                     
                     # when block small enough and speed large enough, there would be a bug
                     '''
-                    if self.cur_block[rank[x - 1]] <= self.cur_block[rank[x]] + 1:
+                    if self.curr_block[rank[x - 1]] <= self.curr_block[rank[x]] + 1:
                         for j in self.siding:
-                            if self.cur_block[rank[x - 1]] == j:
+                            if self.curr_block[rank[x - 1]] == j:
                                 if self.speed[rank[x-1]] < self.speed[rank[x]]:
                                     rank[x], rank[x - 1] = rank[x - 1], rank[x]
                                     self.distance[rank[x]] -= self.speed[rank[x]] * self.refresh
-                                    get_sum_and_cur_block(i)
+                                    get_sum_and_curr_block(i)
                                 break
 
                             elif j == self.siding[-1]:
-                                self.distance[rank[x]] = self.sum_block_dis[rank[x]] - self.block[self.cur_block[rank[x]]]
+                                self.distance[rank[x]] = self.sum_block_dis[rank[x]] - self.block[self.curr_block[rank[x]]]
                                 self.distance[rank[x]] = max(0, self.distance[rank[x]])
-                                get_sum_and_cur_block(i)
+                                get_sum_and_curr_block(i)
 
-                k = self.cur_block[i]
+                k = self.curr_block[i]
 
                 # set the color of train node
                 if 0 < k < len(self.pos):
@@ -456,4 +459,6 @@ a = multi_dirc('2018-01-01 00:00:00', '2018-01-02 00:00:00', 1000, [500, 1000, 1
 print a.string_diagram()
 '''
 
-
+if __name__ == '__main__':
+    a = single_train('2018-01-01 00:00:00', '2018-01-02 00:00:00', True, '2018-01-01 07:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+    print a.string_diagram()
