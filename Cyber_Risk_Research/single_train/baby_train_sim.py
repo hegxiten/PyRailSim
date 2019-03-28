@@ -9,8 +9,8 @@ import networkx as nx
 
 
 '''
-ÖØµãÊÇ·Ö»¯TrackNodeºÍblock£¬ÌáÈ¡blockÔËĞĞÊ±¼ä£¬×÷Îªdelay/holdÊäÈë½øprocessÀï
-¼Ì³ĞnetworkxÀïµÄnode, edge¶ÔÏó£¨TrackNode, Block£©
+å°†TrackNodeä¸Ãblockè½¬åŒ–ä¸ºblock delay/hold processè”ç³»èµ·æ¥
+ç»§æ‰¿networkxçš„node, edgeä¸rackNode, Blockçš„å…³ç³»
 '''
 
 
