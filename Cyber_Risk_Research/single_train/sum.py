@@ -10,7 +10,7 @@ import simpy
 
 class RailNetwork:
     '''
-    Class RailNetwork serves as the base map where the trains are operating on.
+    Class RailNetwork is the base map where the trains are operating on.
     '''
     def __init__(self, G = nx.Graph()):
         self.G = G
@@ -56,10 +56,10 @@ def networkX_write():
     '''
     number = 120
     G = nx.MultiGraph()
-
-    ## define the position (coordinates on the graph) of all nodes represented on the graph, it should be a dictionary
+    
     pos = {}
-
+    ## define the position (coordinates on the graph) of all nodes on the graph 
+    ## it should be a dictionary
     for i in range(1, number+1):
         col = ((i-1) % 20) + 1 if ((i-1) // 20) % 2 == 0 else 20 - (i-1) % 20
         row = i // 20 if i % 20 != 0 else i // 20 - 1
@@ -77,7 +77,8 @@ def networkX_write():
         nodes.append(c)
         G.add_path((c - 1, c + 1))
     
-    ## define siding locations in the grids and add corresponding links to the graph generated 
+    ## define siding locations in the grids
+    ## add corresponding links to the graph generated 
      
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
@@ -142,8 +143,8 @@ class single_train:
         self.labels = {}
         self.pos_labels = {}
         
-        self.siding = siding    # self.siding is the position of siding. ps: siding is a list of integer
-        self.block = block      # self.block is the length of each block
+        self.siding = siding    # position of sidings. A list of integer (block number)
+        self.block = block      # the length of each block. A list of floats
         self.refresh = 2
         
         ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
@@ -164,12 +165,16 @@ class single_train:
         self.headway_exp = 30   # parameter of headway
         self.headway_dev = 5    # standard deviation of headway
         
-        self.distance = defaultdict(lambda: 0)                  ## distance means x-axis coordinates, default value is 0
-        self.curr_block = defaultdict(lambda: 1)                ## 1 is the default value for any key in this dictionary
-        self.sum_block_dis = defaultdict(lambda: self.block[0]) ## using the cumulative distance to determine the current block, default value is the  
-         
+        '''state variables below: dictionaries describing the states of every train
+        ## distance means x-axis coordinates, default value is 0
         ## distance is the dictionary for trains with the Key Value as train indices (integers)
-
+        ## the current block for any train at any moment 1 is the default value for any key in this dictionary
+        ## the cumulative distance used to determine the current block, default value is the length of the first block
+        '''
+        self.distance = defaultdict(lambda: 0)                  
+        self.curr_block = defaultdict(lambda: 1)                
+        self.sum_block_dis = defaultdict(lambda: self.block[0]) 
+         
         self.time = {1: self.strt_t_ticks}
         ## time is the dictionary for trains with with the Key Value as train indices (integers) 
         
@@ -179,28 +184,38 @@ class single_train:
         self.rank = defaultdict(lambda: 0)
         self.weight = defaultdict(lambda: 0)
 
-
-        # use simpy library to define the process of train system
-        env = simpy.Environment()
-        env.process(self.train(env))
-        duration = self.stop_t_ticks - self.strt_t_ticks
-        env.run(until=duration)
-
     def train(self, env):
-        def get_sum_and_curr_block(number):
-            """Explains for this function.
-            """
         
+        def get_sum_and_curr_block(tn):
+            """Encapsulated function to determine concurrent block and total blocked distance of a train:
+            
+            (at each moment)
+            the accumulative distance traveled by a train. 
+            the current block number of a train.
+            
+            Function or returns: 
+                Update the two dictionaries (sum_block_dis) and (curr_block)
+            
+            sum_block_dis : dictionary
+                Keys: train number 'tn'
+                Value: cumulative distance traveled by this train as occupied blocks (total blocked distance)
+            curr_block : dictionary
+                Keys: train number 'tn'
+                Value: current block number for this train  
+            """
             # if (distance > block_begin), block go further; if (distance < block_end), block go close.
-            while not (self.sum_block_dis[number] - self.block[self.curr_block[number]]) < self.distance[number] <= (self.sum_block_dis[number]):
-                if self.distance[number] >= self.sum_block_dis[number]:
-                    self.sum_block_dis[number] += self.block[self.curr_block[number]]
-                    self.curr_block[number] += 1
+            
+            while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
+                if self.distance[tn] >= self.sum_block_dis[tn]:
+                    self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
+                    self.curr_block[tn] += 1
 
-                elif self.distance[number] <= (self.sum_block_dis[number] - self.block[self.curr_block[number]]):
-                    self.sum_block_dis[number] -= self.block[self.curr_block[number]]
-                    self.curr_block[number] -= 1
-
+                elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
+                    self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
+                    self.curr_block[tn] -= 1
+            
+            
+            
         # ranking is used to find which train will be surpassed next
         rank = {}
         for i in range(1000):   #1000 is a temporary use for max number of trains
@@ -303,7 +318,7 @@ class single_train:
                     self.pos_labels[k] = self.pos[k]
 
                 self.one_detail['time'] = round(self.speed[i], 2)
-                self.one_detail['speed(mils/min)'] = round(self.speed[i], 2)
+                self.one_detail['speed(miles/min)'] = round(self.speed[i], 2)
                 self.one_detail['distance(miles)'] = round(self.distance[i], 2)
                 self.one_detail['headway(mins)'] = round(headway, 2)
                 self.one_detail['weight(1-3)'] = self.weight[i]
@@ -320,6 +335,14 @@ class single_train:
             # networkX pause 0.01 seconds
             # plt.pause(0.05)
             yield env.timeout(self.refresh*60)
+        
+    
+    def run(self):
+        # use simpy library to define the process of train system
+        env = simpy.Environment()
+        env.process(self.train(env))
+        duration = self.stop_t_ticks - self.strt_t_ticks
+        env.run(until=duration)
 
     def string_diagram(self):
         # draw the train working diagram
@@ -460,5 +483,6 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-02 00:00:00', True, '2018-01-01 07:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
-    print a.string_diagram()
+    a = single_train('2018-01-01 00:00:00', '2018-01-03 00:00:00', True, '2018-01-01 07:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+    a.run()
+    a.string_diagram()
