@@ -8,6 +8,9 @@ import simpy
 # from simpy.Simulation import *
 # import pandas as pd
 
+print 'version: simpy: ' + simpy.__version__
+print 'version: networkx: ' + nx.__version__
+
 class RailNetwork:
     '''
     Class RailNetwork is the base map where the trains are operating on.
@@ -483,6 +486,6 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-03 00:00:00', True, '2018-01-01 07:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 07:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
     a.run()
-    a.string_diagram()
+    print a.string_diagram()

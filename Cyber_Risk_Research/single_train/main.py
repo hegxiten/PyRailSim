@@ -14,6 +14,7 @@ sum.networkX_write()
 
 start = time.clock()
 a = single_train('2018-01-01 00:00:00', '2018-01-10 00:00:00', True, '2018-01-01 07:00:00', '2018-01-01 07:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+a.run()
 print('pure python takes {}'.format(time.clock() - start))
 # print a.string_diagram()
 
