@@ -148,7 +148,7 @@ class single_train:
         
         self.siding = siding    # position of sidings. A list of integer (block number)
         self.block = block      # the length of each block. A list of floats
-        self.refresh = 2
+        self.refresh = 1        # unit of refreshing time in minutes
         
         ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
         self.T = time
@@ -159,14 +159,17 @@ class single_train:
         self.DoS_stop_t_ticks = time.mktime(time.strptime(DoS_stop_t, "%Y-%m-%d %H:%M:%S"))
         self.DoS_block = DoS_block
         
-        self.number = 0         ## self.number is the number of refreshes.
+        self.number = 0         ## self.number is the number of trains.
         
         self.one_schedule = {}  # we get a new self.one_schedule after each refresh
         self.one_detail = {}
         self.speed = {}
         
-        self.headway_exp = 30   # parameter of headway
-        self.headway_dev = 5    # standard deviation of headway
+        self.hdw_exp_min = 30   # parameter of headway, in minutes
+        self.hdw_dev_min = 5    # standard deviation of headway, in minutes
+        
+        self.mph_exp = 50     # parameter of speed, in miles per hour
+        self.mph_dev = 10     # standard deviation of speed, in miles per hour
         
         '''state variables below: dictionaries describing the states of every train
         ## distance means x-axis coordinates, default value is 0
@@ -174,13 +177,16 @@ class single_train:
         ## the current block for any train at any moment 1 is the default value for any key in this dictionary
         ## the cumulative distance used to determine the current block, default value is the length of the first block
         '''
-        self.distance = defaultdict(lambda: 0)                  
+        self.distance = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin                  
         self.curr_block = defaultdict(lambda: 1)                
         self.sum_block_dis = defaultdict(lambda: self.block[0]) 
          
-        self.time = {1: self.strt_t_ticks}
-        ## time is the dictionary for trains with with the Key Value as train indices (integers) 
-        
+        self.time = {1: self.strt_t_ticks}       
+        '''The dictionary showing the initialization time for each train entering the system.
+        time : dictionary
+            Key: train number 'tn'
+            Value: strt_t + time of train number 'tn' has been traveling at this moment, unit in seconds
+        '''
         # define which siding that late/fast train surpass previous/slow trains
         self.isPass = defaultdict(lambda: float('inf'))
         # in order to solve problem: the number of trains is not the rank of trains. I use dict rank[n]
@@ -200,40 +206,66 @@ class single_train:
                 Update the two dictionaries (sum_block_dis) and (curr_block)
             
             sum_block_dis : dictionary
-                Keys: train number 'tn'
+                Key: train number 'tn'
                 Value: cumulative distance traveled by this train as occupied blocks (total blocked distance)
             curr_block : dictionary
-                Keys: train number 'tn'
+                Key: train number 'tn'
                 Value: current block number for this train  
+                
+            Notes:
+            ------
+                Calculate distance[tn] first, and then update the two dictionaries.
+                distance[tn] is the current distance from the origin of coordinates. 
+            
+            To-do:
+            ------
+                The relationships and logics need to be normalized to eliminate the more than/less than signs. 
+                Merge two directions into one single judgment logic.   
             """
             # if (distance > block_begin), block go further; if (distance < block_end), block go close.
             
             while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
                 if self.distance[tn] >= self.sum_block_dis[tn]:
+                    # When updated position is at the next block (Forward direction): 
                     self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
                     self.curr_block[tn] += 1
 
                 elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
+                    # When updated position is at the next block (Reverse direction): 
                     self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
                     self.curr_block[tn] -= 1
             
+        rank = {}               # rank is used to determine the order of trains 
+        '''Dictionary containing the concurrent rank for each train, with train number as keys. 
+        rank : dictionary
+            Key: train number 'tn'
+            Value: current order of position (directional, no.1 on the 'rightmost')
+        '''
+        def update_rank():
+            """Update the ranking for all concurrent trains in the system
             
-            
-        # ranking is used to find which train will be surpassed next
-        rank = {}
-        for i in range(1000):   #1000 is a temporary use for max number of trains
-            rank[i] = i
-
-        # n is the counter used to create many "one_detail", otherwise all "one_schedule" will be the same
-        n = 1
-        temp = 0
+            """
+            sorted_distance = sorted(self.distance.values(),reverse=True)
+            for i in self.distance.keys():
+                rank[i] = 1 + sorted_distance.index(self.distance[i])
+                
+        update_rank()           # initialize the rank dictionary
+        n = 1       # n is the counter variable used to create many "one_detail", otherwise all "one_schedule" will be the same
+        temp = 0    # temp is a stop watch with refreshing time, counting the reminder time before another new train is generated in minutes. 
         np.random.seed()
-        self.speed[1] = np.random.normal(0.8, 0.2)    # miles per minute
-        self.weight[1] = np.random.randint(1, 4)    
-        # self.distance[1] = 0
-        headway = np.random.normal(self.headway_exp, self.headway_dev)
+        self.speed[1] = np.random.normal(self.mph_exp/60, self.mph_dev/60)      # speed in miles per minute
+        self.weight[1] = np.random.randint(1, 4)        
+        
         while True:
-            # initialize label and color
+            '''Explain the while True loop
+            '''
+
+            
+            '''First, draw the dynamic circle dots in the topology view 
+            Notes:
+            ------
+                Initializing labels and colors
+            ''' 
             plt.clf()
             self.labels.clear()
             self.pos_labels.clear()
@@ -244,35 +276,50 @@ class single_train:
             # default block which have siding to 'black'
             for i in self.siding:
                 self.ncolor[i] = 'black'
-
-            # because headway > refresh time, so we need to decide if there is a new train.
-            if temp < headway:
+            
+            
+            
+            # headway in minutes, local variable, randomize every loop in the while True body
+            headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)  
+            
+            # because headway > temp is possible, determine if there is a new train by the judgment below:
+            if temp < headway:  ## no need for a new train
                 temp += self.refresh
-            else:
-                ## generate a new train
-                temp = headway % self.refresh
-                self.number += 1
+                get_sum_and_curr_block(self.number)
+            else:               ## need a new train and clear temp
+                temp = headway % self.refresh   # clearing the temp stop watch
+                self.number += 1                # adding a new train, meanwhile assigning the train number as its identifier.
                 self.speed[self.number] = np.random.normal(0.8, 0.2)  
-                self.time[self.number] = self.strt_t_ticks + temp * 60
+                self.time[self.number] = self.strt_t_ticks + temp * 60  # in seconds because of the ticks
                 self.weight[self.number] = np.random.randint(1, 4)
 
-                # update the [distance] and [number of block] of the new generated train
-                self.distance[self.number] += self.speed[self.number] * temp
+                # update distance[tn] and block status for the newly generated train
+                self.distance[self.number] += self.speed[self.number] * temp    # miles/min * mins
                 get_sum_and_curr_block(self.number)
+                 
+                
 
-                # headway = np.random.normal(10, 3)
-                headway = np.random.normal(self.headway_exp, self.headway_dev)
+            self.all_schedule[self.number] = {}     # initialize the global schedule for this train Key: self.number
 
-            self.all_schedule[self.number] = {}
 
-            for x in xrange(1, self.number + 1):
-                i = rank[x]
-                self.one_detail = {}
-                self.time[i] += self.refresh * 60
-
+            '''Starting below includes both DoS and overtaking policies. Needs to be separated.
+            '''
+            update_rank()
+            for x in xrange(1, self.number + 1):    # for all current trains 
+                i = rank[x]                         # train number x is now ranked as i
+                self.one_detail = {}                # initialize the one_detail dictionary
+                '''Dictionary containing the lifetime information and behaviors of a train, with train number as keys.
+                one_detail : dictionary
+                    Key: train number 'tn'
+                    Value: dictionary for key-value pairs with lifetime attributes of a train 
+                '''
+                self.time[i] += self.refresh * 60   # update time line in seconds accrues by refresh, refresh in minutes, time in seconds
+                
+                '''When DoS happens:
+                '''
                 if self.is_DoS is True:
-                    # self.time[n] is (the time for a train has been traveling) + (strt_t time) 
-                    # so self.time[1] is current time.
+                    # self.time[tn] is the time for a train has been traveling + strt_t time in seconds, concurrent global time for train 'tn'
+                    # so self.time[1] is the current global time. Notice that time is a dictionary, with keys as integer train identifiers.
                     if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
                         if self.curr_block[i] != self.DoS_block:
                             self.distance[i] += self.speed[i] * self.refresh
@@ -285,7 +332,7 @@ class single_train:
                     self.distance[i] += self.speed[i] * self.refresh
                     get_sum_and_curr_block(i)
 
-                '''
+                '''When overtaking happens:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
@@ -309,6 +356,7 @@ class single_train:
                                 self.distance[rank[x]] = self.sum_block_dis[rank[x]] - self.block[self.curr_block[rank[x]]]
                                 self.distance[rank[x]] = max(0, self.distance[rank[x]])
                                 get_sum_and_curr_block(i)
+
 
                 k = self.curr_block[i]
 
@@ -486,6 +534,6 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 07:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+    a = single_train('2018-01-01 00:00:00', '2018-01-1 12:00:00', True, '2018-01-01 05:00:00', '2018-01-01 09:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
     a.run()
     print a.string_diagram()
