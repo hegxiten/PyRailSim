@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 '''
 BUG log
 1: when headway larger than 60, there would be a bug
