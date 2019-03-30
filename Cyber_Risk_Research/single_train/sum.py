@@ -49,9 +49,6 @@ class Train_generator:
     def __init__(self):
         pass
 
-    
-    
-        
 
 def networkX_write():
     '''
@@ -138,7 +135,8 @@ class single_train:
     '''
 
     def __init__(self, strt_t, stop_t, is_DoS, DoS_strt_t, DoS_stop_t, DoS_block, siding, block):
-        self.all_schedule = {}
+        self.all_schedule = defaultdict(lambda: {})     
+        # initialize the global schedule for train Key: self.number
         
         ## load the rail network
         self.G = nx.read_gpickle("a.gpickle")   
@@ -165,8 +163,8 @@ class single_train:
         self.one_detail = {}
         self.speed = {}
         
-        self.hdw_exp_min = 30   # parameter of headway, in minutes
-        self.hdw_dev_min = 5    # standard deviation of headway, in minutes
+        self.hdw_exp_min = 10   # parameter of headway, in minutes
+        self.hdw_dev_min = 2    # standard deviation of headway, in minutes
         
         self.mph_exp = 50     # parameter of speed, in miles per hour
         self.mph_dev = 10     # standard deviation of speed, in miles per hour
@@ -177,10 +175,10 @@ class single_train:
         ## the current block for any train at any moment 1 is the default value for any key in this dictionary
         ## the cumulative distance used to determine the current block, default value is the length of the first block
         '''
-        self.distance = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin                  
+        self.distance = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin
+        self.rank = defaultdict(lambda: 0)          # rank is used to determine the order of trains                  
         self.curr_block = defaultdict(lambda: 1)                
         self.sum_block_dis = defaultdict(lambda: self.block[0]) 
-         
         self.time = {1: self.strt_t_ticks}       
         '''The dictionary showing the initialization time for each train entering the system.
         time : dictionary
@@ -223,19 +221,20 @@ class single_train:
                 Merge two directions into one single judgment logic.   
             """
             # if (distance > block_begin), block go further; if (distance < block_end), block go close.
-            
-            while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
-                if self.distance[tn] >= self.sum_block_dis[tn]:
-                    # When updated position is at the next block (Forward direction): 
-                    self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
-                    self.curr_block[tn] += 1
-
-                elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
-                    # When updated position is at the next block (Reverse direction): 
-                    self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
-                    self.curr_block[tn] -= 1
-            
-        rank = {}               # rank is used to determine the order of trains 
+            if tn == 0:     # avoid initializing train number 0 (int) in the default dictionaries
+                pass
+            else:
+                while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
+                    if self.distance[tn] >= self.sum_block_dis[tn]:
+                        # When updated position is at the next block (Forward direction): 
+                        self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
+                        self.curr_block[tn] += 1
+    
+                    elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
+                        # When updated position is at the next block (Reverse direction): 
+                        self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
+                        self.curr_block[tn] -= 1
+             
         '''Dictionary containing the concurrent rank for each train, with train number as keys. 
         rank : dictionary
             Key: train number 'tn'
@@ -247,20 +246,22 @@ class single_train:
             """
             sorted_distance = sorted(self.distance.values(),reverse=True)
             for i in self.distance.keys():
-                rank[i] = 1 + sorted_distance.index(self.distance[i])
-                
+                self.rank[i] = 1 + sorted_distance.index(self.distance[i])
+                           
         update_rank()           # initialize the rank dictionary
         n = 1       # n is the counter variable used to create many "one_detail", otherwise all "one_schedule" will be the same
         temp = 0    # temp is a stop watch with refreshing time, counting the reminder time before another new train is generated in minutes. 
         np.random.seed()
-        self.speed[1] = np.random.normal(self.mph_exp/60, self.mph_dev/60)      # speed in miles per minute
-        self.weight[1] = np.random.randint(1, 4)        
+        #self.speed[1] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)      # speed in miles per minute, float division
+        #self.weight[1] = np.random.randint(1, 4)        
+        whileloopcount = 0
         
         while True:
+            whileloopcount += 1
+            
+                
             '''Explain the while True loop
             '''
-
-            
             '''First, draw the dynamic circle dots in the topology view 
             Notes:
             ------
@@ -276,38 +277,32 @@ class single_train:
             # default block which have siding to 'black'
             for i in self.siding:
                 self.ncolor[i] = 'black'
-            
-            
+                      
             
             # headway in minutes, local variable, randomize every loop in the while True body
             headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)  
-            
-            # because headway > temp is possible, determine if there is a new train by the judgment below:
+            # because headway > temp is possible, determine if there is a new train after a new refresh by the judgment below:
             if temp < headway:  ## no need for a new train
                 temp += self.refresh
-                get_sum_and_curr_block(self.number)
             else:               ## need a new train and clear temp
                 temp = headway % self.refresh   # clearing the temp stop watch
                 self.number += 1                # adding a new train, meanwhile assigning the train number as its identifier.
-                self.speed[self.number] = np.random.normal(0.8, 0.2)  
+                self.speed[self.number] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)    # speed in miles per minute                
                 self.time[self.number] = self.strt_t_ticks + temp * 60  # in seconds because of the ticks
                 self.weight[self.number] = np.random.randint(1, 4)
 
                 # update distance[tn] and block status for the newly generated train
                 self.distance[self.number] += self.speed[self.number] * temp    # miles/min * mins
-                get_sum_and_curr_block(self.number)
-                 
-                
-
-            self.all_schedule[self.number] = {}     # initialize the global schedule for this train Key: self.number
-
-
+            get_sum_and_curr_block(self.number)
+            
+            print 'this is loop: ' +str(whileloopcount)    
             '''Starting below includes both DoS and overtaking policies. Needs to be separated.
             '''
+            print self.distance.values()
             update_rank()
-            for x in xrange(1, self.number + 1):    # for all current trains 
-                i = rank[x]                         # train number x is now ranked as i
-                self.one_detail = {}                # initialize the one_detail dictionary
+            for x in xrange(1, len(self.rank) + 1):     # for all current trains, starting from the first of the queue
+                i = self.rank[x]                        # train number x is now ranked as i
+                self.one_detail = {}                    # initialize the one_detail dictionary
                 '''Dictionary containing the lifetime information and behaviors of a train, with train number as keys.
                 one_detail : dictionary
                     Key: train number 'tn'
@@ -343,18 +338,18 @@ class single_train:
                     
                     # when block small enough and speed large enough, there would be a bug
                     '''
-                    if self.curr_block[rank[x - 1]] <= self.curr_block[rank[x]] + 1:
+                    if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
                         for j in self.siding:
-                            if self.curr_block[rank[x - 1]] == j:
-                                if self.speed[rank[x-1]] < self.speed[rank[x]]:
-                                    rank[x], rank[x - 1] = rank[x - 1], rank[x]
-                                    self.distance[rank[x]] -= self.speed[rank[x]] * self.refresh
+                            if self.curr_block[self.rank[x - 1]] == j:
+                                if self.speed[self.rank[x-1]] < self.speed[self.rank[x]]:
+                                    self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
+                                    self.distance[self.rank[x]] -= self.speed[self.rank[x]] * self.refresh
                                     get_sum_and_curr_block(i)
                                 break
 
                             elif j == self.siding[-1]:
-                                self.distance[rank[x]] = self.sum_block_dis[rank[x]] - self.block[self.curr_block[rank[x]]]
-                                self.distance[rank[x]] = max(0, self.distance[rank[x]])
+                                self.distance[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
+                                #self.distance[self.rank[x]] = max(0, self.distance[self.rank[x]])
                                 get_sum_and_curr_block(i)
 
 
@@ -534,6 +529,6 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-1 12:00:00', True, '2018-01-01 05:00:00', '2018-01-01 09:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', False, '2018-01-01 09:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
     a.run()
-    print a.string_diagram()
+    a.string_diagram()
