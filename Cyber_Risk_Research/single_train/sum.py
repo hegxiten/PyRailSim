@@ -8,9 +8,6 @@ import simpy
 # from simpy.Simulation import *
 # import pandas as pd
 
-print 'version: simpy: ' + simpy.__version__
-print 'version: networkx: ' + nx.__version__
-
 class RailNetwork:
     '''
     Class RailNetwork is the base map where the trains are operating on.
