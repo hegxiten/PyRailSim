@@ -295,19 +295,20 @@ class single_train:
             print 'this is loop: ' +str(whileloopcount)    
             '''Starting below includes both DoS and overtaking policies. Needs to be separated.
             '''
-            print self.distance.values()
+            
             update_rank()
             for x in xrange(1, len(self.rank) + 1):     # for all current trains, starting from the first of the queue
-                i = self.rank[x]                        # train number x is now ranked as i
+                i = self.rank[x]                        # train number x (1,2,3,4,5...) is now ranked as i
                 self.one_detail = {}                    # initialize the one_detail dictionary
                 '''Dictionary containing the lifetime information and behaviors of a train, with train number as keys.
                 one_detail : dictionary
                     Key: train number 'tn'
                     Value: dictionary for key-value pairs with lifetime attributes of a train 
                 '''
-                self.time[i] += self.refresh * 60   # update time line in seconds accrues by refresh, refresh in minutes, time in seconds
-                
-                '''When DoS happens:
+                self.time[i] += self.refresh * 60       
+                # update time line in seconds accrues by refresh, refresh in minutes, time in seconds
+                # note the key here is i instead of x, because the actions are based on the order of the queue. 
+                '''If DoS happens:
                 '''
                 if self.is_DoS is True:
                     # self.time[tn] is the time for a train has been traveling + strt_t time in seconds, concurrent global time for train 'tn'
@@ -315,20 +316,23 @@ class single_train:
                     if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
                         if self.curr_block[i] != self.DoS_block:
                             self.distance[i] += self.speed[i] * self.refresh
-                            get_sum_and_curr_block(i)
+                
                     else:
                         self.distance[i] += self.speed[i] * self.refresh
-                        get_sum_and_curr_block(i)
+                
 
                 elif self.is_DoS is False:
                     self.distance[i] += self.speed[i] * self.refresh
-                    get_sum_and_curr_block(i)
+                
+                get_sum_and_curr_block(i)
 
                 '''When overtaking happens:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
-                if x > 1:
+                    
+                if x > 1 is False:
+                    
                     # The block position of prev train and current train
                     '''
                     Overtake Policy:
@@ -349,13 +353,10 @@ class single_train:
                                 #self.distance[self.rank[x]] = max(0, self.distance[self.rank[x]])
                                 get_sum_and_curr_block(i)
 
-
-                k = self.curr_block[i]
-
                 # set the color of train node
+                k = self.curr_block[i]
                 if 0 < k < len(self.pos):
                     self.ncolor[k-1] = 'r'
-
                 if 0 < k < len(self.pos):
                     self.labels[k] = i
                     self.pos_labels[k] = self.pos[k]
