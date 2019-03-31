@@ -5,6 +5,7 @@ import time
 from collections import defaultdict
 import heapq
 import simpy
+from interval import Interval
 # from simpy.Simulation import *
 # import pandas as pd
 
@@ -186,7 +187,10 @@ class single_train:
         self.isPass = defaultdict(lambda: float('inf'))
         # in order to solve problem: the number of trains is not the rank of trains. I use dict rank[n]
         self.rank = defaultdict(lambda: 0)
+        self.tn_by_rank = {}
+        
         self.weight = defaultdict(lambda: 0)
+        
 
     def train(self, env):
         
@@ -232,6 +236,62 @@ class single_train:
                         self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
                         self.curr_block[tn] -= 1
              
+        def approach_block(tn, blk_idx):
+            if self.speed[tn] > 0:
+                if self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx - 1]:
+                    return True 
+            if self.speed[tn] < 0:
+                if self.distance[tn] + self.speed[tn] * self.refresh > self.sum_block_dis[blk_idx]:
+                    return True
+        
+        def leaving_block(tn, blk_idx):
+            if self.speed[tn] > 0 and self.distance[tn] > self.sum_block_dis[blk_idx]: 
+                return True 
+            if self.speed[tn] < 0 and self.distance[tn] < self.sum_block_dis[blk_idx-1]:
+                return True
+        
+        def in_block(tn, blk_idx):            
+            if self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]: 
+                if self.sum_block_dis[blk_idx-1] < self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx]:
+                    return True    
+                
+        def enter_block(tn, blk_idx):
+            if not self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
+                if self.sum_block_dis[blk_idx-1] < self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx]:
+                    return True 
+                
+        def exit_block(tn, blk_idx):
+            if self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]: 
+                if not self.sum_block_dis[blk_idx-1] < self.distance[tn] + self.speed[tn] < self.sum_block_dis[blk_idx]:
+                    return True 
+        
+        def skip_block(tn, blk_idx):
+            if not self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
+                if self.speed[tn] > 0:
+                    if self.distance[tn] + self.speed[tn] * self.refresh > self.sum_block_dis[blk_idx]:
+                        return True 
+                if self.speed[tn] < 0:
+                    if self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx-1]:
+                        return True
+        
+        #=======================================================================
+        # def train_proceed(tn, delta_t):           
+        #     rank_tn_to_follow = self.rank[tn] - 1
+        #     tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
+        #     
+        #     if in_block(tn, self.curr_block[tn]):
+        #         self.distance[tn] += self.speed[tn] * delta_t
+        #         self.time[tn] += self.refresh * 60
+        #     if enter_block(tn, self.curr_block[tn] + 1):
+        #         if abs(self.curr_block[tn_to_follow] - self.curr_block[tn]) > 1:
+        #             if self.rank[tn] -  
+        # 
+        #=======================================================================
+        
+        #=======================================================================
+        # def reach_blk_end:
+        #     pass
+        #=======================================================================
         '''Dictionary containing the concurrent rank for each train, with train number as keys. 
         rank : dictionary
             Key: train number 'tn'
@@ -244,6 +304,7 @@ class single_train:
             sorted_distance = sorted(self.distance.values(),reverse=True)
             for i in self.distance.keys():
                 self.rank[i] = 1 + sorted_distance.index(self.distance[i])
+            self.tn_by_rank  = {v : k for k, v in self.rank.items()}
                            
         update_rank()           # initialize the rank dictionary
         n = 1       # n is the counter variable used to create many "one_detail", otherwise all "one_schedule" will be the same
@@ -255,7 +316,7 @@ class single_train:
         
         while True:
             whileloopcount += 1
-            
+            print 'this is loop: ' +str(whileloopcount)
                 
             '''Explain the while True loop
             '''
@@ -273,13 +334,14 @@ class single_train:
                 self.ncolor.append('g')
             # default block which have siding to 'black'
             for i in self.siding:
-                self.ncolor[i] = 'black'
-                      
+                self.ncolor[i] = 'black'        
+            #===================================================================
             
+            #===================================================================
             # headway in minutes, local variable, randomize every loop in the while True body
             headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)  
             # because headway > temp is possible, determine if there is a new train after a new refresh by the judgment below:
-            if temp < headway:  ## no need for a new train
+            if temp < headway:  ## no need for a new train, do nothing
                 temp += self.refresh
             else:               ## need a new train and clear temp
                 temp = headway % self.refresh   # clearing the temp stop watch
@@ -287,71 +349,88 @@ class single_train:
                 self.speed[self.number] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)    # speed in miles per minute                
                 self.time[self.number] = self.strt_t_ticks + temp * 60  # in seconds because of the ticks
                 self.weight[self.number] = np.random.randint(1, 4)
-
                 # update distance[tn] and block status for the newly generated train
                 self.distance[self.number] += self.speed[self.number] * temp    # miles/min * mins
             get_sum_and_curr_block(self.number)
+            """The block above ONLY determine the need and initialize the new train.
+            """
+            #===================================================================
             
-            print 'this is loop: ' +str(whileloopcount)    
+            #===================================================================
             '''Starting below includes both DoS and overtaking policies. Needs to be separated.
             '''
-            
             update_rank()
-            for x in xrange(1, len(self.rank) + 1):     # for all current trains, starting from the first of the queue
-                i = self.rank[x]                        # train number x (1,2,3,4,5...) is now ranked as i
+            # for x in xrange(1, self.number + 1):        # for all current trains, starting from the first of the queue
+            for i in self.rank.keys():
+                # i = self.rank[x]                        # train number x (1,2,3,4,5...) is now ranked as i
                 self.one_detail = {}                    # initialize the one_detail dictionary
                 '''Dictionary containing the lifetime information and behaviors of a train, with train number as keys.
                 one_detail : dictionary
                     Key: train number 'tn'
                     Value: dictionary for key-value pairs with lifetime attributes of a train 
-                '''
-                self.time[i] += self.refresh * 60       
+                ''' 
+                        
                 # update time line in seconds accrues by refresh, refresh in minutes, time in seconds
                 # note the key here is i instead of x, because the actions are based on the order of the queue. 
+                
                 '''If DoS happens:
                 '''
+                get_sum_and_curr_block(i)
                 if self.is_DoS is True:
                     # self.time[tn] is the time for a train has been traveling + strt_t time in seconds, concurrent global time for train 'tn'
                     # so self.time[1] is the current global time. Notice that time is a dictionary, with keys as integer train identifiers.
                     if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
-                        if self.curr_block[i] != self.DoS_block:
+                        if approach_block(i, self.DoS_block) or in_block(i, self.DoS_block) or leaving_block(i, self.DoS_block):
                             self.distance[i] += self.speed[i] * self.refresh
-                
-                    else:
+                        elif enter_block(i, self.DoS_block) or skip_block(i, self.DoS_block):
+                            if self.distance[i] <= self.sum_block_dis[self.DoS_block - 1]:
+                                self.distance[i] = self.sum_block_dis[self.DoS_block - 1]
+                            if self.distance[i] >= self.sum_block_dis[self.DoS_block]:
+                                self.distance[i] = self.sum_block_dis[self.DoS_block]
+                        elif exit_block(i, self.DoS_block):
+                            if self.speed[i] > 0:
+                                self.distance[i] = self.sum_block_dis[self.DoS_block]
+                            if self.speed[i] < 0:
+                                self.distance[i] = self.sum_block_dis[self.DoS_block - 1]
+                        else:                       
+                            self.distance[i] += self.speed[i] * self.refresh
+                    else:                       
                         self.distance[i] += self.speed[i] * self.refresh
-                
-
-                elif self.is_DoS is False:
+                    self.time[i] += self.refresh * 60
+                    get_sum_and_curr_block(i)
+                else:
                     self.distance[i] += self.speed[i] * self.refresh
-                
-                get_sum_and_curr_block(i)
+                    self.time[i] += self.refresh * 60
+                    get_sum_and_curr_block(i)
 
                 '''When overtaking happens:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
                     
-                if x > 1 is False:
-                    
-                    # The block position of prev train and current train
-                    '''
-                    Overtake Policy:
-                    
-                    # when block small enough and speed large enough, there would be a bug
-                    '''
-                    if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
-                        for j in self.siding:
-                            if self.curr_block[self.rank[x - 1]] == j:
-                                if self.speed[self.rank[x-1]] < self.speed[self.rank[x]]:
-                                    self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
-                                    self.distance[self.rank[x]] -= self.speed[self.rank[x]] * self.refresh
-                                    get_sum_and_curr_block(i)
-                                break
-
-                            elif j == self.siding[-1]:
-                                self.distance[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
-                                #self.distance[self.rank[x]] = max(0, self.distance[self.rank[x]])
-                                get_sum_and_curr_block(i)
+#===============================================================================
+#                 if x > 1 is False:
+#                     
+#                     # The block position of prev train and current train
+#                     '''
+#                     Overtake Policy:
+#                     
+#                     # when block small enough and speed large enough, there would be a bug
+#                     '''
+#                     if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
+#                         for j in self.siding:
+#                             if self.curr_block[self.rank[x - 1]] == j:
+#                                 if self.speed[self.rank[x-1]] < self.speed[self.rank[x]]:
+#                                     self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
+#                                     self.distance[self.rank[x]] -= self.speed[self.rank[x]] * self.refresh
+#                                     get_sum_and_curr_block(i)
+#                                 break
+# 
+#                             elif j == self.siding[-1]:
+#                                 self.distance[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
+#                                 #self.distance[self.rank[x]] = max(0, self.distance[self.rank[x]])
+#                                 get_sum_and_curr_block(i)
+#===============================================================================
 
                 # set the color of train node
                 k = self.curr_block[i]
@@ -361,10 +440,13 @@ class single_train:
                     self.labels[k] = i
                     self.pos_labels[k] = self.pos[k]
 
-                self.one_detail['time'] = round(self.speed[i], 2)
-                self.one_detail['speed(miles/min)'] = round(self.speed[i], 2)
-                self.one_detail['distance(miles)'] = round(self.distance[i], 2)
-                self.one_detail['headway(mins)'] = round(headway, 2)
+#                 self.one_detail['time'] = round(self.speed[i], 2)
+                '''Why self.speed here instead of self.time?
+                '''
+                self.one_detail['time'] = self.time[i]
+                self.one_detail['speed(miles/min)'] = self.speed[i]
+                self.one_detail['distance(miles)'] = self.distance[i]
+                self.one_detail['headway(mins)'] = headway
                 self.one_detail['weight(1-3)'] = self.weight[i]
                 time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[1]))
                 self.one_schedule[time_standard] = self.one_detail
@@ -487,9 +569,9 @@ class multi_dirc:
                         self.distance_A[i] = self.distance_A[i-1] - self.speed_A[i-1] * self.buffer
                 dirc = 'A'
                 self.one_detail_A[n]['dirc'] = dirc
-                self.one_detail_A[n]['speed_A(mils/min)'] = round(self.speed_A[i], 2)
-                self.one_detail_A[n]['distance_A(miles)'] = round(self.distance_A[i], 2)
-                self.one_detail_A[n]['headway(mins)'] = round(headway, 2)
+                self.one_detail_A[n]['speed_A(mils/min)'] = self.speed_A[i]
+                self.one_detail_A[n]['distance_A(miles)'] = self.distance_A[i]
+                self.one_detail_A[n]['headway(mins)'] = headway
 
                 # get A and B pass through which buffer
                 for x in range(len(self.buffer_list)):
@@ -527,6 +609,6 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', False, '2018-01-01 09:00:00', '2018-01-01 10:30:00', 23, [20, 30, 40, 60, 80, 100], [20] * 5000)
+    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 09:00:00', '2018-01-01 10:30:00', 18, [20, 30, 40], [20] * 60)
     a.run()
     a.string_diagram()
