@@ -153,9 +153,11 @@ class single_train:
         self.T = time
         self.strt_t_ticks = time.mktime(time.strptime(strt_t, "%Y-%m-%d %H:%M:%S"))
         self.stop_t_ticks = time.mktime(time.strptime(stop_t, "%Y-%m-%d %H:%M:%S"))
+        
         self.is_DoS = is_DoS    # dummy information of DoS (if DoS is in-place or not)
         self.DoS_strt_t_ticks = time.mktime(time.strptime(DoS_strt_t, "%Y-%m-%d %H:%M:%S"))
         self.DoS_stop_t_ticks = time.mktime(time.strptime(DoS_stop_t, "%Y-%m-%d %H:%M:%S"))
+        
         self.DoS_block = DoS_block
         
         self.number = 0         ## self.number is the number of trains.
@@ -171,12 +173,12 @@ class single_train:
         self.mph_dev = 10     # standard deviation of speed, in miles per hour
         
         '''state variables below: dictionaries describing the states of every train
-        ## distance means x-axis coordinates, default value is 0
-        ## distance is the dictionary for trains with the Key Value as train indices (integers)
+        ## coord_mp means x-axis coordinates, default value is 0
+        ## coord_mp is the dictionary for trains with the Key Value as train indices (integers)
         ## the current block for any train at any moment 1 is the default value for any key in this dictionary
         ## the cumulative distance used to determine the current block, default value is the length of the first block
         '''
-        self.distance = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin
+        self.coord_mp = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin
         self.rank = defaultdict(lambda: 0)          # rank is used to determine the order of trains                  
         self.curr_block = defaultdict(lambda: 1)                
         self.sum_block_dis = defaultdict(lambda: self.block[0]) 
@@ -215,73 +217,61 @@ class single_train:
             Notes:
             ------
                 Calculate distance[tn] first, and then update the two dictionaries.
-                distance[tn] is the current distance from the origin of coordinates. 
+                coord_mp[tn] is the current distance from the origin of coordinates. 
             
             To-do:
             ------
                 The relationships and logics need to be normalized to eliminate the more than/less than signs. 
                 Merge two directions into one single judgment logic.   
             """
-            # if (distance > block_begin), block go further; if (distance < block_end), block go close.
+            # if (coord_mp > block_begin), block go further; if (coord_mp < block_end), block go close.
             if tn == 0:     # avoid initializing train number 0 (int) in the default dictionaries. 
                             # who?
                 pass
             else:
                 for i in range(len(self.blk_interval)):
-                    if self.blk_interval[i][0] < self.distance[tn] <= self.blk_interval[i][1]:
+                    if self.blk_interval[i][0] < self.coord_mp[tn] <= self.blk_interval[i][1]:
                         self.sum_block_dis[tn] = self.blk_interval[i][1]
                         self.curr_block[tn] = i + 1
-    #===========================================================================
-    #             while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
-    #                 if self.distance[tn] > self.sum_block_dis[tn]:
-    #                     # When updated position is at the next block (Forward direction): 
-    #                     self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
-    #                     self.curr_block[tn] += 1
-    # 
-    #                 elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
-    #                     # When updated position is at the next block (Reverse direction): 
-    #                     self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
-    #                     self.curr_block[tn] -= 1
-    #===========================================================================
-             
+ 
         def approach_block(tn, blk_idx):
             if self.speed[tn] > 0:
-                if self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx - 1]:
+                if self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][0]:
                     return True 
             if self.speed[tn] < 0:
-                if self.distance[tn] + self.speed[tn] * self.refresh > self.sum_block_dis[blk_idx]:
+                if self.coord_mp[tn] + self.speed[tn] * self.refresh > self.blk_interval[blk_idx][1]:
                     return True
         
         def leaving_block(tn, blk_idx):
-            if self.speed[tn] > 0 and self.distance[tn] > self.sum_block_dis[blk_idx]: 
+            if self.speed[tn] > 0 and self.coord_mp[tn] > self.blk_interval[blk_idx][1]: 
                 return True 
-            if self.speed[tn] < 0 and self.distance[tn] < self.sum_block_dis[blk_idx-1]:
+            if self.speed[tn] < 0 and self.coord_mp[tn] < self.blk_interval[blk_idx][0]:
                 return True
         
         def in_block(tn, blk_idx):            
-            if self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]: 
-                if self.sum_block_dis[blk_idx-1] < self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx]:
+            if self.blk_interval[blk_idx][0] < self.coord_mp[tn] <= self.blk_interval[blk_idx][1]: 
+                if self.blk_interval[blk_idx][0] < self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][1]:
                     return True    
                 
         def enter_block(tn, blk_idx):
-            if not self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
-                if self.sum_block_dis[blk_idx-1] < self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx]:
+            if not self.blk_interval[blk_idx][0] < self.coord_mp[tn] < self.blk_interval[blk_idx][1]:
+                if self.blk_interval[blk_idx][0] < self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][1]:
                     return True 
                 
         def exit_block(tn, blk_idx):
-            if self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]: 
-                if not self.sum_block_dis[blk_idx-1] < self.distance[tn] + self.speed[tn] < self.sum_block_dis[blk_idx]:
+            if self.blk_interval[blk_idx][0] < self.coord_mp[tn] < self.blk_interval[blk_idx][1]: 
+                if not self.blk_interval[blk_idx][0] < self.coord_mp[tn] + self.speed[tn] < self.blk_interval[blk_idx][1]:
                     return True 
         
         def skip_block(tn, blk_idx):
-            if not self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
+            if not self.blk_interval[blk_idx][0] < self.coord_mp[tn] < self.blk_interval[blk_idx][1]:
                 if self.speed[tn] > 0:
-                    if self.distance[tn] + self.speed[tn] * self.refresh > self.sum_block_dis[blk_idx]:
-                        if self.distance[tn] < self.sum_block_dis[blk_idx-1]:
+                    if self.coord_mp[tn] + self.speed[tn] * self.refresh > self.blk_interval[blk_idx][1]:
+                        if self.coord_mp[tn] < self.blk_interval[blk_idx][0]:
                             return True 
                 if self.speed[tn] < 0:
-                    if self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx-1]:
-                        if self.distance[tn] > self.sum_block_dis[blk_idx]: 
+                    if self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][0]:
+                        if self.coord_mp[tn] > self.blk_interval[blk_idx][1]: 
                             return True
         
         #=======================================================================
@@ -290,7 +280,7 @@ class single_train:
         #     tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
         #     
         #     if in_block(tn, self.curr_block[tn]):
-        #         self.distance[tn] += self.speed[tn] * delta_t
+        #         self.coord_mp[tn] += self.speed[tn] * delta_t
         #         self.time[tn] += self.refresh * 60
         #     if enter_block(tn, self.curr_block[tn] + 1):
         #         if abs(self.curr_block[tn_to_follow] - self.curr_block[tn]) > 1:
@@ -299,13 +289,13 @@ class single_train:
         #=======================================================================
         
         def reach_blk_end(tn, blk_idx):
-            '''Not yet implemented time update, only distance now.
+            '''Not yet implemented time update, only coord_mp now.
             '''
-            if self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
+            if self.blk_interval[tn][1] < self.coord_mp[tn] < self.sum_block_dis[blk_idx]:
                 if self.speed[tn] > 0:
-                    self.distance[tn] = self.sum_block_dis[blk_idx]
+                    self.coord_mp[tn] = self.sum_block_dis[blk_idx]
                 if self.speed[tn] < 0:
-                    self.distance[tn] = self.sum_block_dis[blk_idx - 1]
+                    self.coord_mp[tn] = self.sum_block_dis[blk_idx - 1]
                 if self.speed[tn] == 0:
                     print self.speed[tn]
                     raise Exception("Speed is zero")
@@ -323,9 +313,9 @@ class single_train:
             """Update the ranking for all concurrent trains in the system
             
             """
-            sorted_distance = sorted(self.distance.values(),reverse=True)
-            for i in self.distance.keys():
-                self.rank[i] = 1 + sorted_distance.index(self.distance[i])
+            sorted_distance = sorted(self.coord_mp.values(),reverse=True)
+            for i in self.coord_mp.keys():
+                self.rank[i] = 1 + sorted_distance.index(self.coord_mp[i])
             self.tn_by_rank  = {v : k for k, v in self.rank.items()}
                            
         update_rank()           # initialize the rank dictionary
@@ -335,11 +325,11 @@ class single_train:
         #self.speed[1] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)      # speed in miles per minute, float division
         #self.weight[1] = np.random.randint(1, 4)        
         whileloopcount = 0
-        
+        the_last_action = 'None'
         while True:
             whileloopcount += 1
-            print 'this is loop: ' +str(whileloopcount)
-                
+            #print 'this is loop: ' +str(whileloopcount)
+            
             '''Explain the while True loop
             '''
             '''First, draw the dynamic circle dots in the topology view 
@@ -369,10 +359,11 @@ class single_train:
                 temp = headway % self.refresh   # clearing the temp stop watch
                 self.number += 1                # adding a new train, meanwhile assigning the train number as its identifier.
                 self.speed[self.number] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)    # speed in miles per minute                
-                self.time[self.number] = self.strt_t_ticks + temp * 60  # in seconds because of the ticks
+                self.time[self.number] = self.strt_t_ticks + temp * 60                      # "born time" for train tn 
+                                                                                            # in seconds because of the ticks are in seconds
                 self.weight[self.number] = np.random.randint(1, 4)
-                # update distance[tn] and block status for the newly generated train
-                self.distance[self.number] += self.speed[self.number] * temp    # miles/min * mins
+                # update coord_mp[tn] and block status for the newly generated train
+                self.coord_mp[self.number] += self.speed[self.number] * temp    # miles/min * mins
             get_sum_and_curr_block(self.number)
             """The block above ONLY determine the need and initialize the new train.
             """
@@ -401,74 +392,81 @@ class single_train:
                 if self.is_DoS is True:
                     # self.time[tn] is the time for a train has been traveling + strt_t time in seconds, concurrent global time for train 'tn'
                     # so self.time[1] is the current global time. Notice that time is a dictionary, with keys as integer train identifiers.
-                    if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
+                    if self.DoS_strt_t_ticks < self.time[i] < self.DoS_stop_t_ticks:
                         if approach_block(i, self.DoS_block) or in_block(i, self.DoS_block) or leaving_block(i, self.DoS_block):
-                            self.distance[i] += self.speed[i] * self.refresh
-                        elif enter_block(i, self.DoS_block) or skip_block(i, self.DoS_block):    
-                            reach_blk_end(i, self.curr_block[i])
+                            self.coord_mp[i] += self.speed[i] * self.refresh
+                        elif enter_block(i, self.DoS_block) or skip_block(i, self.DoS_block):
+                            if self.coord_mp[i] <= self.sum_block_dis[self.DoS_block - 1]:
+                                self.coord_mp[i] = self.sum_block_dis[self.DoS_block - 1]
+                            if self.coord_mp[i] >= self.sum_block_dis[self.DoS_block]:
+                                self.coord_mp[i] = self.sum_block_dis[self.DoS_block]
                         elif exit_block(i, self.DoS_block):
-                            reach_blk_end(i, self.DoS_block)
+                            if self.speed[i] > 0:
+                                self.coord_mp[i] = self.sum_block_dis[self.DoS_block]
+                            if self.speed[i] < 0:
+                                self.coord_mp[i] = self.sum_block_dis[self.DoS_block - 1]
                         else:                       
-                            self.distance[i] += self.speed[i] * self.refresh
+                            self.coord_mp[i] += self.speed[i] * self.refresh
                     else:                       
-                        self.distance[i] += self.speed[i] * self.refresh
-                    self.time[i] += self.refresh * 60
+                        self.coord_mp[i] += self.speed[i] * self.refresh
                     get_sum_and_curr_block(i)
                 else:
-                    self.distance[i] += self.speed[i] * self.refresh
-                    self.time[i] += self.refresh * 60
+                    self.coord_mp[i] += self.speed[i] * self.refresh
                     get_sum_and_curr_block(i)
-
+                self.time[i] += self.refresh * 60
+                
                 '''When overtaking happens:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
                     
-#===============================================================================
-#                 if x > 1 is False:
-#                     
-#                     # The block position of prev train and current train
-#                     '''
-#                     Overtake Policy:
-#                     
-#                     # when block small enough and speed large enough, there would be a bug
-#                     '''
-#                     if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
-#                         for j in self.siding:
-#                             if self.curr_block[self.rank[x - 1]] == j:
-#                                 if self.speed[self.rank[x-1]] < self.speed[self.rank[x]]:
-#                                     self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
-#                                     self.distance[self.rank[x]] -= self.speed[self.rank[x]] * self.refresh
-#                                     get_sum_and_curr_block(i)
-#                                 break
-# 
-#                             elif j == self.siding[-1]:
-#                                 self.distance[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
-#                                 #self.distance[self.rank[x]] = max(0, self.distance[self.rank[x]])
-#                                 get_sum_and_curr_block(i)
-#===============================================================================
-
-                # set the color of train node
-                k = self.curr_block[i]
-                if 0 < k < len(self.pos):
-                    self.ncolor[k-1] = 'r'
-                if 0 < k < len(self.pos):
-                    self.labels[k] = i
-                    self.pos_labels[k] = self.pos[k]
+                #-------------------------------------------- if i > 0 is False:
+#------------------------------------------------------------------------------ 
+                    #------ # The block position of prev train and current train
+                    #------------------------------------------------------- '''
+                    #------------------------------------------ Overtake Policy:
+#------------------------------------------------------------------------------ 
+                     # # when block small enough and speed large enough, there would be a bug
+                    #------------------------------------------------------- '''
+                     # if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
+                        #--------------------------------- for j in self.siding:
+                            #-------- if self.curr_block[self.rank[x - 1]] == j:
+                                 # if self.speed[self.rank[x-1]] < self.speed[self.rank[x]]:
+                                     # self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
+                                     # self.coord_mp[self.rank[x]] -= self.speed[self.rank[x]] * self.refresh
+                                    #----------------- get_sum_and_curr_block(i)
+                                #----------------------------------------- break
+#------------------------------------------------------------------------------ 
+                            #------------------------ elif j == self.siding[-1]:
+                                 # self.coord_mp[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
+                                 # #self.coord_mp[self.rank[x]] = max(0, self.coord_mp[self.rank[x]])
+                                # #--------------------- get_sum_and_curr_block(i)
+#------------------------------------------------------------------------------ 
+                #--------------------------------- # set the color of train node
+                #---------------------------------------- k = self.curr_block[i]
+                #------------------------------------- if 0 < k < len(self.pos):
+                    #------------------------------------ self.ncolor[k-1] = 'r'
+                #------------------------------------- if 0 < k < len(self.pos):
+                    #---------------------------------------- self.labels[k] = i
+                    #-------------------------- self.pos_labels[k] = self.pos[k]
 
 #                 self.one_detail['time'] = round(self.speed[i], 2)
-                '''Why self.speed here instead of self.time?
-                '''
+                
                 self.one_detail['time'] = self.time[i]
-                self.one_detail['speed(miles/min)'] = self.speed[i]
-                self.one_detail['distance(miles)'] = self.distance[i]
-                self.one_detail['headway(mins)'] = headway
-                self.one_detail['weight(1-3)'] = self.weight[i]
-                time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[1]))
-                self.one_schedule[time_standard] = self.one_detail
-                self.all_schedule[i][time_standard] = self.one_schedule[time_standard]
+                self.one_detail['coord_mp(miles)'] = self.coord_mp[i]
+                
+                t_stamp_std = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[1]))    # set the first train as reference time
+                
+                self.one_schedule[t_stamp_std] = self.one_detail       
+                #-------------------------- print self.one_schedule.values()[:5]
+                self.all_schedule[i][t_stamp_std] = self.one_detail 
                 n += 1
-
+                the_last_action = 'train number: '      +str(i)\
+                                    +' as rank: '       +str(self.rank[i])\
+                                    +' approach MP: '   +str(round(self.coord_mp[i],2))\
+                                    +' at ticks: '       +str(round(self.time[i]-self.strt_t_ticks,2))[-9:]
+                
+                                    
             # draw the train map
             # nx.draw_networkx_nodes(self.G, self.pos, node_color=self.ncolor, node_size=200)
             # nx.draw_networkx_labels(self.G, self.pos_labels, self.labels, font_size=10)
@@ -476,6 +474,7 @@ class single_train:
             
             # networkX pause 0.01 seconds
             # plt.pause(0.05)
+            #print sorted(self.all_schedule[50].keys())[-5:], sorted([self.all_schedule[50][i]['coord_mp(miles)'] for i in sorted(self.all_schedule[50].keys())[-5:]])
             yield env.timeout(self.refresh*60)
         
     
@@ -490,17 +489,22 @@ class single_train:
         # draw the train working diagram
         '''begin comment__train stringline diagram'''
         x = []; y = []
-        for i in self.all_schedule:
+        for tn in self.all_schedule:
             x.append([])
             y.append([])
 
-            for j in self.all_schedule[i]:
-                x[i-1].append((time.mktime(time.strptime(j, "%Y-%m-%d %H:%M:%S")) - self.strt_t_ticks) / 3600)
-                y[i-1].append(self.all_schedule[i][j]['distance(miles)'])
-
-            x[i-1].sort()
-            y[i-1].sort()
-
+            for t_stamp_std in self.all_schedule[tn]:  #t_stamp_std is all the time stamps
+                x[tn-1].append((time.mktime(time.strptime(t_stamp_std, "%Y-%m-%d %H:%M:%S"))-self.strt_t_ticks)/3600)
+                y[tn-1].append(self.all_schedule[tn][t_stamp_std]['coord_mp(miles)'])
+                #print x[tn-1]
+            
+            y[tn-1] = [n for (m,n) in sorted(zip(x[tn-1],y[tn-1]))] 
+            x[tn-1] = sorted(x[tn-1])
+            
+            
+                
+            #self.tn_by_rank  = {v : rk for rk, v in self.rank.items()}
+        
         plt.title('Result Analysis')
         for n in range(len(x)-1):
             if n % 4 == 0:
@@ -514,7 +518,7 @@ class single_train:
 
         plt.legend()
         plt.xlabel('time /hours')
-        plt.ylabel('distance /miles')
+        plt.ylabel('coord_mp /miles')
         plt.show()
         '''end comment__train stringline diagram'''
 
@@ -606,9 +610,9 @@ class multi_dirc:
                         distance_B -= (time_arrive_buffer_A - time_arrive_buffer_B) * self.speed_B
 
                 self.one_detail_A[n]['buffer_index'] = index_A
-                time_standard = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[i]))
-                self.one_schedule_A[time_standard] = self.one_detail_A[n]
-                self.all_schedule_A[i][time_standard] = self.one_schedule_A[time_standard]
+                t_stamp_std = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[i]))
+                self.one_schedule_A[t_stamp_std] = self.one_detail_A[n]
+                self.all_schedule_A[i][t_stamp_std] = self.one_schedule_A[t_stamp_std]
                 n += 1
             self.number += 1
             yield env.timeout(headway * 60)
@@ -625,6 +629,10 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 09:00:00', '2018-01-01 10:30:00', 18, [20, 30, 40], [20] * 60)
+    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 09:00:00', '2018-01-01 09:30:00', 18, [20, 30, 40], [20] * 60)
     a.run()
+    print a.blk_interval
+    print a.blk_interval[18]
+    print '2018-01-01 09:00:00', '2018-01-01 09:30:00'
     a.string_diagram()
+    
