@@ -5,7 +5,6 @@ import time
 from collections import defaultdict
 import heapq
 import simpy
-from interval import Interval
 # from simpy.Simulation import *
 # import pandas as pd
 
@@ -142,8 +141,12 @@ class single_train:
         self.labels = {}
         self.pos_labels = {}
         
-        self.siding = siding    # position of sidings. A list of integer (block number)
+        self.siding = siding    # position of sidings. A list of integer (block index)
         self.block = block      # the length of each block. A list of floats
+        self.blk_sum_top = [sum(self.block[:i+1]) for i in range(len(self.block))]
+        self.blk_sum_bot = [sum(self.block[:i]) for i in range(len(self.block))]
+        self.blk_interval = zip(self.blk_sum_bot, self.blk_sum_top)
+        self.blk_idx_list = [a + 1 for a in range(len(self.block))]
         self.refresh = 1        # unit of refreshing time in minutes
         
         ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
@@ -190,10 +193,8 @@ class single_train:
         self.tn_by_rank = {}
         
         self.weight = defaultdict(lambda: 0)
-        
-
-    def train(self, env):
-        
+    
+    def train(self, env):   
         def get_sum_and_curr_block(tn):
             """Encapsulated function to determine concurrent block and total blocked distance of a train:
             
@@ -222,19 +223,26 @@ class single_train:
                 Merge two directions into one single judgment logic.   
             """
             # if (distance > block_begin), block go further; if (distance < block_end), block go close.
-            if tn == 0:     # avoid initializing train number 0 (int) in the default dictionaries
+            if tn == 0:     # avoid initializing train number 0 (int) in the default dictionaries. 
+                            # who?
                 pass
             else:
-                while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
-                    if self.distance[tn] >= self.sum_block_dis[tn]:
-                        # When updated position is at the next block (Forward direction): 
-                        self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
-                        self.curr_block[tn] += 1
-    
-                    elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
-                        # When updated position is at the next block (Reverse direction): 
-                        self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
-                        self.curr_block[tn] -= 1
+                for i in range(len(self.blk_interval)):
+                    if self.blk_interval[i][0] < self.distance[tn] <= self.blk_interval[i][1]:
+                        self.sum_block_dis[tn] = self.blk_interval[i][1]
+                        self.curr_block[tn] = i + 1
+    #===========================================================================
+    #             while not (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]) < self.distance[tn] <= (self.sum_block_dis[tn]):
+    #                 if self.distance[tn] > self.sum_block_dis[tn]:
+    #                     # When updated position is at the next block (Forward direction): 
+    #                     self.sum_block_dis[tn] += self.block[self.curr_block[tn]]
+    #                     self.curr_block[tn] += 1
+    # 
+    #                 elif self.distance[tn] <= (self.sum_block_dis[tn] - self.block[self.curr_block[tn]]):
+    #                     # When updated position is at the next block (Reverse direction): 
+    #                     self.sum_block_dis[tn] -= self.block[self.curr_block[tn]]
+    #                     self.curr_block[tn] -= 1
+    #===========================================================================
              
         def approach_block(tn, blk_idx):
             if self.speed[tn] > 0:
@@ -269,10 +277,12 @@ class single_train:
             if not self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
                 if self.speed[tn] > 0:
                     if self.distance[tn] + self.speed[tn] * self.refresh > self.sum_block_dis[blk_idx]:
-                        return True 
+                        if self.distance[tn] < self.sum_block_dis[blk_idx-1]:
+                            return True 
                 if self.speed[tn] < 0:
                     if self.distance[tn] + self.speed[tn] * self.refresh < self.sum_block_dis[blk_idx-1]:
-                        return True
+                        if self.distance[tn] > self.sum_block_dis[blk_idx]: 
+                            return True
         
         #=======================================================================
         # def train_proceed(tn, delta_t):           
@@ -288,10 +298,22 @@ class single_train:
         # 
         #=======================================================================
         
-        #=======================================================================
-        # def reach_blk_end:
-        #     pass
-        #=======================================================================
+        def reach_blk_end(tn, blk_idx):
+            '''Not yet implemented time update, only distance now.
+            '''
+            if self.sum_block_dis[blk_idx-1] < self.distance[tn] < self.sum_block_dis[blk_idx]:
+                if self.speed[tn] > 0:
+                    self.distance[tn] = self.sum_block_dis[blk_idx]
+                if self.speed[tn] < 0:
+                    self.distance[tn] = self.sum_block_dis[blk_idx - 1]
+                if self.speed[tn] == 0:
+                    print self.speed[tn]
+                    raise Exception("Speed is zero")
+                # self.time[tn] += self.refresh * 60
+            else:
+                print self.curr_block[tn]
+                raise Exception("Current block Error")
+            
         '''Dictionary containing the concurrent rank for each train, with train number as keys. 
         rank : dictionary
             Key: train number 'tn'
@@ -382,16 +404,10 @@ class single_train:
                     if self.DoS_strt_t_ticks < self.time[1] < self.DoS_stop_t_ticks:
                         if approach_block(i, self.DoS_block) or in_block(i, self.DoS_block) or leaving_block(i, self.DoS_block):
                             self.distance[i] += self.speed[i] * self.refresh
-                        elif enter_block(i, self.DoS_block) or skip_block(i, self.DoS_block):
-                            if self.distance[i] <= self.sum_block_dis[self.DoS_block - 1]:
-                                self.distance[i] = self.sum_block_dis[self.DoS_block - 1]
-                            if self.distance[i] >= self.sum_block_dis[self.DoS_block]:
-                                self.distance[i] = self.sum_block_dis[self.DoS_block]
+                        elif enter_block(i, self.DoS_block) or skip_block(i, self.DoS_block):    
+                            reach_blk_end(i, self.curr_block[i])
                         elif exit_block(i, self.DoS_block):
-                            if self.speed[i] > 0:
-                                self.distance[i] = self.sum_block_dis[self.DoS_block]
-                            if self.speed[i] < 0:
-                                self.distance[i] = self.sum_block_dis[self.DoS_block - 1]
+                            reach_blk_end(i, self.DoS_block)
                         else:                       
                             self.distance[i] += self.speed[i] * self.refresh
                     else:                       
