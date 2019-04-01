@@ -308,7 +308,13 @@ class single_train:
             
             if self.blk_interval[self.curr_block[tn]][0] <= self.curr_mp[tn] + self.curr_spd[tn] * delta_t <= self.blk_interval[self.curr_block[tn]][1]:
                 self.curr_mp[tn] += self.curr_spd[tn] * delta_t
-            elif  
+            elif next_avail(tn):
+                
+            enter_block(tn, self.curr_block[tn] + 1):
+                self.curr_mp[tn] += self.curr_mp[tn] + 1
+                get_curr_block(tn)
+            elif enter_block(tn, self.curr_block[tn] - 1):
+                self.curr_mp[tn] += 
                        
             rank_tn_to_follow = self.rank[tn] - 1
             tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
