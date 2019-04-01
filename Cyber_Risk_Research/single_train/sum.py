@@ -5,7 +5,8 @@ import time
 from collections import defaultdict
 import heapq
 import simpy
-from compiler.pycodegen import EXCEPT
+
+import intervals as I
 # from simpy.Simulation import *
 # import pandas as pd
 
@@ -147,7 +148,8 @@ class single_train:
         self.blk_sum_top = [sum(self.block[:i+1]) for i in range(len(self.block))]
         self.blk_sum_bot = [sum(self.block[:i]) for i in range(len(self.block))]
         self.blk_interval = zip(self.blk_sum_bot, self.blk_sum_top)
-        self.blk_idx_list = [a + 1 for a in range(len(self.block))]
+        self.blk_boundaries = self.blk_sum_top[:-1]
+        self.blk_idx_list = [a for a in range(len(self.block))]
         self.refresh = 1        # unit of refreshing time in minutes
         
         ## strt_t and stop_t are string for time, the format is '2018-01-01 00:00:00'
@@ -159,19 +161,26 @@ class single_train:
         self.DoS_strt_t_ticks = time.mktime(time.strptime(DoS_strt_t, "%Y-%m-%d %H:%M:%S"))
         self.DoS_stop_t_ticks = time.mktime(time.strptime(DoS_stop_t, "%Y-%m-%d %H:%M:%S"))
         
+        self.clock_time = self.strt_t_ticks
+        
         self.DoS_block = DoS_block
         
         self.number = 0         ## self.number is the number of trains.
         
         self.one_schedule = {}  # we get a new self.one_schedule after each refresh
         self.one_detail = {}
-        self.speed = {}
+        
+        self.max_speed = {}
+        self.max_acc = {}
+        
+        self.curr_spd = {}
+        self.curr_acc = {}
         
         self.hdw_exp_min = 10   # parameter of headway, in minutes
-        self.hdw_dev_min = 0   # standard deviation of headway, in minutes
+        self.hdw_dev_min = 3   # standard deviation of headway, in minutes
         
         self.mph_exp = 50       # parameter of speed, in miles per hour
-        self.mph_dev = 0        # standard deviation of speed, in miles per hour
+        self.mph_dev = 5        # standard deviation of speed, in miles per hour
         
         '''state variables below: dictionaries describing the states of every train
         ## coord_mp means x-axis coordinates, default value is 0
@@ -179,16 +188,17 @@ class single_train:
         ## the current block for any train at any moment 1 is the default value for any key in this dictionary
         ## the cumulative distance used to determine the current block, default value is the length of the first block
         '''
-        self.coord_mp = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin
+        self.curr_mp = defaultdict(lambda: 0.0)    # assuming every train initialize from the coordinate origin
         self.rank = defaultdict(lambda: 0)          # rank is used to determine the order of trains                  
-        self.curr_block = defaultdict(lambda: 1)                
-        self.sum_block_dis = defaultdict(lambda: self.block[0]) 
-        self.time = {}       
+        self.curr_block = defaultdict(lambda: 0)
+        self.curr_occupy = {}                
+        self.curr_duration = {}
+        self.init_moment = {}       
         
-        '''The dictionary showing the initialization time for each train entering the system.
-        time : dictionary
+        '''The dictionary showing the operating duration for each train of the system at the current moment.
+        curr_duration : dictionary
             Key: train number 'tn'
-            Value: strt_t_ticks + time of train number 'tn' has been traveling at this moment, unit in seconds
+            Value: duration of train number 'tn' has been traveling at this moment, unit in seconds
         '''
         # define which siding that late/fast train surpass previous/slow trains
         self.isPass = defaultdict(lambda: float('inf'))
@@ -207,11 +217,8 @@ class single_train:
             the current block number of a train.
             
             Function or returns: 
-                Update the two dictionaries (sum_block_dis) and (curr_block)
+                Update the (curr_block) dictionary
             
-            sum_block_dis : dictionary
-                Key: train number 'tn'
-                Value: cumulative distance traveled by this train as occupied blocks (total blocked distance)
             curr_block : dictionary
                 Key: train number 'tn'
                 Value: current block number for this train  
@@ -231,82 +238,103 @@ class single_train:
                             # who?
                 pass
             else:
-                for i in range(len(self.blk_interval)):
-                    if self.blk_interval[i][0] < self.coord_mp[tn] <= self.blk_interval[i][1]:
-                        self.sum_block_dis[tn] = self.blk_interval[i][1]
-                        self.curr_block[tn] = i + 1
+                if self.curr_mp[tn] not in self.blk_boundaries:
+                    for i in range(len(self.blk_interval)):
+                        if self.blk_interval[i][0] < self.curr_mp[tn] < self.blk_interval[i][1]:
+                            self.curr_occupy[tn] = I.open(blk_interval[i][0], blk_interval[i][1]) 
+                            self.curr_block[tn] = i
+                else:
+                    if self.curr_spd[tn] <> 0:
+                        idx = self.blk_boundaries.index(self.curr_mp[tn])
+                        self.curr_occupy[tn] = I.open(blk_interval[i-1][0], blk_interval[i][1])
+                        self.curr_block[tn] = sorted([i-1, i])
+                    if self.curr_spd[tn] == 0:
+                         
  
         def approach_block(tn, blk_idx):
-            if self.speed[tn] > 0:
-                if self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][0]:
-                    print 'approaching, MP: '+' train '+str(tn) +' '+ str(round(self.coord_mp[tn] + self.speed[tn] * self.refresh))+' DoS has been: '+str(self.time[tn]-self.DoS_strt_t_ticks)  
+            if self.curr_spd[tn] > 0:
+                if self.curr_mp[tn] + self.curr_spd[tn] * self.refresh < self.blk_interval[blk_idx][0]:
+                    #print 'approaching, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
                     return True 
-            if self.speed[tn] < 0:
-                if self.coord_mp[tn] + self.speed[tn] * self.refresh > self.blk_interval[blk_idx][1]:
+            if self.curr_spd[tn] < 0:
+                if self.curr_mp[tn] + self.curr_spd[tn] * self.refresh > self.blk_interval[blk_idx][1]:
                     return True
         
         def leaving_block(tn, blk_idx):
-            if self.speed[tn] > 0 and self.coord_mp[tn] > self.blk_interval[blk_idx][1]: 
-                print 'leaving, MP: '+' train '+str(tn) +' '+ str(round(self.coord_mp[tn] + self.speed[tn] * self.refresh))+' DoS has been: '+str(self.time[tn]-self.DoS_strt_t_ticks)  
+            if self.curr_spd[tn] > 0 and self.curr_mp[tn] > self.blk_interval[blk_idx][1]: 
+                #print 'leaving, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
                 return True 
-            if self.speed[tn] < 0 and self.coord_mp[tn] < self.blk_interval[blk_idx][0]:
+            if self.curr_spd[tn] < 0 and self.curr_mp[tn] < self.blk_interval[blk_idx][0]:
                 return True
         
         def in_block(tn, blk_idx):            
-            if self.blk_interval[blk_idx][0] < self.coord_mp[tn] <= self.blk_interval[blk_idx][1]: 
-                if self.blk_interval[blk_idx][0] < self.coord_mp[tn] + self.speed[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
-                    print 'within, MP: '+' train '+str(tn) +' '+ str(round(self.coord_mp[tn] + self.speed[tn] * self.refresh))+' DoS has been: '+str(self.time[tn]-self.DoS_strt_t_ticks)  
-                    return True    
+            if self.curr_spd[tn] <> 0: 
+                if self.blk_interval[blk_idx][0] < self.curr_mp[tn] <= self.blk_interval[blk_idx][1]: 
+                    if self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
+                        #print 'within, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
+                        return True    
                 
         def enter_block(tn, blk_idx):
-            if not self.blk_interval[blk_idx][0] < self.coord_mp[tn] <= self.blk_interval[blk_idx][1]:
-                if self.blk_interval[blk_idx][0] < self.coord_mp[tn] + self.speed[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
+            if not self.blk_interval[blk_idx][0] < self.curr_mp[tn] <= self.blk_interval[blk_idx][1]:
+                if self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
                     return True 
         
         def skip_block(tn, blk_idx):
-            if not self.blk_interval[blk_idx][0] < self.coord_mp[tn] < self.blk_interval[blk_idx][1]:
-                if self.speed[tn] > 0:
-                    if self.coord_mp[tn] + self.speed[tn] * self.refresh > self.blk_interval[blk_idx][1]:
-                        if self.coord_mp[tn] < self.blk_interval[blk_idx][0]:
+            if not self.blk_interval[blk_idx][0] < self.curr_mp[tn] < self.blk_interval[blk_idx][1]:
+                if self.curr_spd[tn] > 0:
+                    if self.curr_mp[tn] + self.curr_spd[tn] * self.refresh > self.blk_interval[blk_idx][1]:
+                        if self.curr_mp[tn] < self.blk_interval[blk_idx][0]:
                             print 'Warning: refresh too short, DoS got skipped'
                             return True 
-                if self.speed[tn] < 0:
-                    if self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][0]:
-                        if self.coord_mp[tn] > self.blk_interval[blk_idx][1]: 
+                if self.curr_spd[tn] < 0:
+                    if self.curr_mp[tn] + self.curr_spd[tn] * self.refresh < self.blk_interval[blk_idx][0]:
+                        if self.curr_mp[tn] > self.blk_interval[blk_idx][1]: 
                             print 'Warning: refresh too short, DoS got skipped'
                             return True
         
         def exit_block(tn, blk_idx):
-            if self.blk_interval[blk_idx][0] < self.coord_mp[tn] < self.blk_interval[blk_idx][1]: 
-                if not self.blk_interval[blk_idx][0] < self.coord_mp[tn] + self.speed[tn] * self.refresh < self.blk_interval[blk_idx][1]:
+            if self.blk_interval[blk_idx][0] < self.curr_mp[tn] <= self.blk_interval[blk_idx][1]: 
+                if not self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh < self.blk_interval[blk_idx][1]:
                     return True 
         
         
         
-        #=======================================================================
-        # def train_proceed(tn, delta_t):           
-        #     rank_tn_to_follow = self.rank[tn] - 1
-        #     tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
-        #     
-        #     if in_block(tn, self.curr_block[tn]):
-        #         self.coord_mp[tn] += self.speed[tn] * delta_t
-        #         self.time[tn] += self.refresh * 60
-        #     if enter_block(tn, self.curr_block[tn] + 1):
-        #         if abs(self.curr_block[tn_to_follow] - self.curr_block[tn]) > 1:
-        #             if self.rank[tn] -  
-        # 
-        #=======================================================================
+        def train_proceed(tn, delta_t):
+            get_curr_block(tn)
+            update_rank()
+            
+            next_blk_idx = 
+            prev_blk_idx = 
+            
+            if self.blk_interval[self.curr_block[tn]][0] <= self.curr_mp[tn] + self.curr_spd[tn] * delta_t <= self.blk_interval[self.curr_block[tn]][1]:
+                self.curr_mp[tn] += self.curr_spd[tn] * delta_t
+            elif  
+                       
+            rank_tn_to_follow = self.rank[tn] - 1
+            tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
+             
+            if in_block(tn, self.curr_block[tn]):
+                self.curr_mp[tn] += self.curr_spd[tn] * delta_t
+                self.curr_duration[tn] += self.refresh * 60
+            if enter_block(tn, self.curr_block[tn] + 1):
+                if abs(self.curr_block[tn_to_follow] - self.curr_block[tn]) > 1:
+                    if self.rank[tn] -  
+         
         
-        def DoS_reach_blk_end(tn):
+        def DoS_reach_blk_end(tn, blk_idx):
             '''Not yet implemented time update, only coord_mp now.
             '''
             
-            if self.speed[tn] > 0:   
-                self.coord_mp[tn] = self.blk_interval[self.curr_block[tn]][1]
-            if self.speed[tn] < 0:
-                self.coord_mp[tn] = self.blk_interval[self.curr_block[tn]][0]
-            if self.speed[tn] == 0:
-                raise Exception("Speed is zero")
+            if self.curr_spd[tn] > 0:   
+                self.curr_mp[tn] = self.blk_interval[blk_idx][1]
+            if self.curr_spd[tn] < 0:
+                self.curr_mp[tn] = self.blk_interval[blk_idx][0]
+            if self.curr_spd[tn] == 0:
+                if self.max_speed > 0:
+                    self.curr_mp[tn] = self.blk_interval[blk_idx][1]
+                if self.max_speed < 0:
+                    self.curr_mp[tn] = self.blk_interval[blk_idx][0]
+            print 'DoS Reaching End Done', tn, self.curr_mp[tn], blk_idx
             
             
         '''Dictionary containing the concurrent rank for each train, with train number as keys. 
@@ -318,22 +346,21 @@ class single_train:
             """Update the ranking for all concurrent trains in the system
             
             """
-            sorted_distance = sorted(self.coord_mp.values(),reverse=True)
-            for i in self.coord_mp.keys():
-                self.rank[i] = 1 + sorted_distance.index(self.coord_mp[i])
+            sorted_distance = sorted(self.curr_mp.values(),reverse=True)
+            for i in self.curr_mp.keys():
+                self.rank[i] = 1 + sorted_distance.index(self.curr_mp[i])
             self.tn_by_rank  = {v : k for k, v in self.rank.items()}
                            
         update_rank()           # initialize the rank dictionary
-        n = 1                   # n is the counter variable used to create many "one_detail", otherwise all "one_schedule" will be the same
         hdw_stpwatch = 0                # hdw_stpwatch is a stop watch with refreshing time, counting the reminder time before another new train is generated in minutes. 
         np.random.seed()
-        #self.speed[1] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)      # speed in miles per minute, float division
+        #self.curr_spd[1] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)      # speed in miles per minute, float division
         #self.weight[1] = np.random.randint(1, 4)        
         whileloopcount = 0
         the_last_action = 'None'
         while True:
             whileloopcount += 1
-            
+            #print zip(self.curr_mp.keys(),self.curr_mp.values())
             #print 'this is loop: ' +str(whileloopcount)
             
             '''Explain the while True loop
@@ -361,7 +388,9 @@ class single_train:
             '''
             #===================================================================
             # headway in minutes, local variable, randomize every loop in the while True body
-            headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)  
+            headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)
+            while headway <= 0:
+                headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)  
             # because headway > hdw_stpwatch is possible, determine if there is a new train after a new refresh by the judgment below:
             if hdw_stpwatch < headway:  ## no need for a new train, do nothing
                 hdw_stpwatch += self.refresh
@@ -371,15 +400,13 @@ class single_train:
                 spd_seed = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0) 
                 while spd_seed <= 0:
                     spd_seed = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)    
-                self.speed[self.number] = spd_seed                                          # speed in miles per minute                
-                if self.number == 1:
-                    self.time[self.number] = self.strt_t_ticks + hdw_stpwatch * 60              # "born time" for train tn
-                if self.number > 1:
-                    self.time[self.number] = self.time[1] + hdw_stpwatch * 60
-                                                                                            # in seconds because of the ticks are in seconds
+                self.max_speed[self.number] = spd_seed
+                self.curr_spd[self.number] = spd_seed                                          # speed in miles per minute
+                self.init_moment[self.number] = self.clock_time + hdw_stpwatch * 60 
+                self.curr_duration[self.number] = hdw_stpwatch * 60                         # in seconds because of the ticks are in seconds
                 self.weight[self.number] = np.random.randint(1, 4)
                 # update coord_mp[tn] and block status for the newly generated train
-                self.coord_mp[self.number] += self.speed[self.number] * hdw_stpwatch    # miles/min * mins
+                self.curr_mp[self.number] += self.curr_spd[self.number] * hdw_stpwatch    # miles/min * mins
             
             get_curr_block(self.number)
             """The block above ONLY determine the need to initialize a new train.
@@ -391,8 +418,9 @@ class single_train:
             '''
             update_rank()
             # for x in xrange(1, self.number + 1):        # for all current trains, starting from the first of the queue
-            for i in self.rank.keys():
-                # i = self.rank[x]                        # train number x (1,2,3,4,5...) is now ranked as i
+            for tn in self.curr_mp.keys():                
+                #print tn, self.curr_mp[tn], self.curr_block[tn], self.blk_interval[self.curr_block[tn]], 'crr_spd', self.curr_spd[tn]
+                # tn = self.rank[x]                        # train number x (1,2,3,4,5...) is now ranked as tn
                 self.one_detail = {}                    # initialize the one_detail dictionary
                 '''Dictionary containing the momentary information and behaviors of a train, with train number as keys.
                 one_detail : dictionary
@@ -401,87 +429,94 @@ class single_train:
                 ''' 
                         
                 # update time line in seconds accrues by refresh, refresh in minutes, time in seconds
-                # note the key here is i instead of x, because the actions are based on the order of the queue. 
+                # note the key here is tn instead of x, because the actions are based on the order of the queue. 
                 
                 '''If DoS happens:
                 '''
-                get_curr_block(i)
-                if self.is_DoS is True:
-                    # self.time[tn] is the time for a train has been traveling + strt_t time in seconds, concurrent global time for train 'tn'
-                    # so self.time[1] is the current global time. Notice that time is a dictionary, with keys as integer train identifiers.
-                    if self.time[1] < self.DoS_strt_t_ticks:
-                        self.coord_mp[i] += self.speed[i] * self.refresh
-                        
-                    elif self.time[1] > self.DoS_stop_t_ticks:
-                        self.coord_mp[i] += self.speed[i] * self.refresh
-                        
-                    else:
-                        
-                        if approach_block(i, self.DoS_block) or in_block(i, self.DoS_block) or leaving_block(i, self.DoS_block):
-                            self.coord_mp[i] += self.speed[i] * self.refresh
-                            
-                        elif enter_block(i, self.DoS_block) or skip_block(i, self.DoS_block) or exit_block(i, self.DoS_block):
-                            self.coord_mp[i] = DoS_reach_blk_end(i)
-                            
-                    self.time[i] += self.refresh * 60
-                    get_curr_block(i)
-                else:
-                    self.coord_mp[i] += self.speed[i] * self.refresh
-                    self.time[i] += self.refresh * 60
-                    get_curr_block(i)
+                get_curr_block(tn)
+                if self.is_DoS:
+                    # self.curr_duration[tn] is the duration for a train has been traveling in seconds, concurrent life of time for train 'tn'
+                    # so self.clock_time is the current global time. Notice that time is a dictionary, with keys as integer train identifiers.
+                    if self.clock_time < self.DoS_strt_t_ticks or self.clock_time > self.DoS_stop_t_ticks:
+                        self.curr_spd[tn] = self.max_speed[tn]
+                        self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
                 
+                    else:
+                        if approach_block(tn, self.DoS_block) or in_block(tn, self.DoS_block) or leaving_block(tn, self.DoS_block):
+                            self.curr_spd[tn] = self.max_speed[tn]
+                            self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
+                            
+                        elif enter_block(tn, self.DoS_block):
+                            DoS_reach_blk_end(tn, self.curr_block[tn])
+                            self.curr_spd[tn] = 0
+                        elif skip_block(tn, self.DoS_block):
+                            DoS_reach_blk_end(tn, self.curr_block[tn])
+                            self.curr_spd[tn] = 0
+                        elif exit_block(tn, self.DoS_block):
+                            DoS_reach_blk_end(tn, self.curr_block[tn])
+                            self.curr_spd[tn] = 0
+                        elif self.curr_spd[tn] == 0:
+                            self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
+                            print 'Train: ',tn, 'curr spd: ', self.curr_spd[tn], ' MP:', self.curr_mp[tn], self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.clock_time))
+                            
+                    self.curr_duration[tn] += self.refresh * 60
+                    get_curr_block(tn)
+                else:
+                    self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
+                    self.curr_duration[tn] += self.refresh * 60
+                    get_curr_block(tn)
+
                 
                 '''When overtaking happens:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
                     
-                #-------------------------------------------- if i > 0 is False:
-#------------------------------------------------------------------------------ 
-                    #------ # The block position of prev train and current train
-                    #------------------------------------------------------- '''
-                    #------------------------------------------ Overtake Policy:
-#------------------------------------------------------------------------------ 
-                     # # when block small enough and speed large enough, there would be a bug
-                    #------------------------------------------------------- '''
-                     # if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
-                        #--------------------------------- for j in self.siding:
-                            #-------- if self.curr_block[self.rank[x - 1]] == j:
-                                 # if self.speed[self.rank[x-1]] < self.speed[self.rank[x]]:
-                                     # self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
-                                     # self.coord_mp[self.rank[x]] -= self.speed[self.rank[x]] * self.refresh
-                                    #----------------- get_curr_block(i)
-                                #----------------------------------------- break
-#------------------------------------------------------------------------------ 
-                            #------------------------ elif j == self.siding[-1]:
-                                 # self.coord_mp[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
-                                 # #self.coord_mp[self.rank[x]] = max(0, self.coord_mp[self.rank[x]])
-                                # #--------------------- get_curr_block(i)
-#------------------------------------------------------------------------------ 
-                #--------------------------------- # set the color of train node
-                #---------------------------------------- k = self.curr_block[i]
-                #------------------------------------- if 0 < k < len(self.pos):
-                    #------------------------------------ self.ncolor[k-1] = 'r'
-                #------------------------------------- if 0 < k < len(self.pos):
-                    #---------------------------------------- self.labels[k] = i
-                    #-------------------------- self.pos_labels[k] = self.pos[k]
+                if i > 0 is False:
 
-#                 self.one_detail['time'] = round(self.speed[i], 2)
+                    # The block position of prev train and current train
+                    '''
+                    Overtake Policy:
+
+                      # when block small enough and speed large enough, there would be a bug
+                    '''
+                    if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
+                        for sd in self.siding:
+                            if self.curr_block[self.rank[x - 1]] == sd:
+                                if self.curr_spd[self.rank[x-1]] < self.curr_spd[self.rank[x]]:
+                                    self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
+                                    self.curr_mp[self.rank[x]] -= self.curr_spd[self.rank[x]] * self.refresh
+                                    get_curr_block(i)
+                                break
+
+                            elif sd == self.siding[-1]:
+                                pass
+                                #self.curr_mp[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
+                                #self.curr_mp[self.rank[x]] = max(0, self.curr_mp[self.rank[x]])
+                                #--------------------- get_curr_block(i)
+
+                # set the color of train node
+                k = self.curr_block[i]
+                if 0 < k < len(self.pos):
+                    self.ncolor[k-1] = 'r'
+                if 0 < k < len(self.pos):
+                    self.labels[k] = i
+                    self.pos_labels[k] = self.pos[k]
+
+#                 self.one_detail['duration'] = round(self.curr_spd[i], 2)
                 
-                self.one_detail['time'] = self.time[i]
-                self.one_detail['coord_mp(miles)'] = self.coord_mp[i]
+                self.one_detail['duration'] = self.curr_duration[tn]
+                self.one_detail['coord_mp(miles)'] = self.curr_mp[tn]
                 
-                t_stamp_std = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[1]))    # set the first train as reference time
-                
+                t_stamp_std = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.clock_time))    # set the first train as reference time
                 self.one_schedule[t_stamp_std] = self.one_detail       
                 #-------------------------- print self.one_schedule.values()[:5]
-                self.all_schedule[i][t_stamp_std] = self.one_detail 
-                n += 1
-                print self.time[i]
-                the_last_action = 'train number: '      +str(i)\
-                                    +' as rank: '       +str(self.rank[i])\
-                                    +' approach MP: '   +str(round(self.coord_mp[i],2))\
-                                    +' at ticks: '      +str(round(float(self.time[i] - self.strt_t_ticks), 2))[-9:]
+                self.all_schedule[tn][t_stamp_std] = self.one_detail 
+                
+                the_last_action = 'train number: '      +str(tn)\
+                                    +' as rank: '       +str(self.rank[tn])\
+                                    +' approach MP: '   +str(self.curr_mp[tn])\
+                                    +' at ticks: '      +str(self.curr_duration[tn])[-9:]
                 
                                     
             # draw the train map
@@ -492,6 +527,7 @@ class single_train:
             # networkX pause 0.01 seconds
             # plt.pause(0.05)
             #print sorted(self.all_schedule[50].keys())[-5:], sorted([self.all_schedule[50][i]['coord_mp(miles)'] for i in sorted(self.all_schedule[50].keys())[-5:]])
+            self.clock_time += self.refresh * 60
             yield env.timeout(self.refresh*60)
         
     
@@ -573,10 +609,10 @@ class multi_dirc:
         self.one_schedule_B = {}
         self.one_detail_A = {}
         self.one_detail_B = {}
-        self.speed_A = {}
-        self.speed_B = np.random.normal(3, 0.5)
+        self.curr_spd_A = {}
+        self.curr_spd_B = np.random.normal(3, 0.5)
         self.distance_A = {1: 0}
-        self.time = {1: self.strt_t_ticks}
+        self.curr_duration = {1: self.strt_t_ticks}
         env = simpy.Environment()
         env.process(self.train(env))
         duration = self.stop_t_ticks - self.strt_t_ticks
@@ -590,23 +626,23 @@ class multi_dirc:
 
         while True:
             np.random.seed()
-            self.speed_A[self.number] = np.random.normal(3, 0.5) # miles per minute
+            self.curr_spd_A[self.number] = np.random.normal(3, 0.5) # miles per minute
             headway = np.random.normal(20, 5)
             self.all_schedule_A[self.number] = {}
-            self.time[self.number] = self.strt_t_ticks
+            self.curr_duration[self.number] = self.strt_t_ticks
             self.distance_A[self.number] = 0
 
             for i in xrange(1, self.number+1):
                 self.one_detail_A[n] = {}
-                self.time[i] += headway * 60
-                self.distance_A[i] += self.speed_A[i] * headway
-                distance_B = (self.speed_B * (self.time[1] - self.strt_t_ticks)) / 60
+                self.curr_duration[i] += headway * 60
+                self.distance_A[i] += self.curr_spd_A[i] * headway
+                distance_B = (self.curr_spd_B * (self.clock_time - self.strt_t_ticks)) / 60
                 if i > 1:
-                    if self.distance_A[i] > self.distance_A[i-1] - self.speed_A[i-1] * self.buffer:
-                        self.distance_A[i] = self.distance_A[i-1] - self.speed_A[i-1] * self.buffer
+                    if self.distance_A[i] > self.distance_A[i-1] - self.curr_spd_A[i-1] * self.buffer:
+                        self.distance_A[i] = self.distance_A[i-1] - self.curr_spd_A[i-1] * self.buffer
                 dirc = 'A'
                 self.one_detail_A[n]['dirc'] = dirc
-                self.one_detail_A[n]['speed_A(mils/min)'] = self.speed_A[i]
+                self.one_detail_A[n]['speed_A(mils/min)'] = self.curr_spd_A[i]
                 self.one_detail_A[n]['distance_A(miles)'] = self.distance_A[i]
                 self.one_detail_A[n]['headway(mins)'] = headway
 
@@ -619,15 +655,15 @@ class multi_dirc:
                         index_B = x + 1
                 # A and B
                 if index_B - index_A == 2:
-                    time_arrive_buffer_A = self.buffer_list[index_A-1] / self.speed_A[i]
-                    time_arrive_buffer_B = (self.dis - self.buffer_list[index_B-1]) / self.speed_B
+                    time_arrive_buffer_A = self.buffer_list[index_A-1] / self.curr_spd_A[i]
+                    time_arrive_buffer_B = (self.dis - self.buffer_list[index_B-1]) / self.curr_spd_B
                     if time_arrive_buffer_A < time_arrive_buffer_B:
-                        self.distance_A[i] -= (time_arrive_buffer_B - time_arrive_buffer_A) * self.speed_A[i]
+                        self.distance_A[i] -= (time_arrive_buffer_B - time_arrive_buffer_A) * self.curr_spd_A[i]
                     else:
-                        distance_B -= (time_arrive_buffer_A - time_arrive_buffer_B) * self.speed_B
+                        distance_B -= (time_arrive_buffer_A - time_arrive_buffer_B) * self.curr_spd_B
 
                 self.one_detail_A[n]['buffer_index'] = index_A
-                t_stamp_std = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.time[i]))
+                t_stamp_std = self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.curr_duration[i]))
                 self.one_schedule_A[t_stamp_std] = self.one_detail_A[n]
                 self.all_schedule_A[i][t_stamp_std] = self.one_schedule_A[t_stamp_std]
                 n += 1
@@ -646,7 +682,7 @@ print a.string_diagram()
 '''
 
 if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 09:00:00', '2018-01-01 09:30:00', 18, [20, 30, 40], [20] * 60)
+    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 05:00:00', '2018-01-01 09:30:00', 05, [20, 30, 40], [20] * 60)
     a.run()
     print a.blk_interval
     print a.blk_interval[18]
