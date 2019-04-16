@@ -260,7 +260,7 @@ class single_train:
                             self.curr_occupy[tn] = I.open(self.blk_interval[i][0], self.blk_interval[i][1]) 
                             self.curr_block[tn] = i
                 else:
-                    if self.curr_spd[tn] <> 0:
+                    if self.curr_spd[tn] != 0:
                         idx = self.blk_boundaries.index(self.curr_mp[tn])
                         self.curr_occupy[tn] = I.open(blk_interval[i-1][0], blk_interval[i][1])
                         self.curr_block[tn] = sorted([i-1, i])
@@ -268,6 +268,8 @@ class single_train:
                          pass
  
         def approach_block(tn, blk_idx):
+            # Approach is a status that the tn_th train is approaching the blk_idx_th block.
+            # After the refresh time the train still does not enter the block.
             if self.curr_spd[tn] > 0:
                 if self.curr_mp[tn] + self.curr_spd[tn] * self.refresh < self.blk_interval[blk_idx][0]:
                     #print 'approaching, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
@@ -277,25 +279,35 @@ class single_train:
                     return True
         
         def leaving_block(tn, blk_idx):
+            # Leaving is a status that the tn_th train is leaving the blk_idx_th block.
+            # Before and after the refresh time, the train had left the block.
             if self.curr_spd[tn] > 0 and self.curr_mp[tn] > self.blk_interval[blk_idx][1]: 
                 #print 'leaving, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
                 return True 
             if self.curr_spd[tn] < 0 and self.curr_mp[tn] < self.blk_interval[blk_idx][0]:
                 return True
         
-        def in_block(tn, blk_idx):            
-            if self.curr_spd[tn] <> 0: 
+        def in_block(tn, blk_idx):
+            # In_block is a status that the tn_th train is in the blk_idx_th block.
+            # Before and after the refresh time, the train is in the block.
+            if self.curr_spd[tn] != 0: 
                 if self.blk_interval[blk_idx][0] < self.curr_mp[tn] <= self.blk_interval[blk_idx][1]: 
                     if self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
                         #print 'within, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
                         return True    
                 
         def enter_block(tn, blk_idx):
+            # Enter is a status that the tn_th train is entering the blk_idx_th block.
+            # Before the refresh time, the train was not in the block.
+            # After the refresh time, the train was in the block.
             if not self.blk_interval[blk_idx][0] < self.curr_mp[tn] <= self.blk_interval[blk_idx][1]:
                 if self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
                     return True 
         
         def skip_block(tn, blk_idx):
+            # Skip is a status that the tn_th train is skiping the blk_idx_th block.
+            # Before the refresh time, the train was appoarching the block.
+            # After the refresh time, the train was leaving the block.
             if not self.blk_interval[blk_idx][0] < self.curr_mp[tn] < self.blk_interval[blk_idx][1]:
                 if self.curr_spd[tn] > 0:
                     if self.curr_mp[tn] + self.curr_spd[tn] * self.refresh > self.blk_interval[blk_idx][1]:
@@ -309,6 +321,9 @@ class single_train:
                             return True
         
         def exit_block(tn, blk_idx):
+            # Exit is a status that the tn_th train is exiting the blk_idx_th block.
+            # Before the refresh time, the train was in the block.
+            # After the refresh time, the train was not in the block.
             if self.blk_interval[blk_idx][0] < self.curr_mp[tn] <= self.blk_interval[blk_idx][1]: 
                 if not self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh < self.blk_interval[blk_idx][1]:
                     return True 
