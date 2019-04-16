@@ -461,7 +461,7 @@ class single_train:
                     Key: train number 'tn'
                     Value: dictionary for key-value pairs with lifetime attributes of a train 
                 ''' 
-                        
+                
                 # update time line in seconds accrues by refresh, refresh in minutes, time in seconds
                 # note the key here is tn instead of x, because the actions are based on the order of the queue. 
                 
@@ -491,43 +491,45 @@ class single_train:
                             self.curr_spd[tn] = 0
                         elif self.curr_spd[tn] == 0:
                             self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
-                            print 'Train: ',tn, 'curr spd: ', self.curr_spd[tn], ' MP:', self.curr_mp[tn], self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.clock_time))
-                            
+                            print 'Train: ',tn, 'curr spd: ', self.curr_spd[tn], ' MP:', self.curr_mp[tn], self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.clock_time))                            
                     self.curr_duration[tn] += self.refresh * 60
                     get_curr_block(tn)
                 else:
                     self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
                     self.curr_duration[tn] += self.refresh * 60
                     get_curr_block(tn)
-
+                
+                
                 
                 '''When overtaking happens:
                 Traverse the rank of all train, if low rank catch up high rank, it should follow instead of surpass. 
                 Unless there is a siding.
                 '''
-                    
-                if i > 0 is False:
-
-                    # The block position of prev train and current train
-                    '''
-                    Overtake Policy:
-
-                      # when block small enough and speed large enough, there would be a bug
-                    '''
-                    if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
-                        for sd in self.siding:
-                            if self.curr_block[self.rank[x - 1]] == sd:
-                                if self.curr_spd[self.rank[x-1]] < self.curr_spd[self.rank[x]]:
-                                    self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
-                                    self.curr_mp[self.rank[x]] -= self.curr_spd[self.rank[x]] * self.refresh
-                                    get_curr_block(i)
-                                break
-
-                            elif sd == self.siding[-1]:
-                                pass
-                                #self.curr_mp[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
-                                #self.curr_mp[self.rank[x]] = max(0, self.curr_mp[self.rank[x]])
-                                #--------------------- get_curr_block(i)
+                
+#===============================================================================
+#                 if i > 0 is False:
+# 
+#                     # The block position of prev train and current train
+#                     '''
+#                     Overtake Policy:
+# 
+#                       # when block small enough and speed large enough, there would be a bug
+#                     '''
+#                     if self.curr_block[self.rank[x - 1]] <= self.curr_block[self.rank[x]] + 1:
+#                         for sd in self.siding:
+#                             if self.curr_block[self.rank[x - 1]] == sd:
+#                                 if self.curr_spd[self.rank[x-1]] < self.curr_spd[self.rank[x]]:
+#                                     self.rank[x], self.rank[x - 1] = self.rank[x - 1], self.rank[x]
+#                                     self.curr_mp[self.rank[x]] -= self.curr_spd[self.rank[x]] * self.refresh
+#                                     get_curr_block(i)
+#                                 break
+# 
+#                             elif sd == self.siding[-1]:
+#                                 pass
+#                                 #self.curr_mp[self.rank[x]] = self.sum_block_dis[self.rank[x]] - self.block[self.curr_block[self.rank[x]]]
+#                                 #self.curr_mp[self.rank[x]] = max(0, self.curr_mp[self.rank[x]])
+#                                 #--------------------- get_curr_block(i)
+#===============================================================================
 
                 # set the color of train node
                 k = self.curr_block[i]
