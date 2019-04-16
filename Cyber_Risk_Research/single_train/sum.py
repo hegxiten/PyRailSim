@@ -395,7 +395,7 @@ class single_train:
         The actions before the while loop is the initialization of the simulation. 
         '''   
         update_rank()           # initialize the rank dictionary
-        hdw_stpwatch = 0                # hdw_stpwatch is a stop watch with refreshing time, counting the reminder time before another new train is generated in minutes. 
+        hdw_stpwatch = 0        # hdw_stpwatch is a stop watch with refreshing time, counting the reminder time before another new train is generated in minutes. 
         np.random.seed()
         #self.curr_spd[1] = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)      # speed in miles per minute, float division
         #self.weight[1] = np.random.randint(1, 4)        
@@ -434,10 +434,11 @@ class single_train:
             float problem when printing the events.  
             '''
             #===================================================================
+            #===========================Generate Train==========================
             # headway in minutes, local variable, randomize every loop in the while True body
             headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)
             while headway <= 0:
-                headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)  
+                headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)
             # because headway > hdw_stpwatch is possible, determine if there is a new train after a new refresh by the judgment below:
             if hdw_stpwatch < headway:  ## no need for a new train, do nothing
                 hdw_stpwatch += self.refresh
@@ -449,7 +450,7 @@ class single_train:
                     spd_seed = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)    
                 self.max_speed[self.number] = spd_seed
                 self.curr_spd[self.number] = spd_seed                                          # speed in miles per minute
-                self.init_moment[self.number] = self.clock_time + hdw_stpwatch * 60 
+                self.init_moment[self.number] = self.clock_time + hdw_stpwatch * 60
                 self.curr_duration[self.number] = hdw_stpwatch * 60                         # in seconds because of the ticks are in seconds
                 self.weight[self.number] = np.random.randint(1, 4)
                 # update coord_mp[tn] and block status for the newly generated train
