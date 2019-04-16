@@ -241,7 +241,7 @@ class single_train:
                 if self.curr_mp[tn] not in self.blk_boundaries:
                     for i in range(len(self.blk_interval)):
                         if self.blk_interval[i][0] < self.curr_mp[tn] < self.blk_interval[i][1]:
-                            self.curr_occupy[tn] = I.open(blk_interval[i][0], blk_interval[i][1]) 
+                            self.curr_occupy[tn] = I.open(self.blk_interval[i][0], self.blk_interval[i][1]) 
                             self.curr_block[tn] = i
                 else:
                     if self.curr_spd[tn] <> 0:
@@ -249,7 +249,7 @@ class single_train:
                         self.curr_occupy[tn] = I.open(blk_interval[i-1][0], blk_interval[i][1])
                         self.curr_block[tn] = sorted([i-1, i])
                     if self.curr_spd[tn] == 0:
-                         
+                         pass
  
         def approach_block(tn, blk_idx):
             if self.curr_spd[tn] > 0:
@@ -299,32 +299,34 @@ class single_train:
         
         
         
-        def train_proceed(tn, delta_t):
-            get_curr_block(tn)
-            update_rank()
-            
-            next_blk_idx = 
-            prev_blk_idx = 
-            
-            if self.blk_interval[self.curr_block[tn]][0] <= self.curr_mp[tn] + self.curr_spd[tn] * delta_t <= self.blk_interval[self.curr_block[tn]][1]:
-                self.curr_mp[tn] += self.curr_spd[tn] * delta_t
-            elif next_avail(tn):
-                
-            enter_block(tn, self.curr_block[tn] + 1):
-                self.curr_mp[tn] += self.curr_mp[tn] + 1
-                get_curr_block(tn)
-            elif enter_block(tn, self.curr_block[tn] - 1):
-                self.curr_mp[tn] += 
-                       
-            rank_tn_to_follow = self.rank[tn] - 1
-            tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
-             
-            if in_block(tn, self.curr_block[tn]):
-                self.curr_mp[tn] += self.curr_spd[tn] * delta_t
-                self.curr_duration[tn] += self.refresh * 60
-            if enter_block(tn, self.curr_block[tn] + 1):
-                if abs(self.curr_block[tn_to_follow] - self.curr_block[tn]) > 1:
-                    if self.rank[tn] -  
+        #=======================================================================
+        # def train_proceed(tn, delta_t):
+        #     get_curr_block(tn)
+        #     update_rank()
+        #     
+        #     next_blk_idx = 
+        #     prev_blk_idx = 
+        #     
+        #     if self.blk_interval[self.curr_block[tn]][0] <= self.curr_mp[tn] + self.curr_spd[tn] * delta_t <= self.blk_interval[self.curr_block[tn]][1]:
+        #         self.curr_mp[tn] += self.curr_spd[tn] * delta_t
+        #     elif next_avail(tn):
+        #         
+        #     enter_block(tn, self.curr_block[tn] + 1):
+        #         self.curr_mp[tn] += self.curr_mp[tn] + 1
+        #         get_curr_block(tn)
+        #     elif enter_block(tn, self.curr_block[tn] - 1):
+        #         self.curr_mp[tn] += 
+        #                
+        #     rank_tn_to_follow = self.rank[tn] - 1
+        #     tn_to_follow = self.tn_by_rank[rank_tn_to_follow]
+        #      
+        #     if in_block(tn, self.curr_block[tn]):
+        #         self.curr_mp[tn] += self.curr_spd[tn] * delta_t
+        #         self.curr_duration[tn] += self.refresh * 60
+        #     if enter_block(tn, self.curr_block[tn] + 1):
+        #         if abs(self.curr_block[tn_to_follow] - self.curr_block[tn]) > 1:
+        #             if self.rank[tn] -  
+        #=======================================================================
          
         
         def DoS_reach_blk_end(tn, blk_idx):
