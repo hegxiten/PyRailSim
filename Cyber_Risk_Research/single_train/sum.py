@@ -12,7 +12,8 @@ import intervals as I
 
 class RailNetwork:
     '''
-    Class RailNetwork is the base map where the trains are operating on.
+    Class RailNetwork is the base map where the trains are operating on. 
+    This class doesn't change the output or parameters for calculation.
     '''
     def __init__(self, G = nx.Graph()):
         self.G = G
@@ -33,6 +34,10 @@ class RailNetwork:
                     self.G[i[0]][i[1]]['attr'] = 'siding'
 
 class Simulator:
+    '''
+    Class Simulator is trying to instantiate an object. 
+    Not started yet.  
+    '''
     def __init__(self, strt_t, stop_t, speed, time_log):
         ## define the feature parameters of a train object
         self.refresh = 2
@@ -45,13 +50,17 @@ class Simulator:
     def attack_DoS(self, DoS_strt_t, DoS_stop_t, DoS_block):
         pass
 class Train_generator:
+    '''
+    Class Train_generator is trying to rewrite the generation process within single_train class. 
+    Not started yet.  
+    '''
     def __init__(self):
         pass
 
 
 def networkX_write():
     '''
-    ## generate a network graph in simple grids and save it into 'gpickle' file.
+    generate a network graph in simple grids and save it into 'gpickle' file.
     '''
     number = 120
     G = nx.MultiGraph()
@@ -208,7 +217,14 @@ class single_train:
         
         self.weight = defaultdict(lambda: 0)
     
-    def train(self, env):   
+    def train(self, env):
+        '''
+        This function describes all the actions for each train object in the simulator of each refreshing time (Discrete Event Simulator).
+        Each self.refresh is the time increment for the train actions to be taken.
+        
+        >>>e.g. approach_block, leaving_block, etc. as train's actions (built-in functions below) for each self.refresh time.
+        >>>Although not written in Class, the train are supposed to be re-written in objects.
+        '''   
         def get_curr_block(tn):
             """Encapsulated function to determine concurrent block and total blocked distance of a train:
             
@@ -358,7 +374,11 @@ class single_train:
             for i in self.curr_mp.keys():
                 self.rank[i] = 1 + sorted_distance.index(self.curr_mp[i])
             self.tn_by_rank  = {v : k for k, v in self.rank.items()}
-                           
+        
+        '''
+        Below is the logics for the relationships among trains when the simulation is running. 
+        The actions before the while loop is the initialization of the simulation. 
+        '''   
         update_rank()           # initialize the rank dictionary
         hdw_stpwatch = 0                # hdw_stpwatch is a stop watch with refreshing time, counting the reminder time before another new train is generated in minutes. 
         np.random.seed()
@@ -367,6 +387,10 @@ class single_train:
         whileloopcount = 0
         the_last_action = 'None'
         while True:
+            '''
+            The while loop serves as the continuous simulation until the timeout funcion called at the end (yield env.timeout())
+            This is the application of the simpy library. Needs to be explained later. 
+            '''
             whileloopcount += 1
             #print zip(self.curr_mp.keys(),self.curr_mp.values())
             #print 'this is loop: ' +str(whileloopcount)
@@ -423,6 +447,8 @@ class single_train:
             
             #===================================================================
             '''Starting below includes both DoS and overtaking policies. Needs to be separated.
+            The for loop iterates all the online trains and their neighbors to determine if there is overtaking or holding actions to be taken. 
+            Below is the major part to be re-written and split.
             '''
             update_rank()
             # for x in xrange(1, self.number + 1):        # for all current trains, starting from the first of the queue
@@ -535,11 +561,19 @@ class single_train:
             # networkX pause 0.01 seconds
             # plt.pause(0.05)
             #print sorted(self.all_schedule[50].keys())[-5:], sorted([self.all_schedule[50][i]['coord_mp(miles)'] for i in sorted(self.all_schedule[50].keys())[-5:]])
+            
+            '''
+            To explain the usage of the scripts below, refer simpy documents or ask Kai directly.
+            '''
             self.clock_time += self.refresh * 60
             yield env.timeout(self.refresh*60)
         
     
     def run(self):
+        '''
+        Serves as the simpy envrionment for DES simulation. 
+        To explain the usage of the scripts below, refer simpy documents or ask Kai directly.
+        '''
         # use simpy library to define the process of train system
         env = simpy.Environment()
         env.process(self.train(env))
@@ -547,6 +581,9 @@ class single_train:
         env.run(until=duration)
 
     def string_diagram(self):
+        '''
+        To draw the string diagram based on the schedule dictionary for all the trains. 
+        '''
         # draw the train working diagram
         '''begin comment__train stringline diagram'''
         x = []; y = []
@@ -586,21 +623,19 @@ class single_train:
         # print self.all_schedule
         return self.all_schedule
 
-'''
-# single_train
-from single_train import single_train
-
-import networkX_w_r
-networkX_w_r.networkX_write()
-
-a = single_train('2018-01-01 00:00:00', '2018-01-03 00:00:00', [200, 400, 600, 800])
-print a.string_diagram()
-'''
+if __name__ == '__main__':
+    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 05:00:00', '2018-01-01 09:30:00', 05, [20, 30, 40], [20] * 60)
+    a.run()
+    print a.blk_interval
+    print a.blk_interval[18]
+    print '2018-01-01 09:00:00', '2018-01-01 09:30:00'
+    a.string_diagram()
+    
 
 class multi_dirc:
     '''
-    many trains are generated by two control points,
-    here I want to output the schedule of each train.
+    Needs to be re-written after the single direction is done.
+    Better to integrate multi-dirction with single direction. 
     '''
 
     def __init__(self, strt_t, stop_t, dis_miles, buffer_list):
@@ -681,19 +716,4 @@ class multi_dirc:
     def string_diagram(self):
         return self.all_schedule_A
 
-'''
-# code in main class
 
-from multi_dirc import multi_dirc
-a = multi_dirc('2018-01-01 00:00:00', '2018-01-02 00:00:00', 1000, [500, 1000, 1500, 2000, 2500])
-print a.string_diagram()
-'''
-
-if __name__ == '__main__':
-    a = single_train('2018-01-01 00:00:00', '2018-01-01 12:00:00', True, '2018-01-01 05:00:00', '2018-01-01 09:30:00', 05, [20, 30, 40], [20] * 60)
-    a.run()
-    print a.blk_interval
-    print a.blk_interval[18]
-    print '2018-01-01 09:00:00', '2018-01-01 09:30:00'
-    a.string_diagram()
-    
