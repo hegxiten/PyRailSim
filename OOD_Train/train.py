@@ -87,7 +87,7 @@ class Train():
         self.curr_speed = self.init_speed
         self.status = 1
     
-    def update(self, next_block_has_train, dos_pos=-1):
+    def update(self, system, next_block_has_train, curr_time, dos_pos=-1):
         if self.pos >= self.blk_interval[len(self.blk_interval) - 1][1]:
             return
         if self.pos + self.curr_speed * refresh < self.blk_interval[self.curr_blk][1]:
@@ -97,12 +97,13 @@ class Train():
         elif dos_pos == self.blk_interval[self.curr_blk][1]:
             self.pos = self.blk_interval[self.curr_blk][1]
         else:
+            self.blk_time[self.curr_blk].append(curr_time)
+            self.blk_time.append([curr_time])
+            system.blocks[self.curr_blk].isOccupied = False
             self.curr_blk += 1
+            if(self.curr_blk < len(system.blocks)):
+                system.blocks[self.curr_blk].isOccupied = True
             self.pos = self.pos = self.pos + self.curr_speed * refresh
-        print(self.pos)
 
     def print_blk_time(self):
-        # res = ''
-        # for t in self.blk_time:
-        #     res.append('[' + t[0] + ',' + t[1] + ']')
         print(self.blk_time)
