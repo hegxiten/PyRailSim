@@ -3,7 +3,7 @@ from system import System
 from train import Train
 
 
-sys = System([20] * 10)
+sys = System('2018-01-01 00:00:00', [20] * 10)
 i = 0
 while sys.refresh_time < 200000:
     i += 1

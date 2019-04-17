@@ -10,14 +10,14 @@ class Train():
     spd_exp = 50
     spd_dev = 0.5
 
-    def __init__(self, rank, blk_interval):
+    def __init__(self, rank, blk_interval, sys_time):
         self.pos = 0
-        self.init_speed = 0.5#np.random.normal(self.spd_exp, self.spd_dev)
+        self.init_speed = 0.01#np.random.normal(self.spd_exp, self.spd_dev)
         self.curr_speed = self.init_speed
         self.curr_blk = 0
         self.status = 1
         self.rank = rank
-        self.blk_time = [[time.ctime(int(time.time()))]]
+        self.blk_time = [[time.ctime(sys_time)]]
         self.blk_interval = blk_interval
     '''
     def approach_block(self, blk_idx):
