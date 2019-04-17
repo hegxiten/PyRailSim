@@ -1,7 +1,9 @@
-from block import Block
-from train import Train
 import time
+
+from block import Block
 import numpy as np
+from train import Train
+
 
 exp_buffer, var_buffer = 10, 0.5
 

@@ -1,6 +1,7 @@
-from train import Train
 from block import Block
 from system import System
+from train import Train
+
 
 sys = System([20] * 10)
 i = 0
