@@ -46,7 +46,6 @@ class Train():
                 if self.blk_interval[blk_idx][0] < self.curr_mp[tn] + self.curr_spd[tn] * self.refresh <= self.blk_interval[blk_idx][1]:
                     #print 'within, MP: '+' train '+str(tn) +' '+ str(round(self.curr_mp[tn] + self.curr_spd[tn] * self.refresh))+' DoS has been: '+str(self.curr_duration[tn]-self.DoS_strt_t_ticks)  
                     return True    
-    '''        
     def enter_block(self, blk_idx):
         # Enter is a status that the tn_th train is entering the blk_idx_th block.
         # Before the refresh time, the train was not in the block.
@@ -55,7 +54,7 @@ class Train():
             new_pos = self.pos + self.curr_speed * refresh 
             if self.blk_interval[blk_idx + 1][0] < new_pos <= self.blk_interval[blk_idx + 1][1]:
                 return True 
-    '''
+    
     def skip_block(self, blk_idx):
         # Skip is a status that the tn_th train is skiping the blk_idx_th block.
         # Before the refresh time, the train was appoarching the block.
@@ -88,12 +87,13 @@ class Train():
         self.curr_speed = self.init_speed
         self.status = 1
     
-    def update(self, prev_blk_sum, next_block_has_train):
-        if self.enter_block(self.curr_blk + 1):
-            if not next_block_has_train:
-                self.curr_blk += 1
-                self.pos = self.pos + self.curr_speed * refresh
-            else:
-                self.pos = self.blk_interval[self.curr_blk[1]]
+    def update(self, next_block_has_train, dos_pos=-1):
+        if self.pos + self.speed * refresh < self.blk_interval[self.curr_blk][1]:
+            self.pos = self.pos + self.speed * refresh
+        elif next_block_has_train:
+            self.pos = self.blk_interval[self.curr_blk][1]
+        elif dos_pos == self.blk_interval[self.curr_blk][1]:
+            self.pos = self.blk_interval[self.curr_blk][1]
         else:
-            self.pos = self.pos + self.curr_speed * refresh
+            self.curr_blk += 1
+            self.pos = self.pos = self.pos + self.speed * refresh
