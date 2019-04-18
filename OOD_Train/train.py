@@ -13,7 +13,10 @@ class Train():
         self.curr_blk = 0
         self.status = 1
         self.rank = rank
-        self.blk_time = [[time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(sys_time))]]
+
+        #self.blk_time = [[time.ctime(sys_time)]]
+        self.blk_time = [[sys_time]]
+
         self.blk_interval = blk_interval
     '''
     def approach_block(self, blk_idx):
@@ -96,12 +99,15 @@ class Train():
             self.pos = self.blk_interval[self.curr_blk][1]
         else:
             self.blk_time[self.curr_blk].append(curr_time)
+
             if len(self.blk_time) < len(system.blocks):
                 self.blk_time.append([curr_time])
+
             system.blocks[self.curr_blk].isOccupied = False
-            self.curr_blk += 1
-            if(self.curr_blk < len(system.blocks)):
-                system.blocks[self.curr_blk].isOccupied = True
+            if self.curr_blk + 1 <= len(system.blocks):
+                self.blk_time.append([curr_time])
+                self.curr_blk += 1
+                system.blocks[self.curr_blk].isOccupied = True    
             self.pos = self.pos + self.curr_speed * refresh
 
     def print_blk_time(self):
