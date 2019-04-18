@@ -58,7 +58,7 @@ class System():
                 next_block_has_train = self.blocks[t.curr_blk + 1].isOccupied
             else:
                 next_block_has_train = False
-            curr_time = time.ctime(int(self.sys_time))
+            curr_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(self.sys_time))
             if self.dos_period[0] <= self.sys_time <= self.dos_period[1]:
                 t.update(self, next_block_has_train, curr_time, self.dos_pos)
             else:

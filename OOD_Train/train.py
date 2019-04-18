@@ -1,23 +1,19 @@
 import time
-
+import random
 import numpy as np
 
 
 refresh = 1
 
 class Train():
-
-    spd_exp = 50
-    spd_dev = 0.5
-
     def __init__(self, rank, blk_interval, sys_time):
         self.pos = 0
-        self.init_speed = 0.02#np.random.normal(self.spd_exp, self.spd_dev)
+        self.init_speed = random.randint(2,10) / 100
         self.curr_speed = self.init_speed
         self.curr_blk = 0
         self.status = 1
         self.rank = rank
-        self.blk_time = [[time.ctime(sys_time)]]
+        self.blk_time = [[time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(sys_time))]]
         self.blk_interval = blk_interval
     '''
     def approach_block(self, blk_idx):
@@ -100,7 +96,8 @@ class Train():
             self.pos = self.blk_interval[self.curr_blk][1]
         else:
             self.blk_time[self.curr_blk].append(curr_time)
-            self.blk_time.append([curr_time])
+            if len(self.blk_time) < len(system.blocks):
+                self.blk_time.append([curr_time])
             system.blocks[self.curr_blk].isOccupied = False
             self.curr_blk += 1
             if(self.curr_blk < len(system.blocks)):
