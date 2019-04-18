@@ -91,7 +91,7 @@ class Train():
     def terminate(self):
         self.status = 2
         
-    def proceed_in_block(self, system, blk_idx):
+    def proceed(self, system):
         self.start()
         self.curr_pos += self.curr_speed * self.refresh_time
         self.curr_time += self.refresh_time
@@ -105,15 +105,13 @@ class Train():
             self.curr_time = interpolate_time
             self.time_pos_list.append([self.curr_time, self.curr_pos])
         self.curr_pos = self.curr_pos
-        self.curr_time = self.curr_time + self.refresh_time
+        self.curr_time += self.refresh_time
         self.time_pos_list.append([self.curr_time, self.curr_pos])
         self.stop()
         
     def leave_block(self, system, blk_idx):
         system.blocks[blk_idx].isOccupied = False
         self.blk_time[blk_idx].append(self.curr_time)
-        
-        
         
     def enter_block(self, system, blk_idx):
         system.blocks[blk_idx].isOccupied = True
@@ -123,7 +121,7 @@ class Train():
         if self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
             self.leave_block(system, len(self.blk_interval) - 1)
         elif self.curr_pos + self.curr_speed * self.refresh_time < self.blk_interval[self.curr_blk][1]:
-            self.proceed_in_block(system, self.curr_blk)
+            self.proceed(system)
         elif (next_block_has_train or dos_pos == self.blk_interval[self.curr_blk][1]):
             self.stop_at_block_end(system, self.curr_blk)
         elif self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[self.curr_blk][1]: 
@@ -131,9 +129,9 @@ class Train():
                 self.leave_block(system, self.curr_blk)            
                 self.enter_block(system, self.curr_blk+1)
                 self.curr_blk += 1
-                self.proceed_in_block(system, self.curr_blk)
+                self.proceed(system)
             elif self.curr_pos + self.curr_speed * self.refresh_time < self.blk_interval[self.curr_blk][1]: 
-                self.proceed_in_block(system, self.curr_blk)
+                self.proceed(system)
             else: 
                 self.leave_block(system, self.curr_blk)
 
