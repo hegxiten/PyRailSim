@@ -99,15 +99,14 @@ class Train():
             self.pos = self.blk_interval[self.curr_blk][1]
         else:
             self.blk_time[self.curr_blk].append(curr_time)
-
             if len(self.blk_time) < len(system.blocks):
                 self.blk_time.append([curr_time])
-
             system.blocks[self.curr_blk].isOccupied = False
-            if self.curr_blk + 1 <= len(system.blocks):
-                self.blk_time.append([curr_time])
+            if self.curr_blk < len(system.blocks)-1:
                 self.curr_blk += 1
-                system.blocks[self.curr_blk].isOccupied = True    
+                system.blocks[self.curr_blk].isOccupied = True
+            else:
+                self.blk_time.pop(-1)
             self.pos = self.pos + self.curr_speed * refresh
 
     def print_blk_time(self):
