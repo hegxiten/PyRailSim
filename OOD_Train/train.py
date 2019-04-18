@@ -5,15 +5,13 @@ import numpy as np
 class Train():
     def __init__(self, idx, rank, blk_interval, init_time, refresh_time):
         self.curr_pos = 0
-        self.curr_time = init_time
         self.init_speed = random.randint(2,10) / 100
         self.curr_speed = self.init_speed
         self.curr_blk = 0
         self.status = 1
         self.train_idx = idx
         self.rank = rank
-        #self.blk_time = [[time.ctime(init_time)]]
-        self.blk_time = [[self.curr_time]]
+        self.blk_time = [[init_time]]
         self.blk_interval = blk_interval
         self.refresh_time = refresh_time
         self.time_pos_list = [[self.blk_time[0][0], self.blk_interval[0][0]]]  # not yet implemented interpolation
@@ -94,30 +92,33 @@ class Train():
     def proceed(self, system):
         self.start()
         self.curr_pos += self.curr_speed * self.refresh_time
-        self.curr_time += self.refresh_time
-        self.time_pos_list.append([self.curr_time, self.curr_pos])
+        self.time_pos_list.append([system.sys_time, self.curr_pos])
     
     def stop_at_block_end(self, system, blk_idx):
         # interpolate the time moment when the train reaches exactly the block boundary
         if self.curr_speed > 0:
-            interpolate_time = (self.blk_interval[blk_idx][1] - self.curr_pos) / self.curr_speed + self.curr_time
+            interpolate_time = (self.blk_interval[blk_idx][1] - self.curr_pos) / self.curr_speed + system.sys_time
             self.curr_pos = self.blk_interval[blk_idx][1]
-            self.curr_time = interpolate_time
-            self.time_pos_list.append([self.curr_time, self.curr_pos])
-        self.curr_pos = self.curr_pos
-        self.curr_time += self.refresh_time
-        self.time_pos_list.append([self.curr_time, self.curr_pos])
+            self.time_pos_list.append([system.sys_time, self.curr_pos])
+        if self.curr_speed == 0:
+            self.curr_pos = self.curr_pos
+        self.time_pos_list.append([system.sys_time, self.curr_pos])
         self.stop()
         
     def leave_block(self, system, blk_idx):
         system.blocks[blk_idx].isOccupied = False
-        self.blk_time[blk_idx].append(self.curr_time)
+        self.blk_time[blk_idx].append(system.sys_time)
+        # interpolate the time moment when the train leaves the system
+        if blk_idx == len(system.blocks)-1:
+            interpolate_time = (self.blk_interval[blk_idx][1] - self.curr_pos) / self.curr_speed + system.sys_time
+            self.curr_pos = self.blk_interval[blk_idx][1]
+            self.time_pos_list.append([system.sys_time, self.curr_pos])
         
     def enter_block(self, system, blk_idx):
         system.blocks[blk_idx].isOccupied = True
-        self.blk_time.append([self.curr_time])
+        self.blk_time.append([system.sys_time])
     
-    def update(self, system, next_block_has_train, curr_time, dos_pos=-1):
+    def update(self, system, next_block_has_train, dos_pos=-1):
         # If the train arrives at the end of whole track, the train will leave blocks.
         if self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
             self.leave_block(system, len(self.blk_interval) - 1)

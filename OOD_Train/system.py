@@ -63,9 +63,9 @@ class System():
             curr_time = self.sys_time
 
             if self.dos_period[0] <= self.sys_time <= self.dos_period[1]:
-                t.update(self, next_block_has_train, curr_time, self.dos_pos)
+                t.update(self, next_block_has_train, self.dos_pos)
             else:
-                t.update(self, next_block_has_train, curr_time)
+                t.update(self, next_block_has_train)
         self.sys_time += self.refresh_time
 
         
