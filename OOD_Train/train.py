@@ -12,7 +12,7 @@ class Train():
 
     def __init__(self, rank, blk_interval, sys_time):
         self.pos = 0
-        self.init_speed = 0.01#np.random.normal(self.spd_exp, self.spd_dev)
+        self.init_speed = 0.02#np.random.normal(self.spd_exp, self.spd_dev)
         self.curr_speed = self.init_speed
         self.curr_blk = 0
         self.status = 1
@@ -105,7 +105,7 @@ class Train():
             self.curr_blk += 1
             if(self.curr_blk < len(system.blocks)):
                 system.blocks[self.curr_blk].isOccupied = True
-            self.pos = self.pos = self.pos + self.curr_speed * refresh
+            self.pos = self.pos + self.curr_speed * refresh
 
     def print_blk_time(self):
         print(self.blk_time)

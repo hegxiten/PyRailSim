@@ -8,7 +8,7 @@ from train import Train
 exp_buffer, var_buffer = 10, 0.5
 
 class System():
-    def __init__(self, init_time, block_length, siding_index=[], dos_period=[-1, -1], dos_pos=-1, refresh_time=1):
+    def __init__(self, init_time, block_length, siding_index=[], dos_period=['2017-12-31 00:00:00', '2017-12-31 00:00:00'], dos_pos=-1, refresh_time=1):
         self.sys_time = time.mktime(time.strptime(init_time, "%Y-%m-%d %H:%M:%S"))  
         # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.blocks = []
@@ -19,7 +19,6 @@ class System():
             self.blocks.append(Block(i, block_length[i], False))
         self.trains = []
         self.dos_period = [time.mktime(time.strptime(t, "%Y-%m-%d %H:%M:%S")) for t in dos_period if type(t) == str]
-        print(self.dos_period)
         self.dos_pos = dos_pos
         self.train_num = 0        
         self.block_intervals = []
@@ -42,7 +41,7 @@ class System():
         self.last_train_time = self.sys_time
 
     def refresh(self):
-        headway = 20#np.random.normal(exp_buffer, var_buffer)
+        headway = 600#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation
         # is bigger than headway, it will generate a new train at start point.
         if self.train_num == 0:

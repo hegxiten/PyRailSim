@@ -10,7 +10,7 @@ class Block():
 
     def enter_train(self, train):
         if self.isOccupied:
-            print("This block is occupied, cannot enter new train!")
+            print("Block: "+str(self.index)+" is occupied, cannot enter new train!")
             return False
         else:
             self.curr_train = train
@@ -19,7 +19,7 @@ class Block():
 
     def exit_train(self):
         if not self.isOccupied:
-            print("This block is not occupied, no need to exit!")
+            print("Block: "+str(self.index)+" is not occupied, no need to exit!")
             return False
         else:
             self.curr_train = None
@@ -28,10 +28,10 @@ class Block():
     
     def enter_siding(self, train):
         if not self.has_siding:
-            print("There is no siding in this block.")
+            print("There is no siding in Block: "+str(self.index))
             return False
         elif self.siding_occupied:
-            print("This siding has been occupied!")
+            print("Block: "+str(self.index)+" This siding has been occupied!")
             return False
         else:
             self.siding_train = train
@@ -39,10 +39,10 @@ class Block():
 
     def exit_siding(self, train):
         if not self.has_siding:
-            print("There is no siding in this block.")
+            print("There is no siding in Block: "+str(self.index))
             return False
         elif not self.siding_occupied:
-            print("There is no train on siding, no need to exit siding!")
+            print("Block: "+str(self.index)+" There is no train on siding, no need to exit siding!")
             return False
         else:
             self.siding_train = None
