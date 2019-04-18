@@ -118,12 +118,18 @@ class Train():
         self.blk_time.append([self.curr_time])
     
     def update(self, system, next_block_has_train, curr_time, dos_pos=-1):
+        # If the train arrives at the end of whole track, the train will leave blocks.
         if self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
             self.leave_block(system, len(self.blk_interval) - 1)
+        # The train will still stay in current block in next refresh time, so continue the system.
         elif self.curr_pos + self.curr_speed * self.refresh_time < self.blk_interval[self.curr_blk][1]:
             self.proceed(system)
+        # If the next block has a train or there is a dos at the end of current block,
+        # the train will stop at end of current block.
         elif (next_block_has_train or dos_pos == self.blk_interval[self.curr_blk][1]):
             self.stop_at_block_end(system, self.curr_blk)
+        # If the train will enter the next block in next refresh time,
+        # udpate the system info and the train info.
         elif self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[self.curr_blk][1]: 
             if self.curr_blk < len(system.blocks)-1:
                 self.leave_block(system, self.curr_blk)            
