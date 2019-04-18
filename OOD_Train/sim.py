@@ -59,5 +59,4 @@ def main():
         
     string_diagram(sys)
 
-
 main()

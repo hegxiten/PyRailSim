@@ -30,15 +30,15 @@ class System():
                 left = self.block_intervals[i - 1][1]
                 right = left + block_length[i]
                 self.block_intervals.append([left, right]) 
-        self.last_train_time = self.sys_time
+        self.last_train_init_time = self.sys_time
         self.refresh_time = refresh_time
 
 
     def generate_train(self):
-        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time, self.refresh_time)
+        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time)
         self.trains.append(new_train)
         self.train_num += 1
-        self.last_train_time = self.sys_time
+        self.last_train_init_time = self.sys_time
 
     def refresh(self):
         headway = 600#np.random.normal(exp_buffer, var_buffer)
@@ -46,26 +46,12 @@ class System():
         # is bigger than headway, it will generate a new train at start point.
         if self.train_num == 0:
             self.generate_train()
-
-
-        if self.sys_time - self.last_train_time >= headway and not self.blocks[0].isOccupied:
+            
+        if self.sys_time - self.last_train_init_time >= headway and not self.blocks[0].isOccupied:
             self.generate_train()
 
         for t in self.trains:
-            if t.curr_blk >= len(self.blocks):
-                t.terminate()
-                print("terminated!")
-            if t.curr_blk < len(self.blocks) - 1:
-                next_block_has_train = self.blocks[t.curr_blk + 1].isOccupied
-            else:
-                next_block_has_train = False
-            #curr_time = time.ctime(int(self.sys_time))
-            curr_time = self.sys_time
-
-            if self.dos_period[0] <= self.sys_time <= self.dos_period[1]:
-                t.update(self, next_block_has_train, self.dos_pos)
-            else:
-                t.update(self, next_block_has_train)
+            t.update(self, self.dos_pos)
         self.sys_time += self.refresh_time
 
         

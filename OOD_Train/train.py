@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 class Train():
-    def __init__(self, idx, rank, blk_interval, init_time, refresh_time):
+    def __init__(self, idx, rank, blk_interval, init_time):
         self.curr_pos = 0
         self.init_speed = random.randint(2,10) / 100
         self.curr_speed = self.init_speed
@@ -13,7 +13,6 @@ class Train():
         self.rank = rank
         self.blk_time = [[init_time]]
         self.blk_interval = blk_interval
-        self.refresh_time = refresh_time
         self.time_pos_list = [[self.blk_time[0][0], self.blk_interval[0][0]]]  # not yet implemented interpolation
         
     '''
@@ -91,7 +90,7 @@ class Train():
         
     def proceed(self, system):
         self.start()
-        self.curr_pos += self.curr_speed * self.refresh_time
+        self.curr_pos += self.curr_speed * system.refresh_time
         self.time_pos_list.append([system.sys_time, self.curr_pos])
     
     def stop_at_block_end(self, system, blk_idx):
@@ -118,26 +117,26 @@ class Train():
         system.blocks[blk_idx].isOccupied = True
         self.blk_time.append([system.sys_time])
     
-    def update(self, system, next_block_has_train, dos_pos=-1):
+    def update(self, system, dos_pos=-1):
         # If the train arrives at the end of whole track, the train will leave blocks.
-        if self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
+        if self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
             self.leave_block(system, len(self.blk_interval) - 1)
         # The train will still stay in current block in next refresh time, so continue the system.
-        elif self.curr_pos + self.curr_speed * self.refresh_time < self.blk_interval[self.curr_blk][1]:
+        elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]:
             self.proceed(system)
         # If the next block has a train or there is a dos at the end of current block,
         # the train will stop at end of current block.
-        elif (next_block_has_train or dos_pos == self.blk_interval[self.curr_blk][1]):
+        elif (system.blocks[self.curr_blk+1].isOccupied or dos_pos == self.blk_interval[self.curr_blk][1]):
             self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # udpate the system info and the train info.
-        elif self.curr_pos + self.curr_speed * self.refresh_time >= self.blk_interval[self.curr_blk][1]: 
+        elif self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]: 
             if self.curr_blk < len(system.blocks)-1:
                 self.leave_block(system, self.curr_blk)            
                 self.enter_block(system, self.curr_blk+1)
                 self.curr_blk += 1
                 self.proceed(system)
-            elif self.curr_pos + self.curr_speed * self.refresh_time < self.blk_interval[self.curr_blk][1]: 
+            elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]: 
                 self.proceed(system)
             else: 
                 self.leave_block(system, self.curr_blk)
