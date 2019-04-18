@@ -18,6 +18,9 @@ while sys.sys_time - numerical_init_time  < 10000:
 for t in sys.trains:
     t.print_blk_time()
 
+for b in sys.blocks:
+    print(b.index, b.isOccupied)
+    
     
 def string_diagram():
         '''
@@ -30,15 +33,14 @@ def string_diagram():
             x.append([])
             y.append([])
         
-            for j in range(len(sys.trains[i].blk_time)-1):
-                x[i].append(sys.trains[i].blk_time[j][0])
-                y[i].append(sys.block_intervals[j][0])
-                x[i].append(sys.trains[i].blk_time[j][1])
-                y[i].append(sys.block_intervals[j][1])
+
+            for j in range(len(sys.trains[i].time_pos_list)-1):
+                x[i].append(sys.trains[i].time_pos_list[j][0])
+                y[i].append(sys.trains[i].time_pos_list[j][1])
+                
 
             y[i] = [n for (m,n) in sorted(zip(x[i],y[i]))] 
             x[i] = sorted(x[i])
-            
             
             #self.tn_by_rank  = {v : rk for rk, v in self.rank.items()}
         

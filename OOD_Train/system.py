@@ -35,7 +35,7 @@ class System():
 
 
     def generate_train(self):
-        new_train = Train(self.train_num, self.block_intervals, self.sys_time)
+        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time, self.refresh_time)
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_time = self.sys_time
@@ -53,12 +53,12 @@ class System():
 
         for t in self.trains:
             if t.curr_blk >= len(self.blocks):
-                continue
+                t.terminate()
+                print("terminated!")
             if t.curr_blk < len(self.blocks) - 1:
                 next_block_has_train = self.blocks[t.curr_blk + 1].isOccupied
             else:
                 next_block_has_train = False
-
             #curr_time = time.ctime(int(self.sys_time))
             curr_time = self.sys_time
 
