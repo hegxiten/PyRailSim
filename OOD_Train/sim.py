@@ -37,8 +37,8 @@ def string_diagram(sys):
             plt.plot(x[n], y[n], color='black')
 
     plt.legend()
-    plt.xlabel('time /hours')
-    plt.ylabel('coord_mp /miles')
+    plt.xlabel('Time/secs')
+    plt.ylabel('Mile Post/miles')
     plt.show()
     '''end comment__train stringline diagram'''
 
@@ -58,5 +58,6 @@ def main():
         print(b.index, b.isOccupied)
         
     string_diagram(sys)
+
 
 main()
