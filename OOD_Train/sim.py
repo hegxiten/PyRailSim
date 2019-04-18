@@ -32,8 +32,6 @@ def string_diagram():
         for i in range(len(sys.trains)-1):
             x.append([])
             y.append([])
-        
-
             for j in range(len(sys.trains[i].time_pos_list)-1):
                 x[i].append(sys.trains[i].time_pos_list[j][0])
                 y[i].append(sys.trains[i].time_pos_list[j][1])
