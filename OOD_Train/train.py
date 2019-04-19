@@ -80,12 +80,12 @@ class Train():
     def stop(self):
         self.curr_speed = 0
         self.status = 0
-    
+     
     def start(self):
         self.curr_speed = self.init_speed
         self.status = 1
     
-    def terminate(self):
+    def terminate(self, system):
         self.status = 2
         
     def proceed(self, system):
@@ -113,6 +113,7 @@ class Train():
             self.curr_pos = self.blk_interval[blk_idx][1]
             self.time_pos_list.append([system.sys_time, self.curr_pos])
         
+            
     def enter_block(self, system, blk_idx):
         system.blocks[blk_idx].isOccupied = True
         self.blk_time.append([system.sys_time])
@@ -120,7 +121,9 @@ class Train():
     def update(self, system, dos_pos=-1):
         # If the train arrives at the end of whole track, the train will leave blocks.
         if self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
-            self.leave_block(system, len(self.blk_interval) - 1)
+            if not self.curr_pos == self.blk_interval[len(self.blk_interval) - 1][1]:
+                self.leave_block(system, len(self.blk_interval) - 1)
+            
         # The train will still stay in current block in next refresh time, so continue the system.
         elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]:
             self.proceed(system)
