@@ -1,13 +1,15 @@
 class Block():
-    def __init__(self, index, length, has_siding):
+    def __init__(self, index, length, siding_number=0):
         self.index = index
         self.length = length
-        self.curr_train = None
+        self.curr_train = []
         self.isOccupied = False
-        self.has_siding = has_siding
-        self.siding_occupied = False
-        self.siding_train = None
-
+        self.siding_number = siding_number
+        self.siding_occupied = False    # needs to be re-written into a list-like format
+        self.siding_train = []
+        self.topo = [[] for i in range(self.siding_number+1)]
+        self.trgt_spd = 0
+        self.sys_pos = [0, self.length]
     def enter_train(self, train):
         if self.isOccupied:
             print("Block: "+str(self.index)+" is occupied, cannot enter new train!")
@@ -27,7 +29,7 @@ class Block():
             return True
     
     def enter_siding(self, train):
-        if not self.has_siding:
+        if not self.siding:
             print("There is no siding in Block: "+str(self.index))
             return False
         elif self.siding_occupied:
@@ -38,7 +40,7 @@ class Block():
             self.siding_occupied = True
 
     def exit_siding(self, train):
-        if not self.has_siding:
+        if not self.siding:
             print("There is no siding in Block: "+str(self.index))
             return False
         elif not self.siding_occupied:

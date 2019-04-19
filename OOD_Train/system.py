@@ -8,27 +8,26 @@ from train import Train
 exp_buffer, var_buffer = 10, 0.5
 
 class System():
-    def __init__(self, init_time, block_length, siding_index=[], dos_period=['2017-12-31 00:00:00', '2017-12-31 00:00:00'], dos_pos=-1, refresh_time=1):
+    def __init__(self, init_time, blk_length_list, siding_dict={}, dos_period=['2017-12-31 00:00:00', '2017-12-31 00:00:00'], dos_pos=-1, refresh_time=1):
         self.sys_time = time.mktime(time.strptime(init_time, "%Y-%m-%d %H:%M:%S"))  
         # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.blocks = []
-        self.start_time = time.time()
-        for i in range(len(block_length)):
-            if i in siding_index:
-                self.blocks.append(Block(i, block_length[i], True))
-            self.blocks.append(Block(i, block_length[i], False))
+        for i in range(len(blk_length_list)):
+            if i in siding_dict.keys():
+                self.blocks.append(Block(i, blk_length_list[i], siding_dict[i]))
+            self.blocks.append(Block(i, blk_length_list[i]))
         self.trains = []
         self.dos_period = [time.mktime(time.strptime(t, "%Y-%m-%d %H:%M:%S")) for t in dos_period if type(t) == str]
         self.dos_pos = dos_pos
         self.train_num = 0        
         self.block_intervals = []
         # interval is the two-element array containing mile posts of boundaries 
-        for i in range(len(block_length)):
+        for i in range(len(blk_length_list)):
             if i == 0:
-                self.block_intervals.append([0, block_length[0]])
+                self.block_intervals.append([0, blk_length_list[0]])
             else:
                 left = self.block_intervals[i - 1][1]
-                right = left + block_length[i]
+                right = left + blk_length_list[i]
                 self.block_intervals.append([left, right]) 
         self.last_train_init_time = self.sys_time
         self.refresh_time = refresh_time
