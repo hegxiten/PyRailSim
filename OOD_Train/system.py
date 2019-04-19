@@ -1,5 +1,4 @@
 import time
-
 from block import Block
 import numpy as np
 from train import Train
@@ -53,6 +52,7 @@ class System():
 
         for t in self.trains:
             t.update(self, self.dos_pos)
+        self.trains.sort()
         self.sys_time += self.refresh_time
 
         

@@ -18,7 +18,17 @@ class Train():
         self.blk_interval = blk_interval
         self.time_pos_list = [[self.blk_time[0][0], self.blk_interval[0][0]]]  # not yet implemented interpolation
         self.curr_track = curr_track
-        
+
+    def __lt__(self, other):
+        if self.curr_pos > other.curr_pos:
+            return True
+        elif self.curr_pos < other.curr_pos:
+            return False
+        elif self.curr_speed < other.max_speed:
+            return False
+        else:
+            return True
+
     def stop(self):
         self.curr_speed = 0
         self.status = 0
