@@ -36,6 +36,7 @@ def string_diagram(sys):
         if n % 4 == 3:
             plt.plot(x[n], y[n], color='black')
 
+    plt.grid(True, linestyle = "-.", color = "r", linewidth = "0.1")
     plt.legend()
     plt.xlabel('Time/secs')
     plt.ylabel('Mile Post/miles')
@@ -45,7 +46,7 @@ def string_diagram(sys):
 def main():
     sys_init_time = '2018-01-01 00:00:00'
     numerical_init_time = time.mktime(time.strptime('2018-01-01 00:00:00', "%Y-%m-%d %H:%M:%S"))
-    sys = System(sys_init_time, [5] * 10)
+    sys = System(sys_init_time, [5] * 10, [1,1,1,4,1,1,1,1,1,1])
     i = 0
     while sys.sys_time - numerical_init_time  < 10000:
         i += 1
@@ -54,8 +55,8 @@ def main():
     for t in sys.trains:
         t.print_blk_time()
 
-    for b in sys.blocks:
-        print(b.index, b.isOccupied)
+    # for b in sys.blocks:
+    #     print(b.index, b.isOccupied)
         
     string_diagram(sys)
 
