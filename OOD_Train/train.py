@@ -1,12 +1,15 @@
 import time
 import random
 import numpy as np
+from pylint.test.test_import_graph import dest
 
 class Train():
     def __init__(self, idx, rank, blk_interval, init_time):
         self.curr_pos = 0
-        self.init_speed = random.randint(2,10) / 100
-        self.curr_speed = self.init_speed
+        self.max_speed = random.randint(2,10) / 100
+        self.curr_speed = self.max_speed
+        self.acc = 0.0001
+        self.curr_speed = 0
         self.curr_blk = 0
         self.status = 1
         self.train_idx = idx
@@ -82,67 +85,73 @@ class Train():
         self.status = 0
      
     def start(self):
-        self.curr_speed = self.init_speed
+        self.curr_speed = self.max_speed
         self.status = 1
     
     def terminate(self, system):
         self.status = 2
         
-    def proceed(self, system):
+    def proceed(self, system, dest=None):
         self.start()
-        self.curr_pos += self.curr_speed * system.refresh_time
-        self.time_pos_list.append([system.sys_time, self.curr_pos])
+        if not dest:
+            self.curr_pos += self.curr_speed * system.refresh_time
+        else:
+            self.curr_pos = dest
+        self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
+    
     
     def stop_at_block_end(self, system, blk_idx):
-        # interpolate the time moment when the train reaches exactly the block boundary
+        assert self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]
         if self.curr_speed > 0:
-            interpolate_time = (self.blk_interval[blk_idx][1] - self.curr_pos) / self.curr_speed + system.sys_time
+            interpolate_time = (self.blk_interval[blk_idx][1]-self.curr_pos)/self.curr_speed + system.sys_time
             self.curr_pos = self.blk_interval[blk_idx][1]
-            self.time_pos_list.append([system.sys_time, self.curr_pos])
+            self.time_pos_list.append([interpolate_time, self.curr_pos])
         if self.curr_speed == 0:
             self.curr_pos = self.curr_pos
-        self.time_pos_list.append([system.sys_time, self.curr_pos])
+        self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
         self.stop()
         
     def leave_block(self, system, blk_idx):
+        self.start()
+        interpolate_time = (self.blk_interval[blk_idx][1]-self.curr_pos)/self.curr_speed + system.sys_time
+        self.time_pos_list.append([interpolate_time, self.blk_interval[blk_idx][1]])
+        self.blk_time[blk_idx].append(interpolate_time)
         system.blocks[blk_idx].isOccupied = False
-        self.blk_time[blk_idx].append(system.sys_time)
-        # interpolate the time moment when the train leaves the system
-        if blk_idx == len(system.blocks)-1:
-            interpolate_time = (self.blk_interval[blk_idx][1] - self.curr_pos) / self.curr_speed + system.sys_time
-            self.curr_pos = self.blk_interval[blk_idx][1]
-            self.time_pos_list.append([system.sys_time, self.curr_pos])
         
-            
     def enter_block(self, system, blk_idx):
+        self.start()
         system.blocks[blk_idx].isOccupied = True
-        self.blk_time.append([system.sys_time])
+        interpolate_time = (self.blk_interval[blk_idx][0]-self.curr_pos)/self.curr_speed + system.sys_time
+        self.time_pos_list.append([interpolate_time, self.blk_interval[blk_idx][0]])
+        self.blk_time.append([interpolate_time])
     
     def update(self, system, dos_pos=-1):
-        # If the train arrives at the end of whole track, the train will leave blocks.
-        if self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[len(self.blk_interval) - 1][1]:    
-            if not self.curr_pos == self.blk_interval[len(self.blk_interval) - 1][1]:
-                self.leave_block(system, len(self.blk_interval) - 1)
-            
+        # update self.curr_pos
+        # update self.curr_speed
+        # if the train already at the end of the railway, do nothing. (no updates on (time,pos))
+        if self.curr_pos == self.blk_interval[-1][1]:
+            pass
+        # If the train arrives at the end of all the blocks, the train will leave the system.
+        elif self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[-1][1]:
+            self.leave_block(system, len(self.blk_interval) - 1)
+            self.curr_blk = None
+            self.proceed(system, dest=self.blk_interval[-1][1])
         # The train will still stay in current block in next refresh time, so continue the system.
         elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]:
+            self.curr_blk = self.curr_blk
             self.proceed(system)
         # If the next block has a train or there is a dos at the end of current block,
         # the train will stop at end of current block.
         elif (system.blocks[self.curr_blk+1].isOccupied or dos_pos == self.blk_interval[self.curr_blk][1]):
+            self.curr_blk = self.curr_blk
             self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
-        # udpate the system info and the train info.
+        # update the system info and the train info.
         elif self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]: 
-            if self.curr_blk < len(system.blocks)-1:
-                self.leave_block(system, self.curr_blk)            
-                self.enter_block(system, self.curr_blk+1)
-                self.curr_blk += 1
-                self.proceed(system)
-            elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]: 
-                self.proceed(system)
-            else: 
-                self.leave_block(system, self.curr_blk)
-
+            self.leave_block(system, self.curr_blk)            
+            self.enter_block(system, self.curr_blk+1)
+            self.curr_blk += 1
+            self.proceed(system)
+        
     def print_blk_time(self):
         print(self.blk_time)

@@ -48,7 +48,7 @@ class System():
             
         if self.sys_time - self.last_train_init_time >= headway and not self.blocks[0].isOccupied:
             self.generate_train()
-
+        
         for t in self.trains:
             t.update(self, self.dos_pos)
         self.sys_time += self.refresh_time
