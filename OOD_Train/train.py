@@ -1,4 +1,3 @@
-import time
 import random
 import numpy as np
 
@@ -88,9 +87,13 @@ class Train():
         elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]:
             self.curr_blk = self.curr_blk
             self.proceed(system)
-        # If the next block has no available tracks or there is a dos at the end of current block,
+        # If the next block has no available tracks 
         # the train will stop at end of current block.
-        elif (not system.blocks[self.curr_blk+1].has_available_track() or dos_pos == self.blk_interval[self.curr_blk][1]):
+        elif (not system.blocks[self.curr_blk+1].has_available_track()): 
+            self.stop_at_block_end(system, self.curr_blk)
+        # If or there is a dos at the end of current block
+        # the train will stop at end of current block.
+        elif dos_pos == self.curr_blk and system.dos_period[0] <= system.sys_time <= system.dos_period[1]:
             self.stop_at_block_end(system, self.curr_blk)
         #If next train is faster than this train, the postion of previous train is behind the start
         # of this block, let this train stop at the end of block.

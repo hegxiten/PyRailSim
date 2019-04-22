@@ -1,4 +1,5 @@
-import time
+from datetime import datetime, timedelta
+
 from block import Block
 import numpy as np
 from train import Train
@@ -7,14 +8,14 @@ from train import Train
 exp_buffer, var_buffer = 10, 0.5
 
 class System():
-    def __init__(self, init_time, blk_length_list, tracks=[], dos_period=['2017-12-31 00:00:00', '2017-12-31 00:00:00'], dos_pos=-1, refresh_time=1):
-        self.sys_time = time.mktime(time.strptime(init_time, "%Y-%m-%d %H:%M:%S"))  
+    def __init__(self, init_time, blk_length_list, tracks=[], dos_period=['2017-01-01 02:00:00', '2017-01-01 02:30:00'], dos_pos=-1, refresh_time=1):
+        self.sys_time = init_time.timestamp()  
         # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.blocks = []
         for i in range(len(blk_length_list)):
             self.blocks.append(Block(i, blk_length_list[i], tracks[i]))
         self.trains = []
-        self.dos_period = [time.mktime(time.strptime(t, "%Y-%m-%d %H:%M:%S")) for t in dos_period if type(t) == str]
+        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in dos_period if type(t) == str]
         self.dos_pos = dos_pos
         self.train_num = 0
         self.block_intervals = []
