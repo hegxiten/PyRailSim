@@ -24,7 +24,7 @@ class Train():
             return True
         elif self.curr_pos < other.curr_pos:
             return False
-        elif self.curr_speed < other.max_speed:
+        elif self.max_speed < other.max_speed:
             return False
         else:
             return True
@@ -92,6 +92,14 @@ class Train():
         # If the next block has a train or there is a dos at the end of current block,
         # the train will stop at end of current block.
         elif (not system.blocks[self.curr_blk+1].has_available_track() or dos_pos == self.blk_interval[self.curr_blk][1]):
+            self.stop_at_block_end(system, self.curr_blk)
+        #If next train is faster than this train, the postion of previous train is behind the start
+        # of this block, let this train stop at the end of block.
+        elif self.curr_pos + self.max_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]\
+            and self.rank < system.train_num - 1\
+            and self.max_speed < system.trains[self.rank + 1].max_speed\
+            and system.trains[self.rank + 1].curr_pos >=\
+                system.block_intervals[system.trains[self.rank].curr_blk - 1][0]:
             self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.

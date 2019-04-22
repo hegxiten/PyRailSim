@@ -53,6 +53,9 @@ class System():
         for t in self.trains:
             t.update(self, self.dos_pos)
         self.trains.sort()
+        for i, tr in enumerate(self.trains):
+            tr.rank = i
+
         self.sys_time += self.refresh_time
 
         
