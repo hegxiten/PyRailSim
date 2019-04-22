@@ -101,8 +101,7 @@ class Train():
             and self.rank < system.train_num - 1\
             and self.max_speed < system.trains[self.rank + 1].max_speed\
             and system.trains[self.rank + 1].curr_pos >=\
-                system.block_intervals[system.trains[self.rank].curr_blk - 1][0]\
-            and system.blocks[self.curr_blk].has_available_track():
+                system.block_intervals[system.trains[self.rank].curr_blk - 1][0]:
             self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.

@@ -22,6 +22,9 @@ def string_diagram(sys):
             y[i].append(sys.trains[i].time_pos_list[j][1])
 
 
+        y[i] = [n for (m,n) in sorted(zip(x[i],y[i]))] 
+        # x[i] = sorted(x[i])
+
         #self.tn_by_rank  = {v : rk for rk, v in self.rank.items()}
     
     plt.title('Result Analysis')
@@ -36,6 +39,8 @@ def string_diagram(sys):
             plt.plot(x[n], y[n], color='black')
         if n % 5 == 4:
             plt.plot(x[n], y[n], color='orange')
+
+    plt.gcf().autofmt_xdate()
     plt.grid(True, linestyle = "-.", color = "r", linewidth = "0.1")
     plt.legend()
     plt.xlabel('Time/secs')
