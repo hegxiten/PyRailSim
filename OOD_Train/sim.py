@@ -52,7 +52,7 @@ def main():
 
     sys_init_time = datetime.strptime('2018-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
     sys_term_time = datetime.strptime('2018-01-01 03:00:00', "%Y-%m-%d %H:%M:%S")
-    sys = System(sys_init_time, [5] * 10, [1,1,1,4,1,1,1,1,1,1], dos_period=['2018-01-01 00:30:00', '2018-01-01 01:30:00'], dos_pos=-1)
+    sys = System(sys_init_time, [5] * 10, [1,1,1,2,1,1,1,1,1,1], dos_period=['2018-01-01 00:30:00', '2018-01-01 01:30:00'], dos_pos=-1)
 
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sys_init_time).total_seconds()  < (sys_term_time - sys_init_time).total_seconds():
