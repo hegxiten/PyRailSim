@@ -21,12 +21,7 @@ def string_diagram(sys):
             x[i].append(datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]).strftime("%Y-%m-%d %H:%M:%S"))
             y[i].append(sys.trains[i].time_pos_list[j][1])
 
-<<<<<<< HEAD
-        y[i] = [n for (m,n) in sorted(zip(x[i],y[i]))] 
-        # x[i] = sorted(x[i])
-        
-=======
->>>>>>> datetime converted
+
         #self.tn_by_rank  = {v : rk for rk, v in self.rank.items()}
     
     plt.title('Result Analysis')

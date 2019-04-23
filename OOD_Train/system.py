@@ -54,9 +54,12 @@ class System():
         for t in self.trains:
             t.update(self, self.dos_pos)
         self.trains.sort()
+<<<<<<< HEAD
         for i, tr in enumerate(self.trains):
             tr.rank = i
 
+=======
+>>>>>>> addlet rebased on debug -- datetime module substituted time module
         self.sys_time += self.refresh_time
 
         
