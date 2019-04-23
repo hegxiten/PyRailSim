@@ -17,16 +17,15 @@ def string_diagram(sys):
         y.append([])
         for j in range(len(sys.trains[i].time_pos_list)-1):
             
-            #x[i].append(sys.trains[i].time_pos_list[j][0])
-            x[i].append(datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]).strftime("%Y-%m-%d %H:%M:%S"))
+            x[i].append(sys.trains[i].time_pos_list[j][0])
+            #x[i].append(datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]).strftime("%Y-%m-%d %H:%M:%S"))
             y[i].append(sys.trains[i].time_pos_list[j][1])
 
 
         y[i] = [n for (m,n) in sorted(zip(x[i],y[i]))] 
         # x[i] = sorted(x[i])
 
-        #self.tn_by_rank  = {v : rk for rk, v in self.rank.items()}
-    
+
     plt.title('Result Analysis')
     for n in range(len(x)-1):
         if n % 5 == 0:
@@ -49,9 +48,12 @@ def string_diagram(sys):
     '''end comment__train stringline diagram'''
 
 def main():
+
+
     sys_init_time = datetime.strptime('2018-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
     sys_term_time = datetime.strptime('2018-01-01 03:00:00', "%Y-%m-%d %H:%M:%S")
     sys = System(sys_init_time, [5] * 10, [1,1,1,4,1,1,1,1,1,1], dos_period=['2018-01-01 00:30:00', '2018-01-01 01:30:00'], dos_pos=-1)
+
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sys_init_time).total_seconds()  < (sys_term_time - sys_init_time).total_seconds():
         i += 1

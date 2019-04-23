@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta
+<<<<<<< HEAD
 
+=======
+>>>>>>> change datetime
 from block import Block
 import numpy as np
 from train import Train
