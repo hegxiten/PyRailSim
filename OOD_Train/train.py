@@ -143,7 +143,7 @@ class Train():
             elif break_distance < self.blk_interval[self.curr_blk][1] - self.curr_pos:
                 self.curr_acc = self.acc
         else:
-            self.curr_acc = 0
+            self.curr_acc = self.acc
         
         delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
         print(delta_s)
