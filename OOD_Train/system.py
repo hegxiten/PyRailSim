@@ -38,6 +38,30 @@ class System():
         self.last_train_init_time = self.sys_time
         new_train.enter_block(self, 0, track_idx)
 
+    def update_block_trgt_speed(self):
+        # update the trgt_speed of every block.
+        for i in range(len(self.blocks) - 2,-1,-1):
+            if i <= len(self.blocks) - 2 and not self.blocks[i + 1].has_available_track():
+                self.blocks[i].set_stop_speed()
+
+            if i <= len(self.blocks) - 3 \
+                and self.blocks[i + 1].has_available_track()\
+                and not self.blocks[i + 2].has_available_track():
+                self.blocks[i].set_approaching_speed()
+            
+            if i <= len(self.blocks) - 4 \
+                and self.blocks[i + 1].has_available_track()\
+                and self.blocks[i + 2].has_available_track()\
+                and not self.blocks[i + 3].has_available_track():
+                self.blocks[i].set_middle_approaching_speed()
+
+            if i <= len(self.blocks) - 5 \
+                and self.blocks[i + 1].has_available_track()\
+                and self.blocks[i + 2].has_available_track()\
+                and self.blocks[i + 3].has_available_track()\
+                and not self.blocks[i + 4].has_available_track():
+                self.blocks[i].set_clear_speed()
+            
     def refresh(self):
         headway = 300#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation
@@ -51,10 +75,12 @@ class System():
             self.generate_train(track_idx)
 
         for t in self.trains:
-            t.update(self, self.dos_pos)
+            t.update_acc(self, self.dos_pos)
         self.trains.sort()
         for i, tr in enumerate(self.trains):
             tr.rank = i
+
+        self.update_block_trgt_speed()
 
         self.sys_time += self.refresh_time
 
