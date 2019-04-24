@@ -25,11 +25,6 @@ def string_diagram(sys):
     train_idx = list(range(len(x)))
     t_color = [colors[x.index(i)%color_num] for i in x]
     min_t, max_t = min([i[0] for i in x]), max([i[-1] for i in x])
-    timestamp_list = []
-    for i in x:
-        timestamp_list+=i
-    timestamp_list = sorted(list(set(timestamp_list)))
-    trains = {}
     
     plt.ion()
     plt.title('Result Analysis')
@@ -45,17 +40,11 @@ def string_diagram(sys):
     plt.legend()
     plt.xlabel('Time')
     plt.ylabel('Mile Post/miles')
-    
-    for t in timestamp_list:
-        plt
-        for n in range(len(x)-1):
-            assert len(x[n]) == len(y[n])
-            if t in x[n]:
-                idx_to_trunc = x[n].index(t)
-                plt.plot([mdates.date2num(i) for i in x[n][:idx_to_trunc]], y[n][:idx_to_trunc], color=t_color[n])
-                
-    
-    
+          
+    for n in range(len(x)-1):
+        #assert len(x[n]) == len(y[n]) == t_color[n]
+        plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
+        plt.pause(0.01)
     plt.ioff()
     plt.show()
     '''end comment__train stringline diagram'''
