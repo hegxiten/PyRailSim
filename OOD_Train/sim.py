@@ -44,8 +44,8 @@ def string_diagram(sys, start_time, end_time):
     plt.xlabel('Time')
     plt.ylabel('Mile Post/miles')
 
-    start_time = int(start_time.strftime("%s"))
-    end_time = int(end_time.strftime("%s"))
+    start_time = int(start_time.timestamp())
+    end_time = int(end_time.timestamp())
     time_length = end_time - start_time
     step_size = 30
     for start in range(1,time_length + 1, step_size):
