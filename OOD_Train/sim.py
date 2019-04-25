@@ -9,7 +9,8 @@ import numpy as np
 def string_diagram(sys, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''
-    color_num, colors = 5, ['red','green','blue','black','orange','cyan','magenta']
+    colors = ['red','green','blue','black','orange','cyan','magenta']
+    color_num = len(colors)
     x = []; y = []; 
     for i in range(len(sys.trains)-1):
         x.append([])
@@ -27,7 +28,7 @@ def string_diagram(sys, start_time, end_time):
     train_idx = list(range(len(x)))
     t_color = [colors[x.index(i)%color_num] for i in x]
     min_t, max_t = min([i[0] for i in x]), max([i[-1] for i in x])
-    
+
     plt.ion()
     plt.title('Result Analysis')
     # hours = mdates.HourLocator()
@@ -46,21 +47,28 @@ def string_diagram(sys, start_time, end_time):
     start_time = int(start_time.strftime("%s"))
     end_time = int(end_time.strftime("%s"))
     time_length = end_time - start_time
-
-    for start in range(1,time_length + 1, 5):
-        plt.cla()
+    step_size = 30
+    for start in range(1,time_length + 1, step_size):
         plt.axis([(datetime.fromtimestamp(start_time - 500)), \
             (datetime.fromtimestamp(end_time + 500)), -5 , 55])
         
         for n in range(len(x)-1):
-            #assert len(x[n]) == len(y[n]) == t_color[n]
-            new_x = [mdates.date2num(datetime.fromtimestamp(i)) for i in x[n] if i < start_time + start]
-            length = len(new_x)
-            new_y = y[n][0:length]
+            new_x_y = [[mdates.date2num(datetime.fromtimestamp(i)), j] for i, j in zip(x[n], y[n]) if i < start_time + start and i > start_time + start - 1 - step_size]
+            new_x = []
+            new_y = []
+            for i , j in new_x_y:
+                new_x.append(i)
+                new_y.append(j)
+            if(len(new_x) == 0):
+                continue
             plt.plot(new_x, new_y, color=t_color[n])
-        plt.pause(0.0001)
+            print('==============')
+            print('Length of new_x: {}'.format(len(new_x)))
+            print('Length of new_y: {}'.format(len(new_y)))
+        plt.pause(0.00001)
     plt.ioff()
     plt.show()
+
 
 def main():
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
