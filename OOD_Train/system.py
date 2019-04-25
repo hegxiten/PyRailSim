@@ -80,8 +80,4 @@ class System():
         for i, tr in enumerate(self.trains):
             tr.rank = i
 
-        self.update_block_trgt_speed()
-
         self.sys_time += self.refresh_time
-
-        
