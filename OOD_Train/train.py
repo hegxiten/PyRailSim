@@ -58,7 +58,7 @@ class Train():
         self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
     
     def stop_at_block_end(self, system, blk_idx):
-        assert self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]
+        # assert self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]
         if self.curr_speed > 0:
             interpolate_time = (self.blk_interval[blk_idx][1]-self.curr_pos)/self.curr_speed + system.sys_time
             self.curr_pos = self.blk_interval[blk_idx][1]
@@ -149,8 +149,25 @@ class Train():
         print(delta_s)
         return delta_s
 
+    def select_move_model_simple(self, system):
+        # print("current block index: {}".format(self.curr_blk))
+        if self.curr_blk == None:
+            return 0
+        curr_block = system.blocks[self.curr_blk]
+        
+        if self.curr_speed < curr_block.trgt_speed:
+            self.curr_acc = self.acc
+        elif self.curr_speed > curr_block.trgt_speed:
+            self.curr_acc = - self.acc
+        else:
+            self.curr_acc = 0
+        
+        delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
+        print(delta_s)
+        return delta_s
+
     def update_acc(self, system, dos_pos=-1):
-        delta_s = self.select_move_model(system)
+        delta_s = self.select_move_model_simple(system)
         # update self.curr_pos
         # update self.curr_speed
         # if the train already at the end of the railway, do nothing. (no updates on (time,pos))

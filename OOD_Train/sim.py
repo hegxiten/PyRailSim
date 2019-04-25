@@ -47,7 +47,7 @@ def string_diagram(sys, start_time, end_time):
     start_time = int(start_time.timestamp())
     end_time = int(end_time.timestamp())
     time_length = end_time - start_time
-    step_size = 30
+    step_size = 10
     for start in range(1,time_length + 1, step_size):
         plt.axis([(datetime.fromtimestamp(start_time - 500)), \
             (datetime.fromtimestamp(end_time + 500)), -5 , 55])
