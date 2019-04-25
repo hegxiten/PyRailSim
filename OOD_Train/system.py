@@ -57,5 +57,3 @@ class System():
             tr.rank = i
 
         self.sys_time += self.refresh_time
-
-        

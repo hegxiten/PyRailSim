@@ -6,7 +6,7 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import numpy as np
   
-def string_diagram(sys):
+def string_diagram(sys, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''
     color_num, colors = 5, ['red','green','blue','black','orange','cyan','magenta']
@@ -42,32 +42,35 @@ def string_diagram(sys):
     plt.legend()
     plt.xlabel('Time')
     plt.ylabel('Mile Post/miles')
-    for start in range(1,10800 + 1):
-        plt.cla()
-        plt.axis([1514782500, 1514782800 + 11100, -5 , 55])
 
+    start_time = int(start_time.strftime("%s"))
+    end_time = int(end_time.strftime("%s"))
+    time_length = end_time - start_time
+
+    for start in range(1,time_length + 1, 5):
+        plt.cla()
+        plt.axis([(datetime.fromtimestamp(start_time - 500)), \
+            (datetime.fromtimestamp(end_time + 500)), -5 , 55])
+        
         for n in range(len(x)-1):
             #assert len(x[n]) == len(y[n]) == t_color[n]
-            new_x = [i for i in x[n] if i < 1514782800 + start]
+            new_x = [mdates.date2num(datetime.fromtimestamp(i)) for i in x[n] if i < start_time + start]
             length = len(new_x)
-            # print(len(new_x))
             new_y = y[n][0:length]
-            # print(len(new_y))
             plt.plot(new_x, new_y, color=t_color[n])
         plt.pause(0.0001)
     plt.ioff()
     plt.show()
-    '''end comment__train stringline diagram'''
 
 def main():
-    sim_init_time = datetime.strptime('2018-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
-    sim_term_time = datetime.strptime('2018-01-01 03:00:00', "%Y-%m-%d %H:%M:%S")
+    sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
+    sim_term_time = datetime.strptime('2018-01-10 11:30:00', "%Y-%m-%d %H:%M:%S")
     sys = System(sim_init_time, [5] * 10, [1,1,1,2,1,1,1,1,1,1], dos_period=['2018-01-01 00:30:00', '2018-01-01 01:30:00'], dos_pos=-1)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
         i += 1
         sys.refresh()
-    string_diagram(sys)
+    string_diagram(sys, sim_init_time, sim_term_time)
 
 main()
