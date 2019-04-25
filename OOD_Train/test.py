@@ -17,8 +17,10 @@ for i, tr in enumerate(trs):
     tr.rank = i
 
 for i,tr in enumerate(trs):
-    print("idx: {}, pos: {}, speed: {}, rank: {}".format(i, tr.curr_pos, tr.max_speed, tr.rank))
+    # print("idx: {}, pos: {}, speed: {}, rank: {}".format(i, tr.curr_pos, tr.max_speed, tr.rank))
+
+x = [[1,1], [2,2], [3,3], [4,4], [5,5]]
 
 
-
+print([i for i in x if x[0] < 3])
 

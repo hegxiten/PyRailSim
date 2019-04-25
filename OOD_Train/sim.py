@@ -15,7 +15,9 @@ def string_diagram(sys):
         x.append([])
         y.append([])
         for j in range(len(sys.trains[i].time_pos_list)-1):
-            x[i].append(datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]))
+            # x[i].append(datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]))
+            # y[i].append(sys.trains[i].time_pos_list[j][1])
+            x[i].append(sys.trains[i].time_pos_list[j][0])
             y[i].append(sys.trains[i].time_pos_list[j][1])
 
     y = [i for _,i in sorted(zip([i[0] for i in x], y))]
@@ -28,23 +30,31 @@ def string_diagram(sys):
     
     plt.ion()
     plt.title('Result Analysis')
-    hours = mdates.HourLocator()
-    minutes = mdates.MinuteLocator()
-    seconds = mdates.SecondLocator()
-    dateFmt = mdates.DateFormatter("%H:%M")
-    plt.gca().xaxis.set_major_locator(hours)
-    plt.gca().xaxis.set_minor_locator(minutes)
-    plt.gca().xaxis.set_major_formatter(dateFmt)
-    plt.xticks(rotation=90)
+    # hours = mdates.HourLocator()
+    # minutes = mdates.MinuteLocator()
+    # seconds = mdates.SecondLocator()
+    # dateFmt = mdates.DateFormatter("%H:%M")
+    # plt.gca().xaxis.set_major_locator(hours)
+    # plt.gca().xaxis.set_minor_locator(minutes)
+    # plt.gca().xaxis.set_major_formatter(dateFmt)
+    # plt.xticks(rotation=90)
     plt.grid(True, linestyle = "-.", color = "r", linewidth = "0.1")
     plt.legend()
     plt.xlabel('Time')
     plt.ylabel('Mile Post/miles')
-          
-    for n in range(len(x)-1):
-        #assert len(x[n]) == len(y[n]) == t_color[n]
-        plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
-        plt.pause(0.01)
+    for start in range(1,10800 + 1):
+        plt.cla()
+        plt.axis([1514782500, 1514782800 + 11100, -5 , 55])
+
+        for n in range(len(x)-1):
+            #assert len(x[n]) == len(y[n]) == t_color[n]
+            new_x = [i for i in x[n] if i < 1514782800 + start]
+            length = len(new_x)
+            # print(len(new_x))
+            new_y = y[n][0:length]
+            # print(len(new_y))
+            plt.plot(new_x, new_y, color=t_color[n])
+        plt.pause(0.0001)
     plt.ioff()
     plt.show()
     '''end comment__train stringline diagram'''
