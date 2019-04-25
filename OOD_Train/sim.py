@@ -21,12 +21,6 @@ def string_diagram(sys, start_time, end_time):
             x[i].append(sys.trains[i].time_pos_list[j][0])
             y[i].append(sys.trains[i].time_pos_list[j][1])
 
-<<<<<<< HEAD
-        y[i] = [n for (m,n) in sorted(zip(x[i],y[i]))] 
-        # x[i] = sorted(x[i])
-
-
-=======
     y = [i for _,i in sorted(zip([i[0] for i in x], y))]
     x = sorted(x, key = lambda x: x[0])
     assert len(x) == len(y)
@@ -36,7 +30,6 @@ def string_diagram(sys, start_time, end_time):
     min_t, max_t = min([i[0] for i in x]), max([i[-1] for i in x])
 
     plt.ion()
->>>>>>> diagram_improve
     plt.title('Result Analysis')
     # hours = mdates.HourLocator()
     # minutes = mdates.MinuteLocator()
