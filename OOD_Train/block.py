@@ -8,7 +8,7 @@ class Block():
         self.tracks = [None] * self.track_number
         self.track_isOccupied = [False] * self.track_number    # needs to be re-written into a list-like format
         self.topo = [[] for i in range(self.track_number+1)]
-        self.max_speed = 0.1
+        self.max_speed = 0.09
         self.trgt_speed = self.max_speed
         self.sys_pos = [0, self.length]
 
