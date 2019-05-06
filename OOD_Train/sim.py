@@ -62,9 +62,9 @@ def string_diagram(sys, start_time, end_time):
             if(len(new_x) == 0):
                 continue
             plt.plot(new_x, new_y, color=t_color[n])
-            print('==============')
-            print('Length of new_x: {}'.format(len(new_x)))
-            print('Length of new_y: {}'.format(len(new_y)))
+            # print('==============')
+            # print('Length of new_x: {}'.format(len(new_x)))
+            # print('Length of new_y: {}'.format(len(new_y)))
         plt.pause(0.00001)
     plt.ioff()
     plt.show()

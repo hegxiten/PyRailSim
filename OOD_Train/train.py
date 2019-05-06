@@ -146,7 +146,7 @@ class Train():
             self.curr_acc = 0
         
         delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
-        print(delta_s)
+        # print(delta_s)
         return delta_s
 
     def select_move_model_simple(self, system):
@@ -158,12 +158,13 @@ class Train():
         if self.curr_speed < curr_block.trgt_speed:
             self.curr_acc = self.acc
         elif self.curr_speed > curr_block.trgt_speed:
-            self.curr_acc = - self.acc
+            self.curr_acc = -self.acc
+            print(self.curr_acc)
         else:
             self.curr_acc = 0
         
         delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
-        print(delta_s)
+        # print(delta_s)
         return delta_s
 
     def update_acc(self, system, dos_pos=-1):
