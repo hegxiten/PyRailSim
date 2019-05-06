@@ -159,7 +159,6 @@ class Train():
             self.curr_acc = self.acc
         elif self.curr_speed > curr_block.trgt_speed:
             self.curr_acc = -self.acc
-            print(self.curr_acc)
         else:
             self.curr_acc = 0
         
@@ -193,7 +192,7 @@ class Train():
             self.stop_at_block_end(system, self.curr_blk)
         #If next train is faster than this train, the postion of previous train is behind the start
         # of this block, let this train stop at the end of block.
-        elif self.curr_pos + self.max_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]\
+        elif self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]\
             and self.rank < system.train_num - 1\
             and self.max_speed < system.trains[self.rank + 1].max_speed\
             and system.trains[self.rank + 1].curr_pos >=\
