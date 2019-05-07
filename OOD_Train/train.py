@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from datetime import datetime, timedelta
 
 class Train():
     def __init__(self, idx, rank, blk_interval, init_time, curr_track):
@@ -51,6 +52,7 @@ class Train():
             delta_s = 0
         if self.curr_speed + self.curr_acc * system.refresh_time > self.max_speed:
             self.curr_speed = self.max_speed
+            self.curr_acc = 0
         else:
             self.curr_speed += self.curr_acc * system.refresh_time
         if not dest:
@@ -157,9 +159,9 @@ class Train():
             return 0
         curr_block = system.blocks[self.curr_blk]
         
-        if self.curr_speed < curr_block.trgt_speed:
+        if self.curr_speed < curr_block.trgt_speed and self.curr_speed < self.max_speed:
             self.curr_acc = self.acc
-        elif self.curr_speed > curr_block.trgt_speed:
+        elif self.curr_speed > curr_block.trgt_speed and self.curr_speed > 0:
             self.curr_acc = -self.acc
         else:
             self.curr_acc = 0
@@ -183,11 +185,13 @@ class Train():
         # If or there is a dos at the end of current block
         # the train will stop at end of current block.
         elif self.is_during_dos(system, dos_pos):
-            self.curr_acc = -self.acc
+            if self.curr_speed > 0:
+                self.curr_acc = -self.acc
             delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
             self.proceed_acc(system,delta_s)
         elif self.let_faster_train(system):
-            self.curr_acc = -self.acc
+            if self.curr_speed > 0:
+                self.curr_acc = -self.acc
             delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
             self.proceed_acc(system,delta_s)
         # The train will still stay in current block in next refresh time, so continue the system.
@@ -211,7 +215,7 @@ class Train():
         Determined the train should stop or not because of the next block has a train.
         @return True or False
         '''
-        return self.curr_pos == self.blk_interval[-1][1] and self.blk == None
+        return self.curr_pos == self.blk_interval[-1][1] and self.curr_blk == None
     
     def is_leaving_block(self, delta_s):
         return self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]

@@ -57,7 +57,7 @@ class System():
             print(blk.has_available_track())
 
     def refresh(self):
-        headway = 400#np.random.normal(exp_buffer, var_buffer)
+        headway = 900#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation
         # is bigger than headway, it will generate a new train at start point.
         if self.train_num == 0:
