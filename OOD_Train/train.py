@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 class Train():
     def __init__(self, idx, rank, blk_interval, init_time, curr_track):
         self.curr_pos = 0
-        self.max_speed = random.randint(2,10) / 100
+        self.max_speed = random.randint(10,20) / 1000
         self.curr_speed = self.max_speed
-        self.acc = 0.001
+        self.acc = 2.78e-05
         self.curr_acc = self.acc
         self.curr_blk = 0
         self.status = 1
