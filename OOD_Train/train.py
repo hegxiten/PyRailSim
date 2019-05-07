@@ -69,7 +69,7 @@ class Train():
     def stop_at_block_end(self, system, blk_idx):
         # assert self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]
         if self.curr_speed > 0:
-            interpolate_time = (self.blk_interval[blk_idx][1]-self.curr_pos)/self.curr_speed + system.sys_time
+            interpolate_time = abs(self.blk_interval[blk_idx][1]-self.curr_pos)/self.curr_speed + system.sys_time
             self.curr_pos = self.blk_interval[blk_idx][1]
             self.time_pos_list.append([interpolate_time, self.curr_pos])
         if self.curr_speed == 0:
@@ -192,6 +192,10 @@ class Train():
         # the train will stop at end of current block.
         elif self.is_during_dos(system, dos_pos):
             self.proceed_acc(system,delta_s)
+        # If the next block has no available tracks 
+        # # the train will stop at end of current block.
+        elif self.is_stopped_by_previous_train(system, delta_s): 
+            self.stop_at_block_end(system, self.curr_blk)
         elif self.let_faster_train(system):
             if self.curr_speed > 0:
                 self.curr_acc = -self.acc
@@ -200,10 +204,6 @@ class Train():
         # The train will still stay in current block in next refresh time, so continue the system.
         elif self.is_normal_proceed(delta_s):
             self.proceed_acc(system, delta_s)
-        # If the next block has no available tracks 
-        # the train will stop at end of current block.
-        elif self.is_stopped_by_previous_train(system, delta_s): 
-            self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.
         elif self.is_leaving_block(delta_s): 

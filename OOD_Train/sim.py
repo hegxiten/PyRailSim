@@ -72,8 +72,8 @@ def string_diagram(sys, start_time, end_time):
     for n in range(len(x)-1):
         #assert len(x[n]) == len(y[n]) == t_color[n]
         plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
-    plt.gca().axhspan(15,20,color='yellow',alpha=0.5)
-    plt.gca().axhspan(30,35,color='yellow',alpha=0.5)
+    # plt.gca().axhspan(15,20,color='yellow',alpha=0.5)
+    # plt.gca().axhspan(30,35,color='yellow',alpha=0.5)
     plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
     plt.show()
     #plt.ioff()
