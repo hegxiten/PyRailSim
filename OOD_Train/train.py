@@ -25,6 +25,10 @@ class Train():
             return False
         elif self.max_speed < other.max_speed:
             return False
+        elif self.max_speed > other.max_speed:
+            return True
+        elif self.rank < other.rank:
+            return False
         else:
             return True
 
@@ -48,13 +52,14 @@ class Train():
         self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
         
     def proceed_acc(self, system, delta_s, dest=None):
-        if delta_s < 0:
-            delta_s = 0
+        # if delta_s < 0:
+        #     delta_s = 0
         if self.curr_speed + self.curr_acc * system.refresh_time > self.max_speed:
             self.curr_speed = self.max_speed
             self.curr_acc = 0
         else:
             self.curr_speed += self.curr_acc * system.refresh_time
+
         if not dest:
             self.curr_pos += delta_s
         else:
@@ -158,7 +163,8 @@ class Train():
         if self.curr_blk == None:
             return 0
         curr_block = system.blocks[self.curr_blk]
-        
+        if self.curr_speed < 0 and self.curr_acc < 0:
+            self.curr_speed = 0
         if self.curr_speed < curr_block.trgt_speed and self.curr_speed < self.max_speed:
             self.curr_acc = self.acc
         elif self.curr_speed > curr_block.trgt_speed and self.curr_speed > 0:
@@ -185,9 +191,6 @@ class Train():
         # If or there is a dos at the end of current block
         # the train will stop at end of current block.
         elif self.is_during_dos(system, dos_pos):
-            if self.curr_speed > 0:
-                self.curr_acc = -self.acc
-            delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
             self.proceed_acc(system,delta_s)
         elif self.let_faster_train(system):
             if self.curr_speed > 0:
@@ -255,6 +258,7 @@ class Train():
         @return: True or False
         '''
         return self.rank < system.train_num - 1 and self.max_speed < system.trains[self.rank + 1].max_speed\
+            and system.blocks[self.curr_blk].track_number > 1\
             and ((system.trains[self.rank + 1].curr_blk == self.curr_blk - 1\
                 and system.blocks[self.curr_blk].has_available_track())\
             or system.trains[self.rank + 1].curr_blk == self.curr_blk)

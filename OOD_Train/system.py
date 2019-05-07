@@ -42,7 +42,9 @@ class System():
         # update the trgt_speed of every block.
 
         for i in range(len(self.blocks)):
-            if i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
+            if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
+                self.blocks[i].set_stop_speed()
+            elif i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
                 self.blocks[i].set_stop_speed()
             elif i + 2 < len(self.blocks) and not self.blocks[i + 2].has_available_track():
                 self.blocks[i].set_approaching_speed()
@@ -57,6 +59,7 @@ class System():
             print(blk.has_available_track())
 
     def refresh(self):
+        self.update_block_trgt_speed()
         headway = 900#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation
         # is bigger than headway, it will generate a new train at start point.
@@ -73,5 +76,4 @@ class System():
         self.trains.sort()
         for i, tr in enumerate(self.trains):
             tr.rank = i
-        self.update_block_trgt_speed()
         self.sys_time += self.refresh_time
