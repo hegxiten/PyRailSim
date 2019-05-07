@@ -61,7 +61,9 @@ class Train():
             self.curr_speed += self.curr_acc * system.refresh_time
 
         if not dest:
-            self.curr_pos += delta_s
+            self.curr_pos += delta_s 
+            if self.curr_pos > self.blk_interval[self.curr_blk][1]:
+                self.curr_blk+=1           
         else:
             self.curr_pos = dest
         self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
@@ -89,6 +91,7 @@ class Train():
     def enter_block(self, system, blk_idx, next_block_ava_track):
         system.blocks[blk_idx].occupied_track(next_block_ava_track, self)
         self.curr_track = next_block_ava_track
+        self.curr_blk += 1
         self.blk_time.append([system.sys_time])
     
     def update(self, system, dos_pos=-1):
@@ -158,7 +161,7 @@ class Train():
         # print(delta_s)
         return delta_s
 
-    def select_move_model_simple(self, system):
+    def cal_increment(self, system):
         # print("current block index: {}".format(self.curr_blk))
         if self.curr_blk == None:
             return 0
@@ -177,40 +180,50 @@ class Train():
         return delta_s
 
     def update_acc(self, system, dos_pos=-1):
-        delta_s = self.select_move_model_simple(system)
+        delta_s = self.cal_increment(system)
         # update self.curr_pos
         # update self.curr_speed
         # if the train already at the end of the railway, do nothing. (no updates on (time,pos))
         if self.is_out_of_sys():
+            # print('1')
             pass
         # If the train arrives at the end of all the blocks, the train will leave the system.
         elif self.is_leaving_system(delta_s):
+            # print('2')
             self.leave_block(system, len(self.blk_interval) - 1)
             self.curr_blk = None
             self.proceed_acc(system, delta_s, dest=self.blk_interval[-1][1])
         # If or there is a dos at the end of current block
         # the train will stop at end of current block.
         elif self.is_during_dos(system, dos_pos):
+            # print('3')
             self.proceed_acc(system,delta_s)
         # If the next block has no available tracks 
         # # the train will stop at end of current block.
         elif self.is_stopped_by_previous_train(system, delta_s): 
+            # print('4')
             self.stop_at_block_end(system, self.curr_blk)
         elif self.let_faster_train(system):
+            # print('5')
             if self.curr_speed > 0:
                 self.curr_acc = -self.acc
             delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
             self.proceed_acc(system,delta_s)
         # The train will still stay in current block in next refresh time, so continue the system.
         elif self.is_normal_proceed(delta_s):
+            # print('6')
             self.proceed_acc(system, delta_s)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.
-        elif self.is_leaving_block(delta_s): 
+        elif self.is_leaving_block(delta_s):
+            #===================================================================
+            # print('7')
+            # print('train',self.train_idx,self.rank,self.curr_blk)
+            #===================================================================
             self.leave_block(system, self.curr_blk)
             next_block_ava_track = system.blocks[self.curr_blk + 1].find_available_track()
             self.enter_block(system, self.curr_blk+1, next_block_ava_track)
-            self.curr_blk += 1
+            ################
             self.proceed_acc(system, delta_s)
     
     def is_out_of_sys(self):
