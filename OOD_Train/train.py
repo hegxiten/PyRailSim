@@ -173,7 +173,7 @@ class Train():
         # update self.curr_pos
         # update self.curr_speed
         # if the train already at the end of the railway, do nothing. (no updates on (time,pos))
-        if self.curr_pos == self.blk_interval[-1][1]:
+        if self.is_out_of_sys():
             pass
         # If the train arrives at the end of all the blocks, the train will leave the system.
         elif self.is_leaving_system(delta_s):
@@ -205,7 +205,12 @@ class Train():
             self.enter_block(system, self.curr_blk+1, next_block_ava_track)
             self.curr_blk += 1
             self.proceed_acc(system, delta_s)
-
+    
+    def is_out_of_sys(self):
+        # Determined the train should stop or not because of the next block has a train.
+        # @return: True or False
+        return self.curr_pos == self.blk_interval[-1][1] and self.blk == None
+    
     def is_leaving_block(self, delta_s):
         return self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]
 
