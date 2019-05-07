@@ -91,12 +91,12 @@ class Train():
         if self.curr_pos == self.blk_interval[-1][1]:
             pass
         # If the train arrives at the end of all the blocks, the train will leave the system.
-        elif self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[-1][1]:
+        elif self.is_leaving_system(self.curr_speed * system.refresh_time):
             self.leave_block(system, len(self.blk_interval) - 1)
             self.curr_blk = None
             self.proceed(system, dest=self.blk_interval[-1][1])
         # The train will still stay in current block in next refresh time, so continue the system.
-        elif self.curr_pos + self.curr_speed * system.refresh_time < self.blk_interval[self.curr_blk][1]:
+        elif self.is_normal_proceed(self.curr_speed * system.refresh_time):
             self.curr_blk = self.curr_blk
             self.proceed(system)
         # If the next block has no available tracks 
@@ -105,11 +105,11 @@ class Train():
             self.stop_at_block_end(system, self.curr_blk)
         # If or there is a dos at the end of current block
         # the train will stop at end of current block.
-        elif dos_pos == self.curr_blk and system.dos_period[0] <= system.sys_time <= system.dos_period[1]:
+        elif self.is_during_dos(system, dos_pos):
             self.stop_at_block_end(system, self.curr_blk)
         #If next train is faster than this train, the postion of previous train is behind the start
         # of this block, let this train stop at the end of block.
-        elif self.curr_pos + self.max_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]\
+        elif self.is_leaving_block(self.max_speed * system.refresh_time)\
             and self.rank < system.train_num - 1\
             and self.max_speed < system.trains[self.rank + 1].max_speed\
             and system.trains[self.rank + 1].curr_pos >=\
@@ -118,7 +118,7 @@ class Train():
                 self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.
-        elif self.curr_pos + self.curr_speed * system.refresh_time >= self.blk_interval[self.curr_blk][1]: 
+        elif self.is_leaving_block(self.curr_speed * system.refresh_time): 
             self.leave_block(system, self.curr_blk)
             next_block_ava_track = system.blocks[self.curr_blk + 1].find_available_track()
             self.enter_block(system, self.curr_blk+1, next_block_ava_track)
@@ -176,52 +176,67 @@ class Train():
         if self.curr_pos == self.blk_interval[-1][1]:
             pass
         # If the train arrives at the end of all the blocks, the train will leave the system.
-        elif self.curr_pos + delta_s >= self.blk_interval[-1][1]:
+        elif self.is_leaving_system(delta_s):
             self.leave_block(system, len(self.blk_interval) - 1)
             self.curr_blk = None
             self.proceed_acc(system, delta_s, dest=self.blk_interval[-1][1])
-        elif self.rank < system.train_num - 1\
-            and self.max_speed < system.trains[self.rank + 1].max_speed\
-            and ((system.trains[self.rank + 1].curr_blk == self.curr_blk - 1 and system.blocks[self.curr_blk].has_available_track())\
-                # or system.block_intervals[system.trains[self.rank].curr_blk - 1][1]\
-                or system.trains[self.rank + 1].curr_blk == self.curr_blk):
-                self.curr_acc = -self.acc
-                delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
-                self.proceed_acc(system,delta_s)
-        # The train will still stay in current block in next refresh time, so continue the system.
-        elif self.curr_pos + delta_s < self.blk_interval[self.curr_blk][1]:
-            self.curr_blk = self.curr_blk
-            self.proceed_acc(system, delta_s)
-        # If the next block has no available tracks 
-        # the train will stop at end of current block.
-        elif (not system.blocks[self.curr_blk+1].has_available_track()): 
-            self.stop_at_block_end(system, self.curr_blk)
         # If or there is a dos at the end of current block
         # the train will stop at end of current block.
-        elif dos_pos >= self.curr_blk and system.dos_period[0] <= system.sys_time <= system.dos_period[1]:
+        elif self.is_during_dos(system, dos_pos):
             self.curr_acc = -self.acc
             delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
             self.proceed_acc(system,delta_s)
-        #If next train is faster than this train, the postion of previous train is behind the start
-        # of this block, let this train stop at the end of block.
-        # elif self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]\
-        # elif self.rank < system.train_num - 1\
-        #     and self.max_speed < system.trains[self.rank + 1].max_speed\
-        #     and ((system.trains[self.rank + 1].curr_blk == self.curr_blk - 1 and system.blocks[self.curr_blk].has_available_track())\
-        #         # or system.block_intervals[system.trains[self.rank].curr_blk - 1][1]\
-        #         or system.trains[self.rank + 1].curr_blk == self.curr_blk):
-        #         # self.stop_at_block_end(system, self.curr_blk)
-        #         self.curr_acc = -self.acc
-        #         delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
-        #         self.proceed_acc(system,delta_s)
+        elif self.let_faster_train(system):
+            self.curr_acc = -self.acc
+            delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
+            self.proceed_acc(system,delta_s)
+        # The train will still stay in current block in next refresh time, so continue the system.
+        elif self.is_normal_proceed(delta_s):
+            self.proceed_acc(system, delta_s)
+        # If the next block has no available tracks 
+        # the train will stop at end of current block.
+        elif self.is_stopped_by_previous_train(system, delta_s): 
+            self.stop_at_block_end(system, self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.
-        elif self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]: 
+        elif self.is_leaving_block(delta_s): 
             self.leave_block(system, self.curr_blk)
             next_block_ava_track = system.blocks[self.curr_blk + 1].find_available_track()
             self.enter_block(system, self.curr_blk+1, next_block_ava_track)
             self.curr_blk += 1
             self.proceed_acc(system, delta_s)
+
+    def is_leaving_block(self, delta_s):
+        return self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]
+
+    def is_stopped_by_previous_train(self, system, delta_s):
+        # Determined the train should stop or not because of the next block has a train.
+        # @return: True or False
+        return self.is_leaving_block(delta_s) and (not system.blocks[self.curr_blk+1].has_available_track())
+
+    def is_normal_proceed(self, delta_s):
+        # Whether the train is still in current block in next refresh time.
+        # @return: True or False
+        return self.curr_pos + delta_s < self.blk_interval[self.curr_blk][1]
+
+    def is_leaving_system(self, delta_s):
+        # Whether the train is leaving the last block of system
+        # @return: True or False
+        return self.curr_pos + delta_s >= self.blk_interval[-1][1]
+
+    def is_during_dos(self, system, dos_pos):
+        # Whether the train is during the dos pos and time period
+        # @return: True or False
+        return dos_pos == self.curr_blk and system.dos_period[0] <= system.sys_time <= system.dos_period[1]
+
+    def let_faster_train(self, system):
+        # If the next train is faster than self train,
+        # self train should let faster train go though.
+        # @return: True or False
+        return self.rank < system.train_num - 1 and self.max_speed < system.trains[self.rank + 1].max_speed\
+            and ((system.trains[self.rank + 1].curr_blk == self.curr_blk - 1\
+                and system.blocks[self.curr_blk].has_available_track())\
+            or system.trains[self.rank + 1].curr_blk == self.curr_blk)
 
     def print_blk_time(self):
         print(self.blk_time)
