@@ -207,37 +207,49 @@ class Train():
             self.proceed_acc(system, delta_s)
     
     def is_out_of_sys(self):
-        # Determined the train should stop or not because of the next block has a train.
-        # @return: True or False
+        '''
+        Determined the train should stop or not because of the next block has a train.
+        @return True or False
+        '''
         return self.curr_pos == self.blk_interval[-1][1] and self.blk == None
     
     def is_leaving_block(self, delta_s):
         return self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]
 
     def is_stopped_by_previous_train(self, system, delta_s):
-        # Determined the train should stop or not because of the next block has a train.
-        # @return: True or False
+        '''
+        Determined the train should stop or not because of the next block has a train.
+        @return: True or False
+        '''
         return self.is_leaving_block(delta_s) and (not system.blocks[self.curr_blk+1].has_available_track())
 
     def is_normal_proceed(self, delta_s):
-        # Whether the train is still in current block in next refresh time.
-        # @return: True or False
+        '''
+        Whether the train is still in current block in next refresh time.
+        @return: True or False
+        '''
         return self.curr_pos + delta_s < self.blk_interval[self.curr_blk][1]
 
     def is_leaving_system(self, delta_s):
-        # Whether the train is leaving the last block of system
-        # @return: True or False
+        '''
+        Whether the train is leaving the last block of system
+        @return: True or False
+        '''
         return self.curr_pos + delta_s >= self.blk_interval[-1][1]
 
     def is_during_dos(self, system, dos_pos):
-        # Whether the train is during the dos pos and time period
-        # @return: True or False
+        '''
+        Whether the train is during the dos pos and time period
+        @return: True or False
+        '''
         return dos_pos == self.curr_blk and system.dos_period[0] <= system.sys_time <= system.dos_period[1]
 
     def let_faster_train(self, system):
-        # If the next train is faster than self train,
-        # self train should let faster train go though.
-        # @return: True or False
+        '''
+        If the next train is faster than self train,
+        self train should let faster train go though.
+        @return: True or False
+        '''
         return self.rank < system.train_num - 1 and self.max_speed < system.trains[self.rank + 1].max_speed\
             and ((system.trains[self.rank + 1].curr_blk == self.curr_blk - 1\
                 and system.blocks[self.curr_blk].has_available_track())\
