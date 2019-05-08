@@ -3,11 +3,11 @@ import numpy as np
 from datetime import datetime, timedelta
 
 class Train():
-    def __init__(self, idx, rank, blk_interval, init_time, curr_track):
+    def __init__(self, idx, rank, blk_interval, init_time, curr_track, max_sp, max_acc):
         self.curr_pos = 0
-        self.max_speed = random.randint(10,20) / 1000
+        self.max_speed = max_sp
         self.curr_speed = self.max_speed
-        self.acc = 2.78e-05
+        self.acc = max_acc
         self.curr_acc = self.acc
         self.curr_blk = 0
         self.status = 1
@@ -31,6 +31,9 @@ class Train():
             return False
         else:
             return True
+
+    def __repr__(self):
+        return repr((self.train_idx))
 
     def stop(self):
         self.curr_speed = 0
