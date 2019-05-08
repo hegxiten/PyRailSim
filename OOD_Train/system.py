@@ -70,6 +70,11 @@ class System():
             track_idx = self.blocks[0].find_available_track()
             self.generate_train(track_idx)
 
+        # for i in range(len(self.blocks)):
+        #     print("track {} status: {}".format(i, self.blocks[i].track_isOccupied))
+
+        # for tr in self.trains:
+        #     print("train rank:{}, train blk:{}".format(tr.rank, tr.curr_blk))
         for t in self.trains:
             t.update_acc(self, self.dos_pos)
         self.trains.sort()

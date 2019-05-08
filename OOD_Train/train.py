@@ -78,7 +78,7 @@ class Train():
             self.time_pos_list.append([interpolate_time, self.curr_pos])
         if self.curr_speed == 0:
             self.curr_pos = self.curr_pos
-        self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
+            self.time_pos_list.append([system.sys_time+system.refresh_time, self.curr_pos])
         self.stop()
         
     def leave_block(self, system, blk_idx):
@@ -181,6 +181,8 @@ class Train():
         return delta_s
 
     def update_acc(self, system, dos_pos=-1):
+        if not self.curr_blk == None:
+            assert  self.blk_interval[self.curr_blk][0] <= self.curr_pos <= self.blk_interval[self.curr_blk][1]
         delta_s = self.cal_increment(system)
         # update self.curr_pos
         # update self.curr_speed
@@ -199,7 +201,7 @@ class Train():
             self.leave_block(system, len(self.blk_interval) - 1)
             self.curr_blk = None
             self.proceed_acc(system, delta_s, dest=self.blk_interval[-1][1])
-        '''从这里往下的判断条件，不一定互斥，有重合的地方，所以有可能进错条件'''
+        # '''从这里往下的判断条件，不一定互斥，有重合的地方，所以有可能进错条件'''
         # If the train is WITHIN the system;    如果车还在系统里，
         # If the train is NOT at the end of the system;    如果车不在系统末端，
         # If there is a DoS at the end of its current block;    如果DoS的时间段与本车本区间block吻合，
@@ -227,9 +229,19 @@ class Train():
         # 但是这里有可能闯出现在的block。没有把条件写成互斥的形式。
         elif self.let_faster_train(system):
             # print('5')
+            # if self.curr_pos > self.blk_interval[self.curr_blk][1]:
+            #     print("$$$$$$$$$$$")
             if self.curr_speed > 0:
                 self.curr_acc = -self.acc
             delta_s = self.curr_speed * system.refresh_time + 0.5 * self.curr_acc * system.refresh_time ** 2
+            if self.curr_pos + delta_s > self.blk_interval[self.curr_blk][1]:
+                if system.blocks[self.curr_blk + 1].has_available_track():
+                    next_block_ava_track = system.blocks[self.curr_blk + 1].find_available_track()
+                    self.leave_block(system, self.curr_blk)
+                    self.curr_blk += 1
+                    self.enter_block(system, self.curr_blk, next_block_ava_track)
+                else:
+                    self.stop_at_block_end(system, self.curr_blk)
             self.proceed_acc(system,delta_s)
         # If the train is WITHIN the system;    如果车还在系统里，
         # If the train is NOT at the end of the system;    如果车不在系统末端，
@@ -252,12 +264,16 @@ class Train():
             # print('7')
             # print('train',self.train_idx,self.rank,self.curr_blk)
             #===================================================================
+            if system.blocks[self.curr_blk + 1].has_available_track():
+                next_block_ava_track = system.blocks[self.curr_blk + 1].find_available_track()
             self.leave_block(system, self.curr_blk)
-            next_block_ava_track = system.blocks[self.curr_blk + 1].find_available_track()
             self.enter_block(system, self.curr_blk+1, next_block_ava_track)
             self.curr_blk += 1
             self.proceed_acc(system, delta_s)
         
+        # if (not self.curr_blk == None) and self.curr_pos > self.blk_interval[self.curr_blk][1]:
+        #     self.curr_blk += 1
+
         # What else?     剩余情况待分析。
         
     def is_out_of_sys(self):
@@ -268,7 +284,7 @@ class Train():
         return self.curr_pos == self.blk_interval[-1][1] and self.curr_blk == None
     
     def is_leaving_block(self, delta_s):
-        return self.curr_pos + delta_s >= self.blk_interval[self.curr_blk][1]
+        return self.curr_pos + delta_s > self.blk_interval[self.curr_blk][1]
 
     def is_stopped_by_previous_train(self, system, delta_s):
         '''
@@ -305,7 +321,6 @@ class Train():
         @return: True or False
         '''
         return self.rank < system.train_num - 1 and self.max_speed < system.trains[self.rank + 1].max_speed\
-            and system.blocks[self.curr_blk].track_number > 1\
             and ((system.trains[self.rank + 1].curr_blk == self.curr_blk - 1\
                 and system.blocks[self.curr_blk].has_available_track())\
             or system.trains[self.rank + 1].curr_blk == self.curr_blk)
