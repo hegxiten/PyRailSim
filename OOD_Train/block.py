@@ -30,7 +30,6 @@ class Block():
         self.tracks[idx] = train
     
     def free_track(self, idx):
-        print('{}, {}'.format(self.index,idx))
         assert self.track_isOccupied[idx]
         self.track_isOccupied[idx] = False
         self.tracks[idx] = None

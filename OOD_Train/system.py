@@ -15,7 +15,6 @@ class System():
             self.blocks.append(Block(i, blk_length_list[i], tracks[i]))
         self.trains = []
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in dos_period if type(t) == str]
-        print(self.dos_period)
         self.dos_pos = dos_pos
         self.train_num = 0
         self.block_intervals = []
