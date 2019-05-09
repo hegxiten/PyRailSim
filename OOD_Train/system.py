@@ -3,12 +3,8 @@ from block import Block
 import numpy as np
 from train import Train
 
-sp_container = [0.016, 0.01, 0.01, 0.013, 0.016, 0.015, 0.013, 0.014, 0.016, 0.014, 0.016, 0.018, 0.016, 0.01, 0.014, 0.016, 0.017, 0.011, 0.014, 0.02]
-acc_container = [2.40e-05, 2.97e-05, 3.01e-05, 3.340e-05, 2.32e-05, 3.25e-05, 3.14e-05, 2.39e-05, 3.38e-05, 2.12e-05,\
-                 2.34e-05, 2.58e-05, 2.66e-05, 2.32e-05, 3.40e-05, 3.03e-05, 2.29e-05, 2.90e-05, 3.25e-05, 2.98e-05]
-
 class System():
-    def __init__(self, init_time, blk_length_list, headway, tracks=[], dos_period=['2017-01-01 02:00:00', '2017-01-01 02:30:00'], dos_pos=-1, refresh_time=1):
+    def __init__(self, init_time, blk_length_list, headway, sp_container, acc_container, tracks=[], dos_period=['2017-01-01 02:00:00', '2017-01-01 02:30:00'], dos_pos=-1, refresh_time=1):
         self.sys_time = init_time.timestamp()  
         # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.blocks = []
@@ -20,6 +16,8 @@ class System():
         self.train_num = 0
         self.block_intervals = []
         self.headway = headway
+        self.sp_container = sp_container
+        self.acc_container = acc_container
 
         # interval is the two-element array containing mile posts of boundaries 
         for i in range(len(blk_length_list)):
@@ -33,7 +31,7 @@ class System():
         self.refresh_time = refresh_time
 
     def generate_train(self, track_idx):
-        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time, track_idx, sp_container[self.train_num % 20], acc_container[self.train_num % 20])
+        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time, track_idx, self.sp_container[self.train_num % len(self.sp_container)], self.acc_container[self.train_num % len(self.acc_container)])
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time

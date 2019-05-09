@@ -6,6 +6,7 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import numpy as np
 import time
+import random
 
 def string_diagram(sys, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
@@ -126,19 +127,27 @@ def cal_delay_avg(delay):
 def main():
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
-    sys = System(sim_init_time, [5] * 10, 900, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=-1)
-    sys_dos = System(sim_init_time, [5] * 10, 900, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=4)
+    # for i in range(5):
+    sp_container = []
+    acc_container = []
+    for i in range(20):
+        sp_container.append(random.randint(10,20) / 1000)
+        acc_container.append(2.78e-05 * 0.3 * random.random() + 2.78e-05 * 0.85)
+    headway = 300 * random.random() + 350
+    sys = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=-1)
+    sys_dos = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=4)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
         i += 1
         sys.refresh()
         sys_dos.refresh()
-    # string_diagram(sys, sim_init_time, sim_term_time)
-    # string_diagram(sys_dos, sim_init_time, sim_term_time)
+    string_diagram(sys, sim_init_time, sim_term_time)
+    string_diagram(sys_dos, sim_init_time, sim_term_time)
 
     delay = cal_delay(sys, sys_dos, 20)
     first_delay_train = first_delay_train_idx(delay)
     delay_avg = cal_delay_avg(delay)
+    print("Test case 1, delay_avg = {}".format(delay_avg))
 
 main()
