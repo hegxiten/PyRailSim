@@ -186,8 +186,8 @@ def main():
     
     print("Slowest Train Speed = {} mph".format(min(sp_container)*3600))
     print("Fastest Train Speed = {} mph".format(max(sp_container)*3600))
-    print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600))
-    print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600))
+    print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600*60))
+    print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600*60))
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
     
