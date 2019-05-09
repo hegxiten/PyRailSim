@@ -3,6 +3,7 @@ from system import System
 from train import Train
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.patches as mpatches
 from datetime import datetime, timedelta
 import numpy as np
 import time
@@ -33,7 +34,7 @@ def string_diagram(sys, start_time, end_time):
     
     
     #plt.ion()
-    plt.title('Result Analysis')
+    plt.title('Stringline Diagram', size=35)
     hours = mdates.HourLocator()
     minutes = mdates.MinuteLocator()
     seconds = mdates.SecondLocator()
@@ -44,8 +45,9 @@ def string_diagram(sys, start_time, end_time):
     plt.xticks(rotation=90)
     plt.grid(True, linestyle = "-.", color = "r", linewidth = "0.1")
     plt.legend()
-    plt.xlabel('Time')
-    plt.ylabel('Mile Post/miles')
+    plt.xlabel('Time', size=30)
+    plt.ylabel('Mile Post/miles',size=30)
+    plt.tick_params(labelsize=23)
     start_time = int(start_time.timestamp())
     end_time = int(end_time.timestamp())
     plt.axis([(datetime.fromtimestamp(start_time - 500)), \
@@ -56,7 +58,15 @@ def string_diagram(sys, start_time, end_time):
         plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
     plt.gca().axhspan(15,20,color='yellow',alpha=0.5)
     plt.gca().axhspan(30,35,color='yellow',alpha=0.5)
-    plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
+    #plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
+    labels, label_colors = ['Siding Location'], ['yellow']
+    #用label和color列表生成mpatches.Patch对象，它将作为句柄来生成legend
+    patches = [mpatches.Patch(color=label_colors[i], label="{:s}".format(labels[i])) for i in range(len(label_colors)) ] 
+    ax=plt.gca()
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width , box.height* 0.8])
+    #下面一行中bbox_to_anchor指定了legend的位置
+    ax.legend(handles=patches, bbox_to_anchor=(0.85,0.94), ncol=1) #生成legend    
     plt.show()
     #plt.ioff()
     
@@ -133,21 +143,33 @@ def main():
     for i in range(20):
         sp_container.append(random.randint(10,20) / 1000)
         acc_container.append(2.78e-05 * 0.3 * random.random() + 2.78e-05 * 0.85)
-    headway = 300 * random.random() + 350
+    headway = 200 * random.random() + 400
     sys = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=-1)
-    sys_dos = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=4)
+    sys_dos = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=-1)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
         i += 1
         sys.refresh()
         sys_dos.refresh()
+    
+    delay = cal_delay(sys, sys_dos, 20)
+    print("Test case 1, train delays = {}".format([d.total_seconds() for d in delay]))
+    first_delay_train = first_delay_train_idx(delay)
+    print("Test case 1, first delayed train = {}".format(first_delay_train))
+    delay_avg = cal_delay_avg(delay)
+    print("Test case 1, delay_avg = {}".format(delay_avg))
+    
+    print("Slowest Train Speed = {} mph".format(min(sp_container)*3600))
+    print("Fastest Train Speed = {} mph".format(max(sp_container)*3600))
+    print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600))
+    print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600))
+    
+    
+    
     string_diagram(sys, sim_init_time, sim_term_time)
     string_diagram(sys_dos, sim_init_time, sim_term_time)
 
-    delay = cal_delay(sys, sys_dos, 20)
-    first_delay_train = first_delay_train_idx(delay)
-    delay_avg = cal_delay_avg(delay)
-    print("Test case 1, delay_avg = {}".format(delay_avg))
+    
 
 main()
