@@ -52,11 +52,6 @@ class System():
             else:
                 self.blocks[i].set_clear_speed()
 
-    def print_blk_status(self):
-        print("#===================================")
-        for blk in self.blocks:
-            print(blk.has_available_track())
-
     def refresh(self):
         self.update_block_trgt_speed()
         headway = self.headway#np.random.normal(exp_buffer, var_buffer)
