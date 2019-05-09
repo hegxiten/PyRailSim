@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from block import Block
 import numpy as np
 from train import Train
+from track import Track
+from signal import Signal
 
 class System():
     def __init__(self, init_time, blk_length_list, headway, sp_container, acc_container, tracks=[], dos_period=['2017-01-01 02:00:00', '2017-01-01 02:30:00'], dos_pos=-1, refresh_time=1):
@@ -37,20 +39,36 @@ class System():
         self.last_train_init_time = self.sys_time
         new_train.enter_block(self, 0, track_idx)
 
-    def update_block_trgt_speed(self):
-        # update the trgt_speed of every block.
+    def update_every_track(self, i, direction):
+        assert direction in ['left', 'right']
+        for track in self.blocks[i].tracks:
+            if direction == 'right':
+                if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
+                    track.right_signal.update_signal('r')
+                elif i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
+                    track.right_signal.update_signal('yy')
+                elif i + 2 < len(self.blocks) and not self.blocks[i + 2].has_available_track():
+                    track.right_signal.update_signal('y')
+                elif i + 3 < len(self.blocks) and not self.blocks[i + 3].has_available_track():
+                    track.right_signal.update_signal('g')
+                else:
+                    track.right_signal.update_signal('r')
+            if direction == 'left':
+                if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
+                    track.left_signal.update_signal('r')
+                elif i - 1 >= 0 and not self.blocks[i - 1].has_available_track():
+                    track.left_signal.update_signal('yy')
+                elif i - 2 >= 0 and not self.blocks[i - 2].has_available_track():
+                    track.left_signal.update_signal('y')
+                elif i - 3 >= 0 and not self.blocks[i - 3].has_available_track():
+                    track.left_signal.update_signal('g')
+                else:
+                    track.left_signal.update_signal('r')
 
+    def update_track_signal_color(self):
         for i in range(len(self.blocks)):
-            if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
-                self.blocks[i].set_stop_speed()
-            elif i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
-                self.blocks[i].set_stop_speed()
-            elif i + 2 < len(self.blocks) and not self.blocks[i + 2].has_available_track():
-                self.blocks[i].set_approaching_speed()
-            elif i + 3 < len(self.blocks) and not self.blocks[i + 3].has_available_track():
-                self.blocks[i].set_middle_approaching_speed()
-            else:
-                self.blocks[i].set_clear_speed()
+            self.update_every_track(i, 'right')
+            
 
     def refresh(self):
         self.update_block_trgt_speed()
