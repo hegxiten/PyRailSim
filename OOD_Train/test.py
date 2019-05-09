@@ -8,11 +8,63 @@ import numpy as np
 import time
 import random
 
-def string_diagram(sys, start_time, end_time):
+def string_diagram(sys, sys_dos, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''
     colors = ['red','green','blue','black','orange','cyan','magenta']
     color_num = len(colors)
+    x, y = process_data(sys)
+    x_dos, y_dos = process_data(sys_dos)
+    
+    t_color = [colors[x.index(i)%color_num] for i in x]
+    
+    #plt.ion()
+    plt.title('Result Analysis')
+    hours = mdates.HourLocator()
+    minutes = mdates.MinuteLocator()
+    seconds = mdates.SecondLocator()
+    dateFmt = mdates.DateFormatter("%H:%M")
+    plt.gca().xaxis.set_major_locator(hours)
+    plt.gca().xaxis.set_minor_locator(minutes)
+    plt.gca().xaxis.set_major_formatter(dateFmt)
+    plt.xticks(rotation=90)
+    plt.grid(color = "black")
+    plt.legend()
+    plt.xlabel('Time')
+    plt.ylabel('Mile Post/miles')
+    start_time = int(start_time.timestamp())
+    end_time = int(end_time.timestamp())
+
+    sys_length = sys.block_intervals[-1][1]
+    multi_track_blk_intervals = []
+    for i,blk in enumerate(sys.blocks):
+        if blk.track_number > 1:
+            multi_track_blk_intervals.append(sys.block_intervals[i])
+
+    dos_period = sys_dos.dos_period
+    dos_interval = sys_dos.block_intervals[sys_dos.dos_pos]
+    print(dos_interval)
+    dos_period_ratio = [(dos_period[0] - start_time) / (end_time - start_time), (dos_period[1] - start_time) / (end_time - start_time)]
+    
+    plt.axis([(datetime.fromtimestamp(start_time)), \
+            (datetime.fromtimestamp(end_time)), 0 , sys_length])
+
+    for n in range(len(x)-1):
+        #assert len(x[n]) == len(y[n]) == t_color[n]
+        plt.plot([mdates.date2num(i) for i in x[n]], y[n], '--', color=t_color[n], alpha=0.5)
+    for n in range(len(x_dos) - 1):
+        plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
+    
+    plt.gca().axhspan(dos_interval[0],dos_interval[1], dos_period_ratio[0], dos_period_ratio[1], color='blue',alpha=0.5)
+    for mtbi in multi_track_blk_intervals:
+        plt.gca().axhspan(mtbi[0],mtbi[1], color='yellow',alpha=0.5)
+
+
+    # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),0.3,0.4, color='black',alpha=0.5)
+    # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),0.6,0.7, color='black',alpha=0.5)
+    plt.show()
+
+def process_data(sys):
     x = []; y = []; 
     for i in range(len(sys.trains)-1):
         x.append([])
@@ -26,40 +78,7 @@ def string_diagram(sys, start_time, end_time):
     y = [i for _,i in sorted(zip([i[0] for i in x], y))]
     x = sorted(x, key = lambda x: x[0])
     assert len(x) == len(y)
-    
-    train_idx = list(range(len(x)))
-    t_color = [colors[x.index(i)%color_num] for i in x]
-    min_t, max_t = min([i[0] for i in x]), max([i[-1] for i in x])
-    
-    
-    #plt.ion()
-    plt.title('Result Analysis')
-    hours = mdates.HourLocator()
-    minutes = mdates.MinuteLocator()
-    seconds = mdates.SecondLocator()
-    dateFmt = mdates.DateFormatter("%H:%M")
-    plt.gca().xaxis.set_major_locator(hours)
-    plt.gca().xaxis.set_minor_locator(minutes)
-    plt.gca().xaxis.set_major_formatter(dateFmt)
-    plt.xticks(rotation=90)
-    plt.grid(True, linestyle = "-.", color = "r", linewidth = "0.1")
-    plt.legend()
-    plt.xlabel('Time')
-    plt.ylabel('Mile Post/miles')
-    start_time = int(start_time.timestamp())
-    end_time = int(end_time.timestamp())
-    plt.axis([(datetime.fromtimestamp(start_time - 500)), \
-            (datetime.fromtimestamp(end_time + 500)), -5 , 55])
-
-    for n in range(len(x)-1):
-        #assert len(x[n]) == len(y[n]) == t_color[n]
-        plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
-    plt.gca().axhspan(15,20,color='yellow',alpha=0.5)
-    plt.gca().axhspan(30,35,color='yellow',alpha=0.5)
-    plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
-    plt.show()
-    #plt.ioff()
-    
+    return x, y
 
 def cal_delay(sys, sys_dos, delay_miles):
     x_sys = []
@@ -142,8 +161,8 @@ def main():
         i += 1
         sys.refresh()
         sys_dos.refresh()
-    string_diagram(sys, sim_init_time, sim_term_time)
-    string_diagram(sys_dos, sim_init_time, sim_term_time)
+    string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
+    # string_diagram(sys_dos, sim_init_time, sim_term_time)
 
     delay = cal_delay(sys, sys_dos, 20)
     first_delay_train = first_delay_train_idx(delay)
