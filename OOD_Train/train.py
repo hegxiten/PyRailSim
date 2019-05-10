@@ -15,7 +15,7 @@ class Train():
         self.status = 1
         self.train_idx = idx
         self.rank = rank
-        self.blk_interval = blk_interval
+        self.blk_interval = system.block_intervals
         self.time_pos_list = [[init_time, blk_interval[0][0]]]
 
 
@@ -350,6 +350,7 @@ class Train():
         self.proceed_acc(delta_s)
 
     def proceed_acc(self, delta_s):
+        # print(self.curr_blk)
         self.curr_pos += delta_s
         # 更新当前速度
         self.curr_speed += self.curr_acc * self.system.refresh_time
@@ -359,23 +360,29 @@ class Train():
             # 如果当前的blk是最后一个blk  
             if self.curr_blk == len(self.system.blocks) - 1:
                 curr_blk.free_track(self.curr_track)
-                return     
+                return
+            if self.curr_blk == -1:
+                self.curr_pos = self.system.block_intervals[-1][1]
+                return 
             curr_track = curr_blk.tracks[self.curr_track]
             signal_color = curr_track.right_signal.color
             trgt_spd = curr_track.allow_sp
             next_blk = self.system.blocks[self.curr_blk + 1]
-            next_ava_track = next_blk.find_available_track()
+            self.curr_blk += 1
+
+            # 如果不是红色，正常往前走delta_s, 速度变为traget speed, 并且变化curr_blk, curr_track
+            if signal_color != 'r':
+                next_ava_track = next_blk.find_available_track()
+                self.curr_pos += delta_s
+                curr_blk.free_track(self.curr_track)
+                next_blk.occupied_track(next_ava_track, self)
+            # 如果信号灯为红色，立即停车，火车属性不做改变。
+            if signal_color == 'r':
+                self.curr_pos = self.system.block_intervals[self.curr_blk][1]
+            
             if self.curr_speed > trgt_spd:
                 self.curr_speed = trgt_spd
-                # 如果不是红色，正常往前走delta_s, 速度变为traget speed, 并且变化curr_blk, curr_track
-                if signal_color != 'r':
-                    self.curr_pos += delta_s
-                    curr_blk.free_track(self.curr_track)
-                    next_blk.occupied_track(next_ava_track, self)
-                # 如果信号灯为红色，立即停车，火车属性不做改变。
-                if signal_color == 'r':
-                    self.curr_pos = self.system.block_intervals[self.curr_blk][1]
-
+            
         self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_pos])
                 
             

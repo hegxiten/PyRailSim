@@ -175,11 +175,26 @@ def main():
                  headway=headway, 
                  tracks=[1,1,1,2,1,1,2,1,1,1], 
                  dos_pos=4)
+    sys = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,1,1,1,1,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=-1)
+    sys_dos = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,1,1,1,1,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=4)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
         i += 1
         sys.refresh()
+        if i % 50 == 0:
+            x = []
+            for t in sys.trains:
+                x.append(t.curr_blk)
+            x.reverse()
+
+            l = []
+            for blk in sys.blocks:
+                for tk in blk.tracks:
+                    l.append(tk.right_signal.color)
+            print("++++++++++++++++")
+            print(l)
+            print(x)
         sys_dos.refresh()
 
     # delay = cal_delay(sys, sys_dos, 20)
@@ -196,7 +211,7 @@ def main():
 
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
-    
+    print(len(sys.trains))
     #===========================================================================
     # string_diagram(sys, sim_init_time, sim_term_time)
     # string_diagram(sys_dos, sim_init_time, sim_term_time)

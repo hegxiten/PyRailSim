@@ -92,9 +92,13 @@ class System():
             
             # 找到速度最快火车的track
             max_train_track = ava_track
+            top_speed = prev_train_spd
+            if not self.blocks[i].has_available_track():
+                top_speed = -1
             for j, track in enumerate(self.blocks[i].tracks):
-                if track.train != None and track.train.max_speed > prev_train_spd:
+                if track.train != None and track.train.max_speed > top_speed:
                     max_train_track = j
+                    top_speed = track.train.max_speed
 
             for j, track in enumerate(self.blocks[i].tracks):
                 if j != max_train_track:
