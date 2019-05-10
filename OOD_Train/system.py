@@ -3,7 +3,7 @@ from block import Block
 import numpy as np
 from train import Train
 from track import Track
-from signal import Signal
+from signal_light import Signal
 
 class System():
     def __init__(self, init_time, blk_length_list, headway, sp_container, acc_container, tracks=[], dos_period=['2017-01-01 02:00:00', '2017-01-01 02:30:00'], dos_pos=-1, refresh_time=1):
@@ -33,7 +33,7 @@ class System():
         self.refresh_time = refresh_time
 
     def generate_train(self, track_idx):
-        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time, track_idx, self.sp_container[self.train_num % len(self.sp_container)], self.acc_container[self.train_num % len(self.acc_container)])
+        new_train = Train(self.train_num, self.train_num, self, self.sys_time, track_idx, self.sp_container[self.train_num % len(self.sp_container)], self.acc_container[self.train_num % len(self.acc_container)])
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time
@@ -93,7 +93,7 @@ class System():
             self.generate_train(track_idx)
 
         for t in self.trains:
-            t.update_acc(self)
+            t.update_acc()
         self.trains.sort()
         for i, tr in enumerate(self.trains):
             tr.rank = i

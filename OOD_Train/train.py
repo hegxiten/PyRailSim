@@ -1,6 +1,7 @@
 import random
 import numpy as np
 from datetime import datetime, timedelta
+from signal_light import Signal
 
 class Train():
     def __init__(self, idx, rank, system, init_time, curr_track, max_sp, max_acc):
@@ -361,7 +362,7 @@ class Train():
                 curr_blk.free_track(self.curr_track)
                 return     
             curr_track = curr_blk.tracks[self.curr_track]
-            signal_color = curr_track.right_signal
+            signal_color = curr_track.right_signal.color
             trgt_spd = curr_track.allow_sp
             next_blk = self.system.blocks[self.curr_blk + 1]
             next_ava_track = next_blk.find_available_track()
@@ -375,5 +376,7 @@ class Train():
                 # 如果信号灯为红色，立即停车，火车属性不做改变。
                 if signal_color == 'r':
                     self.curr_pos = self.system.block_intervals[self.curr_blk][1]
+
+        self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_pos])
                 
             

@@ -1,4 +1,4 @@
-from signal import Signal
+from signal_light import Signal
 
 class Track:
     def __init__(self, length, allow_sp):

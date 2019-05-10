@@ -7,6 +7,7 @@ import matplotlib.patches as mpatches
 from datetime import datetime, timedelta
 import numpy as np
 import time
+from signal_light import Signal
 import random
 
 def string_diagram(sys, sys_dos, start_time, end_time):
@@ -177,17 +178,17 @@ def main():
         sys.refresh()
         sys_dos.refresh()
 
-    delay = cal_delay(sys, sys_dos, 20)
-    print("Test case 1, train delays = {}".format([d.total_seconds() for d in delay]))
-    first_delay_train = first_delay_train_idx(delay)
-    print("Test case 1, first delayed train = {}".format(first_delay_train))
-    delay_avg = cal_delay_avg(delay)
-    print("Test case 1, delay_avg = {}".format(delay_avg))
+    # delay = cal_delay(sys, sys_dos, 20)
+    # print("Test case 1, train delays = {}".format([d.total_seconds() for d in delay]))
+    # first_delay_train = first_delay_train_idx(delay)
+    # print("Test case 1, first delayed train = {}".format(first_delay_train))
+    # delay_avg = cal_delay_avg(delay)
+    # print("Test case 1, delay_avg = {}".format(delay_avg))
     
-    print("Slowest Train Speed = {} mph".format(min(sp_container)*3600))
-    print("Fastest Train Speed = {} mph".format(max(sp_container)*3600))
-    print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600))
-    print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600))
+    # print("Slowest Train Speed = {} mph".format(min(sp_container)*3600))
+    # print("Fastest Train Speed = {} mph".format(max(sp_container)*3600))
+    # print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600))
+    # print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600))
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
     
