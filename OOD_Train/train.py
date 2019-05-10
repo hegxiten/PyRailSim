@@ -3,8 +3,9 @@ import numpy as np
 from datetime import datetime, timedelta
 
 class Train():
-    def __init__(self, idx, rank, blk_interval, init_time, curr_track, max_sp, max_acc):
+    def __init__(self, idx, init_rank, blk_interval, init_time, init_track, max_sp, max_acc):
         self.curr_pos = 0
+        self.curr_track = init_track
         self.max_speed = max_sp
         self.curr_speed = self.max_speed
         self.acc = max_acc
@@ -12,11 +13,10 @@ class Train():
         self.curr_blk = 0
         self.status = 1
         self.train_idx = idx
-        self.rank = rank
-        self.blk_time = [[init_time]]
+        self.rank = init_rank
         self.blk_interval = blk_interval
-        self.time_pos_list = [[self.blk_time[0][0], self.blk_interval[0][0]]]  # not yet implemented interpolation
-        self.curr_track = curr_track
+        self.time_pos_list = [[init_time, blk_interval[0][0]]]
+        
 
     def __lt__(self, other):
         if self.curr_pos > other.curr_pos:
@@ -86,7 +86,6 @@ class Train():
         
     def leave_block(self, system, blk_idx):
         system.blocks[blk_idx].free_track(self.curr_track)
-        self.blk_time[blk_idx].append(system.sys_time)
         # interpolate the time moment when the train leaves the system
         if blk_idx == len(system.blocks)-1:
             interpolate_time = (self.blk_interval[blk_idx][1] - self.curr_pos) / self.curr_speed + system.sys_time
@@ -96,7 +95,6 @@ class Train():
     def enter_block(self, system, blk_idx, next_block_ava_track):
         system.blocks[blk_idx].occupied_track(next_block_ava_track, self)
         self.curr_track = next_block_ava_track
-        self.blk_time.append([system.sys_time])
     
     def update(self, system, dos_pos=-1):
         # update self.curr_pos

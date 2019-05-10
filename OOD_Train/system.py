@@ -1,37 +1,62 @@
 from datetime import datetime, timedelta
 from block import Block
 import numpy as np
+import random
 from train import Train
 
 class System():
-    def __init__(self, init_time, blk_length_list, headway, sp_container, acc_container, tracks=[], dos_period=['2017-01-01 02:00:00', '2017-01-01 02:30:00'], dos_pos=-1, refresh_time=1):
-        self.sys_time = init_time.timestamp()  
-        # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
-        self.blocks = []
-        for i in range(len(blk_length_list)):
-            self.blocks.append(Block(i, blk_length_list[i], tracks[i]))
-        self.trains = []
-        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in dos_period if type(t) == str]
-        self.dos_pos = dos_pos
-        self.train_num = 0
+    def __init__(self, init_time, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        :_blk_length_list: list (**kw)
+            A list of block lengths for each block.
+        :tracks: list (**kw)
+            A list of total number of tracks per block.
+        :dos_period: list or tuple (**kw)
+            2-element list or tuple showing the starting and finishing time of DoS attacks.
+        :headway: (**kw)
+            Traffic headway in seconds for unidirectional trains. 500 by default.
+        :dos_pos: int (**kw)
+            Index of block to be attacked by DoS. -1 by default (no DoS).
+        :refresh_time: int (**kw)
+            Seconds between two consecutive traverse calculations of the simulation.
+        :sp_containter: list (**kw)
+            A list of randomized speed values for trains to initialize by. Uniform range.
+        :add_container: list (**kw)
+            A list of randomized acceleration values for trains to initialize by. Uniform range.
+        """
+        _blk_length_list = [5] * 10     if not kwargs.get('blk_length_list') else kwargs.get('blk_length_list')
+        _blk_number = len(_blk_length_list)
+        
+        self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
+        self.trains, self.train_num = [], 0
+        self.blocks = [Block(i, _blk_length_list[i], kwargs.get('tracks')[i]) for i in range(_blk_number)]
+        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
+        self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
+        self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
+        self.last_train_init_time = self.sys_time
+        self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
+        self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
+        self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')
         self.block_intervals = []
-        self.headway = headway
-        self.sp_container = sp_container
-        self.acc_container = acc_container
-
         # interval is the two-element array containing mile posts of boundaries 
-        for i in range(len(blk_length_list)):
+        for i in range(_blk_number):
             if i == 0:
-                self.block_intervals.append([0, blk_length_list[0]])
+                self.block_intervals.append([0, _blk_length_list[0]])
             else:
                 left = self.block_intervals[i - 1][1]
-                right = left + blk_length_list[i]
+                right = left + _blk_length_list[i]
                 self.block_intervals.append([left, right]) 
-        self.last_train_init_time = self.sys_time
-        self.refresh_time = refresh_time
-
+        
     def generate_train(self, track_idx):
-        new_train = Train(self.train_num, self.train_num, self.block_intervals, self.sys_time, track_idx, self.sp_container[self.train_num % len(self.sp_container)], self.acc_container[self.train_num % len(self.acc_container)])
+        new_train = Train(self.train_num, 
+                          self.train_num, 
+                          self.block_intervals, 
+                          self.sys_time, 
+                          track_idx, 
+                          self.sp_container[self.train_num % len(self.sp_container)], 
+                          self.acc_container[self.train_num % len(self.acc_container)])
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time
@@ -76,3 +101,21 @@ class System():
         for i, tr in enumerate(self.trains):
             tr.rank = i
         self.sys_time += self.refresh_time
+        
+if __name__ =='__main__':
+    import random
+    sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
+    sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
+    # for i in range(5):
+    sp_container = []
+    acc_container = []
+    for i in range(20):
+        sp_container.append(random.randint(10,20) / 1000)
+        acc_container.append(2.78e-05 * 0.3 * random.random() + 2.78e-05 * 0.85)
+    headway = 200 * random.random() + 400
+    sys = System(sim_init_time, sp_container, acc_container,
+                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
+                 blk_length_list=[5] * 10, 
+                 headway=headway, 
+                 tracks=[1,1,1,2,1,1,2,1,1,1], 
+                 dos_pos=-1)
