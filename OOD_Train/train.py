@@ -368,11 +368,11 @@ class Train():
             signal_color = curr_track.right_signal.color
             trgt_spd = curr_track.allow_sp
             next_blk = self.system.blocks[self.curr_blk + 1]
-            self.curr_blk += 1
 
             # 如果不是红色，正常往前走delta_s, 速度变为traget speed, 并且变化curr_blk, curr_track
             if signal_color != 'r':
                 next_ava_track = next_blk.find_available_track()
+                self.curr_blk += 1
                 self.curr_pos += delta_s
                 curr_blk.free_track(self.curr_track)
                 next_blk.occupied_track(next_ava_track, self)
