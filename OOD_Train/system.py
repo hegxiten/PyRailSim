@@ -103,19 +103,13 @@ class System():
         self.sys_time += self.refresh_time
         
 if __name__ =='__main__':
-    import random
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
-    # for i in range(5):
-    sp_container = []
-    acc_container = []
-    for i in range(20):
-        sp_container.append(random.randint(10,20) / 1000)
-        acc_container.append(2.78e-05 * 0.3 * random.random() + 2.78e-05 * 0.85)
+    sp_container = [random.uniform(0.01, 0.02) for i in range(20)]
+    acc_container = [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
     headway = 200 * random.random() + 400
     sys = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
-                 blk_length_list=[5] * 10, 
                  headway=headway, 
                  tracks=[1,1,1,2,1,1,2,1,1,1], 
                  dos_pos=-1)
