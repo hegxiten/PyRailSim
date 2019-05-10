@@ -20,3 +20,4 @@
 venv/
 /Document/
 __pycache__/
+DES/test.py
