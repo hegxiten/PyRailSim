@@ -4,7 +4,7 @@ import numpy as np
 import random
 from train import Train
 from track import Track
-from signal import Signal
+from signal_light import Signal
 
 class System():
     def __init__(self, init_time, *args, **kwargs):
@@ -118,7 +118,7 @@ class System():
             self.generate_train(track_idx)
 
         for t in self.trains:
-            t.update_acc(self, self.dos_pos)
+            t.update_acc()
         self.trains.sort()
         for i, tr in enumerate(self.trains):
             tr.rank = i

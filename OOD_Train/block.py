@@ -1,4 +1,5 @@
 from track import Track
+from signal_light import Signal
 
 class Block():
 
