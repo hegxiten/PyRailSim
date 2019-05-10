@@ -6,7 +6,7 @@ from signal_light import Signal
 class Train():
     def __init__(self, idx, rank, system, init_time, curr_track, max_sp, max_acc):
         self.curr_pos = 0
-        self.curr_track = init_track
+        self.curr_track = curr_track
         self.max_speed = max_sp
         self.curr_speed = self.max_speed
         self.acc = max_acc
@@ -14,7 +14,7 @@ class Train():
         self.curr_blk = 0
         self.status = 1
         self.train_idx = idx
-        self.rank = init_rank
+        self.rank = rank
         self.blk_interval = blk_interval
         self.time_pos_list = [[init_time, blk_interval[0][0]]]
 
