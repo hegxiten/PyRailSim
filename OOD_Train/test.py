@@ -46,7 +46,6 @@ def string_diagram(sys, sys_dos, start_time, end_time):
 
     dos_period = sys_dos.dos_period
     dos_interval = sys_dos.block_intervals[sys_dos.dos_pos]
-    print(dos_interval)
     dos_period_ratio = [(dos_period[0] - start_time) / (end_time - start_time), (dos_period[1] - start_time) / (end_time - start_time)]
     
     plt.axis([(datetime.fromtimestamp(start_time)), \
@@ -176,6 +175,7 @@ def main():
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
         i += 1
         sys.refresh()
+        '''
         if i % 50 == 0:
             x = []
             for t in sys.trains:
@@ -189,6 +189,7 @@ def main():
             print("++++++++++++++++")
             print(l)
             print(x)
+        '''
         sys_dos.refresh()
 
     # delay = cal_delay(sys, sys_dos, 20)
@@ -204,7 +205,7 @@ def main():
     # print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600))
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
-    print(len(sys.trains))
+    # print(len(sys.trains))
     #===========================================================================
     # string_diagram(sys, sim_init_time, sim_term_time)
     # string_diagram(sys_dos, sim_init_time, sim_term_time)
