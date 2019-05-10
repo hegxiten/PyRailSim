@@ -54,7 +54,7 @@ class Train():
             self.curr_pos = dest
         self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_pos])
         
-    def proceed_acc(self, delta_s, dest=None):
+    def proceed_a(self, delta_s, dest=None):
         # if delta_s < 0:
         #     delta_s = 0
         if self.curr_speed + self.curr_acc * self.system.refresh_time > self.max_speed:
@@ -183,7 +183,7 @@ class Train():
         # print(delta_s)
         return delta_s
 
-    def update_acc(self, dos_pos=-1):
+    def update_a(self, dos_pos=-1):
         if not self.curr_blk == None:
             assert  self.system.block_intervals[self.curr_blk][0] <= self.curr_pos <= self.system.block_intervals[self.curr_blk][1]
         delta_s = self.cal_increment()
@@ -327,3 +327,28 @@ class Train():
             and ((self.system.trains[self.rank + 1].curr_blk == self.curr_blk - 1\
                 and self.system.blocks[self.curr_blk].has_available_track())\
             or self.system.trains[self.rank + 1].curr_blk == self.curr_blk)
+
+    def cal_acc(self):
+        # print("current block index: {}".format(self.curr_blk))
+        if self.curr_blk == None:
+            return 0
+        curr_track = self.system.blocks[self.curr_blk].tracks[self.curr_track]
+        target_spd = curr_track.allow_sp
+        if self.curr_speed < 0 and self.curr_acc < 0:
+            self.curr_speed = 0
+            
+        if self.curr_speed < target_spd and self.curr_speed < self.max_speed:
+            self.curr_acc = self.acc
+        elif self.curr_speed > target_spd and self.curr_speed > 0:
+            self.curr_acc = -self.acc
+        else:
+            self.curr_acc = 0
+
+    def update_acc(self):
+        delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
+        self.proceed_acc(delta_s)
+
+    def proceed_acc(self, delta_s):
+        self.curr_pos += delta_s
+        if self.curr_pos > self.system.block_intervals[self.curr_blk][1] and self.system.blocks:
+            self.system.blocks[self.curr_blk].free_track(self.curr_track)

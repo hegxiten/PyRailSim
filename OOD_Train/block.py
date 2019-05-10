@@ -23,8 +23,13 @@ class Block():
                 return idx
 
     def occupied_track(self, idx, train):
+        train.curr_blk = self.index
+        train.curr_track = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
+        train = self.tracks[idx].train
+        train.curr_blk = -1
+        train.curr_track = 0
         self.tracks[idx].leave()
     

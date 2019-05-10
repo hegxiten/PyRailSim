@@ -37,7 +37,7 @@ class System():
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time
-        new_train.enter_block(self, 0, track_idx)
+        self.blocks[0].occupied_track(track_idx, new_train)
 
     def update_blk_right(self, i):
         for track in self.blocks[i].tracks:
