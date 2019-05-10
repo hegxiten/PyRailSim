@@ -39,39 +39,48 @@ class System():
         self.last_train_init_time = self.sys_time
         new_train.enter_block(self, 0, track_idx)
 
-    def update_every_track(self, i, direction):
-        assert direction in ['left', 'right']
+    def update_blk_right(self, i):
         for track in self.blocks[i].tracks:
-            if direction == 'right':
-                if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
+            if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
+                track.right_signal.update_signal('r')
+            elif i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
+                track.right_signal.update_signal('r')
+            elif i + 2 < len(self.blocks) and not self.blocks[i + 2].has_available_track():
+                track.right_signal.update_signal('yy')
+            elif i + 3 < len(self.blocks) and not self.blocks[i + 3].has_available_track():
+                track.right_signal.update_signal('y')
+            else:
+                track.right_signal.update_signal('g')
+
+        # 如果track数量超过1才考虑让车情况。（第一个blk暂不考虑为多track）
+        if i > 0 and len(self.blocks[i].tracks) > 1:
+            # 让车情况下的变灯。
+            last_blk_has_train = False
+            if not self.blocks[i - 1].has_available_track(): #后一个blk有车
+                last_blk_has_train = True
+            # if self.blocks[i].has_available_track():
+            ava_track = -1
+            prev_train_spd = 0
+            if last_blk_has_train:
+                ava_track = self.blocks[i].find_available_track()
+                prev_train_spd = self.blocks[i - 1].tracks[0].train.max_speed
+            
+            # 找到速度最快火车的track
+            max_train_track = ava_track
+            for j, track in enumerate(self.blocks[i].tracks):
+                if track.train != None and track.train.max_speed > prev_train_spd:
+                    max_train_track = j
+
+            for j, track in enumerate(self.blocks[i].tracks):
+                if j != max_train_track:
                     track.right_signal.update_signal('r')
-                elif i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
-                    track.right_signal.update_signal('yy')
-                elif i + 2 < len(self.blocks) and not self.blocks[i + 2].has_available_track():
-                    track.right_signal.update_signal('y')
-                elif i + 3 < len(self.blocks) and not self.blocks[i + 3].has_available_track():
-                    track.right_signal.update_signal('g')
-                else:
-                    track.right_signal.update_signal('r')
-            if direction == 'left':
-                if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
-                    track.left_signal.update_signal('r')
-                elif i - 1 >= 0 and not self.blocks[i - 1].has_available_track():
-                    track.left_signal.update_signal('yy')
-                elif i - 2 >= 0 and not self.blocks[i - 2].has_available_track():
-                    track.left_signal.update_signal('y')
-                elif i - 3 >= 0 and not self.blocks[i - 3].has_available_track():
-                    track.left_signal.update_signal('g')
-                else:
-                    track.left_signal.update_signal('r')
 
     def update_track_signal_color(self):
         for i in range(len(self.blocks)):
-            self.update_every_track(i, 'right')
+            self.update_blk_right(i)
             
-
     def refresh(self):
-        self.update_block_trgt_speed()
+        self.update_track_signal_color()
         headway = self.headway#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation
         # is bigger than headway, it will generate a new train at start point.
