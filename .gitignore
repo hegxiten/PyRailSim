@@ -9,6 +9,9 @@
 *.swo
 *.swp
 
+# vscode configs
+.vscode/
+
 *.pyc
 *.pdf
 *.DS_Store
@@ -17,3 +20,4 @@
 venv/
 /Document/
 __pycache__/
+DES/test.py
