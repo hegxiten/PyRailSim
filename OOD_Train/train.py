@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 class Train():
     def __init__(self, idx, rank, system, init_time, curr_track, max_sp, max_acc):
         self.curr_pos = 0
+        self.curr_track = init_track
         self.max_speed = max_sp
         self.curr_speed = self.max_speed
         self.acc = max_acc
@@ -12,11 +13,10 @@ class Train():
         self.curr_blk = 0
         self.status = 1
         self.train_idx = idx
-        self.rank = rank
-        self.system = system
-        self.blk_time = [[init_time]]
-        self.time_pos_list = [[self.blk_time[0][0], self.system.block_intervals[0][0]]]  # not yet implemented interpolation
-        self.curr_track = curr_track
+        self.rank = init_rank
+        self.blk_interval = blk_interval
+        self.time_pos_list = [[init_time, blk_interval[0][0]]]
+
 
     def __lt__(self, other):
         if self.curr_pos > other.curr_pos:
@@ -96,8 +96,7 @@ class Train():
     def enter_block(self, blk_idx, next_block_ava_track):
         self.system.blocks[blk_idx].occupied_track(next_block_ava_track, self)
         self.curr_track = next_block_ava_track
-        self.blk_time.append([self.system.sys_time])
-    
+        
     def update(self, dos_pos=-1):
         # update self.curr_pos
         # update self.curr_speed

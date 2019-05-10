@@ -161,15 +161,19 @@ def cal_delay_avg(delay):
 def main():
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
-    # for i in range(5):
-    sp_container = []
-    acc_container = []
-    for i in range(20):
-        sp_container.append(random.randint(10,20) / 1000)
-        acc_container.append(2.78e-05 * 0.3 * random.random() + 2.78e-05 * 0.85)
+    sp_container = [random.uniform(0.01, 0.02) for i in range(20)]
+    acc_container = [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
     headway = 200 * random.random() + 400
-    sys = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=-1)
-    sys_dos = System(sim_init_time, [5] * 10, headway, sp_container, acc_container, [1,1,1,2,1,1,2,1,1,1], dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'], dos_pos=4)
+    sys = System(sim_init_time, sp_container, acc_container,
+                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
+                 headway=headway, 
+                 tracks=[1,1,1,2,1,1,2,1,1,1], 
+                 dos_pos=-1)
+    sys_dos = System(sim_init_time, sp_container, acc_container,
+                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
+                 headway=headway, 
+                 tracks=[1,1,1,2,1,1,2,1,1,1], 
+                 dos_pos=4)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
@@ -186,8 +190,8 @@ def main():
     
     print("Slowest Train Speed = {} mph".format(min(sp_container)*3600))
     print("Fastest Train Speed = {} mph".format(max(sp_container)*3600))
-    print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600))
-    print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600))
+    print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600*60))
+    print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600*60))
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
     
