@@ -345,10 +345,35 @@ class Train():
             self.curr_acc = 0
 
     def update_acc(self):
+        self.cal_acc()
         delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
         self.proceed_acc(delta_s)
 
     def proceed_acc(self, delta_s):
         self.curr_pos += delta_s
-        if self.curr_pos > self.system.block_intervals[self.curr_blk][1] and self.system.blocks:
-            self.system.blocks[self.curr_blk].free_track(self.curr_track)
+        # 更新当前速度
+        self.curr_speed += self.curr_acc * self.system.refresh_time
+        # 下一个delta_s之后，要越界且还没有减速到target speed.
+        if self.curr_pos > self.system.block_intervals[self.curr_blk][1]:
+            curr_blk = self.system.blocks[self.curr_blk]     
+            # 如果当前的blk是最后一个blk  
+            if self.curr_blk == len(self.system.blocks) - 1:
+                curr_blk.free_track(self.curr_track)
+                return     
+            curr_track = curr_blk.tracks[self.curr_track]
+            signal_color = curr_track.right_signal
+            trgt_spd = curr_track.allow_sp
+            next_blk = self.system.blocks[self.curr_blk + 1]
+            next_ava_track = next_blk.find_available_track()
+            if self.curr_speed > trgt_spd:
+                self.curr_speed = trgt_spd
+                # 如果不是红色，正常往前走delta_s, 速度变为traget speed, 并且变化curr_blk, curr_track
+                if signal_color != 'r':
+                    self.curr_pos += delta_s
+                    curr_blk.free_track(self.curr_track)
+                    next_blk.occupied_track(next_ava_track, self)
+                # 如果信号灯为红色，立即停车，火车属性不做改变。
+                if signal_color == 'r':
+                    self.curr_pos = self.system.block_intervals[self.curr_blk][1]
+                
+            

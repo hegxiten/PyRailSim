@@ -93,7 +93,7 @@ class System():
             self.generate_train(track_idx)
 
         for t in self.trains:
-            t.update_acc(self, self.dos_pos)
+            t.update_acc(self)
         self.trains.sort()
         for i, tr in enumerate(self.trains):
             tr.rank = i
