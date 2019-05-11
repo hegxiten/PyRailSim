@@ -109,7 +109,6 @@ class System():
             self.update_blk_right(i)
             
     def refresh(self):
-        print(len(self.trains))
         self.update_track_signal_color()
         headway = self.headway#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation

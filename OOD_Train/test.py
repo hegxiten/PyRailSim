@@ -64,9 +64,9 @@ def string_diagram(sys, sys_dos, start_time, end_time):
     ax.set_position([box.x0, box.y0, box.width , box.height* 0.8])
     #下面一行中bbox_to_anchor指定了legend的位置
     ax.legend(handles=patches, bbox_to_anchor=(0.85,0.94), ncol=1) #生成legend    
-    for n in range(len(x)-1):   
-        #assert len(x[n]) == len(y[n]) == t_color[n]
-        plt.plot([mdates.date2num(i) for i in x[n]], y[n], '--', color=t_color[n], alpha=0.5)
+    # for n in range(len(x)-1):   
+    #     #assert len(x[n]) == len(y[n]) == t_color[n]
+    #     plt.plot([mdates.date2num(i) for i in x[n]], y[n], '--', color=t_color[n], alpha=0.5)
     for n in range(len(x_dos) - 1):
         plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
     
@@ -167,12 +167,12 @@ def main():
     sys = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,2,1,1,2,1,1,1], 
+                 tracks=[1,1,1,1,1,1,1,1,1,1], 
                  dos_pos=-1)
     sys_dos = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,2,1,1,2,1,1,1], 
+                 tracks=[1,1,1,1,1,1,1,1,1,1], 
                  dos_pos=4)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
@@ -196,12 +196,12 @@ def main():
         '''
         sys_dos.refresh()
 
-    # delay = cal_delay(sys, sys_dos, 20)
-    # print("Test case 1, train delays = {}".format([d.total_seconds() for d in delay]))
-    # first_delay_train = first_delay_train_idx(delay)
-    # print("Test case 1, first delayed train = {}".format(first_delay_train))
-    # delay_avg = cal_delay_avg(delay)
-    # print("Test case 1, delay_avg = {}".format(delay_avg))
+    delay = cal_delay(sys, sys_dos, 20)
+    print("Test case 1, train delays = {}".format([d.total_seconds() for d in delay]))
+    first_delay_train = first_delay_train_idx(delay)
+    print("Test case 1, first delayed train = {}".format(first_delay_train))
+    delay_avg = cal_delay_avg(delay)
+    print("Test case 1, delay_avg = {}".format(delay_avg))
     
     print("Slowest Train Speed = {} mph".format(min(sp_container)*3600))
     print("Fastest Train Speed = {} mph".format(max(sp_container)*3600))
@@ -210,7 +210,6 @@ def main():
 
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
-    # print(len(sys.trains))
     #===========================================================================
     # string_diagram(sys, sim_init_time, sim_term_time)
     # string_diagram(sys_dos, sim_init_time, sim_term_time)

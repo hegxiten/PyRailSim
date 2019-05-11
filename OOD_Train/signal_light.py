@@ -1,7 +1,7 @@
 class Signal:
     def __init__(self, allow_sp):
         self.color = 'g'
-        self.tgt_sp = 0
+        self.tgt_sp = allow_sp
         self.allow_sp = allow_sp
 
     def update_signal(self, color):
