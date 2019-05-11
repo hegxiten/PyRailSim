@@ -1,9 +1,8 @@
 from track import Track
-from signal_light import Signal
 
 class Block():
 
-    def __init__(self, index, length, max_sp, track_number=1):
+    def __init__(self, index, length, max_sp=0.02, track_number=1):
         self.index = index
         self.length = length
         self.max_sp = max_sp

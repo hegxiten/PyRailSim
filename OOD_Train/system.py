@@ -33,7 +33,7 @@ class System():
         
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains, self.train_num = [], 0
-        self.blocks = [Block(i, _blk_length_list[i], kwargs.get('tracks')[i]) for i in range(_blk_number)]
+        self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
         self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
