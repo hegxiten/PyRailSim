@@ -54,7 +54,7 @@ class System():
     def generate_train(self, track_idx):
         new_train = Train(self.train_num, 
                           self.train_num, 
-                          self.block_intervals, 
+                          self, 
                           self.sys_time, 
                           track_idx, 
                           self.sp_container[self.train_num % len(self.sp_container)], 

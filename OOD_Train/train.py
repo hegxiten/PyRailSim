@@ -15,8 +15,9 @@ class Train():
         self.status = 1
         self.train_idx = idx
         self.rank = rank
+        self.system = system
         self.blk_interval = system.block_intervals
-        self.time_pos_list = [[init_time, blk_interval[0][0]]]
+        self.time_pos_list = [[init_time, self.blk_interval[0][0]]]
 
 
     def __lt__(self, other):
