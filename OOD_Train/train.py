@@ -7,7 +7,7 @@ class Train():
     def __init__(self, idx, rank, system, init_time, curr_track, max_sp, max_acc):
         self.curr_pos = 0
         self.max_speed = max_sp
-        self.curr_speed = self.max_speed
+        self.curr_speed = 0
         self.acc = max_acc
         self.curr_acc = self.acc
         self.curr_blk = 0
@@ -334,10 +334,10 @@ class Train():
         if self.curr_blk == None:
             return 0
         curr_track = self.system.blocks[self.curr_blk].tracks[self.curr_track]
-        target_spd = curr_track.allow_sp
+        target_spd = curr_track.right_signal.tgt_sp
         if self.curr_speed < 0 and self.curr_acc < 0:
             self.curr_speed = 0
-            
+        print("{}, {}".format(self.curr_speed, target_spd))
         if self.curr_speed < target_spd and self.curr_speed < self.max_speed:
             self.curr_acc = self.acc
         elif self.curr_speed > target_spd and self.curr_speed > 0:
@@ -351,7 +351,6 @@ class Train():
         self.proceed_acc(delta_s)
 
     def proceed_acc(self, delta_s):
-        # print(self.curr_blk)
         self.curr_pos += delta_s
         # 更新当前速度
         self.curr_speed += self.curr_acc * self.system.refresh_time
@@ -374,12 +373,12 @@ class Train():
             if signal_color != 'r':
                 next_ava_track = next_blk.find_available_track()
                 self.curr_blk += 1
-                self.curr_pos += delta_s
                 curr_blk.free_track(self.curr_track)
                 next_blk.occupied_track(next_ava_track, self)
             # 如果信号灯为红色，立即停车，火车属性不做改变。
             if signal_color == 'r':
                 self.curr_pos = self.system.block_intervals[self.curr_blk][1]
+                self.curr_speed = 0
             
             if self.curr_speed > trgt_spd:
                 self.curr_speed = trgt_spd

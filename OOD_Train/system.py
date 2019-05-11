@@ -11,7 +11,7 @@ class System():
         # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.blocks = []
         for i in range(len(blk_length_list)):
-            self.blocks.append(Block(i, blk_length_list[i], tracks[i]))
+            self.blocks.append(Block(i, blk_length_list[i], 0.02, tracks[i]))
         self.trains = []
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in dos_period if type(t) == str]
         self.dos_pos = dos_pos
@@ -84,7 +84,6 @@ class System():
             self.update_blk_right(i)
             
     def refresh(self):
-        print(len(self.trains))
         self.update_track_signal_color()
         headway = self.headway#np.random.normal(exp_buffer, var_buffer)
         # If the time slot between now and the time of last train generation
