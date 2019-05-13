@@ -64,11 +64,11 @@ def string_diagram(sys, sys_dos, start_time, end_time):
     ax.set_position([box.x0, box.y0, box.width , box.height* 0.8])
     #下面一行中bbox_to_anchor指定了legend的位置
     ax.legend(handles=patches, bbox_to_anchor=(0.85,0.94), ncol=1) #生成legend    
-    # for n in range(len(x)-1):   
+    for n in range(len(x)-1):   
     #     #assert len(x[n]) == len(y[n]) == t_color[n]
-    #     plt.plot([mdates.date2num(i) for i in x[n]], y[n], '--', color=t_color[n], alpha=0.5)
-    for n in range(len(x_dos) - 1):
-        plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
+        plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n], alpha=0.5)
+    # for n in range(len(x_dos) - 1):
+        # plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
     
     plt.gca().axhspan(dos_interval[0],dos_interval[1], dos_period_ratio[0], dos_period_ratio[1], color='blue',alpha=0.5)
     for mtbi in multi_track_blk_intervals:
@@ -167,33 +167,18 @@ def main():
     sys = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,1,1,1,1,1,1,1], 
+                 tracks=[1,1,1,2,1,1,2,1,1,1], 
                  dos_pos=-1)
     sys_dos = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,1,1,1,1,1,1,1], 
+                 tracks=[1,1,1,2,1,1,2,1,1,1], 
                  dos_pos=4)
     sim_timedelta = sim_term_time - sim_init_time
     i = 0
     while (datetime.fromtimestamp(sys.sys_time) - sim_init_time).total_seconds() < sim_timedelta.total_seconds():
         i += 1
         sys.refresh()
-        '''
-        if i % 50 == 0:
-            x = []
-            for t in sys.trains:
-                x.append(t.curr_blk)
-            x.reverse()
-
-            l = []
-            for blk in sys.blocks:
-                for tk in blk.tracks:
-                    l.append(tk.right_signal.color)
-            print("++++++++++++++++")
-            print(l)
-            print(x)
-        '''
         sys_dos.refresh()
 
     delay = cal_delay(sys, sys_dos, 20)

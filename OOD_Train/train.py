@@ -337,7 +337,7 @@ class Train():
         target_spd = curr_track.right_signal.tgt_sp
         if self.curr_speed < 0 and self.curr_acc < 0:
             self.curr_speed = 0
-        print("{}, {}".format(self.curr_speed, target_spd))
+        # print("{}, {}".format(self.curr_speed, target_spd))
         if self.curr_speed < target_spd and self.curr_speed < self.max_speed:
             self.curr_acc = self.acc
         elif self.curr_speed > target_spd and self.curr_speed > 0:

@@ -8,7 +8,15 @@ class Block():
         self.max_sp = max_sp
         # There is track_number tracks in this block.
         self.track_number = track_number
-        self.tracks = [Track(self.length, self.max_sp)] * self.track_number
+        self.tracks = []
+        for i in range(self.track_number):
+            self.tracks.append(Track(self.length, self.max_sp))
+
+    def has_train(self):
+        for tr in self.tracks:
+            if tr.is_Occupied:
+                return True
+        return False
 
     def has_available_track(self):
         for tk in self.tracks:

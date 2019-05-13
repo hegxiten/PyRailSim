@@ -78,15 +78,16 @@ class System():
                 track.right_signal.update_signal('g')
 
         # 如果track数量超过1才考虑让车情况。（第一个blk暂不考虑为多track）
-        if i > 0 and len(self.blocks[i].tracks) > 1:
+        if i > 0 and len(self.blocks[i].tracks) > 1 and self.blocks[i].has_train():
             # 让车情况下的变灯。
             last_blk_has_train = False
             if not self.blocks[i - 1].has_available_track(): #后一个blk有车
                 last_blk_has_train = True
-            # if self.blocks[i].has_available_track():
+
             ava_track = -1
             prev_train_spd = 0
-            if last_blk_has_train:
+
+            if last_blk_has_train and self.blocks[i].has_available_track():
                 ava_track = self.blocks[i].find_available_track()
                 prev_train_spd = self.blocks[i - 1].tracks[0].train.max_speed
             
@@ -101,9 +102,13 @@ class System():
                     top_speed = track.train.max_speed
 
             for j, track in enumerate(self.blocks[i].tracks):
+                # if max_train_track >= 0:
+                #     print(max_train_track)
                 if j != max_train_track:
+                    if j == max_train_track:
+                        print(j)
                     track.right_signal.update_signal('r')
-
+            
     def update_track_signal_color(self):
         for i in range(len(self.blocks)):
             self.update_blk_right(i)
@@ -137,5 +142,5 @@ if __name__ =='__main__':
     sys = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,2,1,1,2,1,1,1], 
+                 tracks=[1,1,1,1,1,1,1,1,1,1], 
                  dos_pos=-1)
