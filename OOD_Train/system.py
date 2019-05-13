@@ -96,10 +96,22 @@ class System():
             top_speed = prev_train_spd
             if not self.blocks[i].has_available_track():
                 top_speed = -1
+            fastest_train_track = 0
+            fastest_speed = -1
             for j, track in enumerate(self.blocks[i].tracks):
                 if track.train != None and track.train.max_speed > top_speed:
                     max_train_track = j
                     top_speed = track.train.max_speed
+                if track.train != None and track.train.max_speed > fastest_speed:
+                    fastest_train_track = j
+                    fastest_speed = track.train.max_speed
+            if max_train_track != fastest_train_track: #说明最快车是后一个block的车。
+                fastest_train = self.blocks[i].tracks[fastest_train_track].train
+                target_spd = 0
+                fastest_train_brk_dis = (fastest_train.curr_speed ** 2 - target_spd ** 2) / fastest_train.acc
+                dis_to_blk_end = self.block_intervals[i][1] - fastest_train.curr_pos
+                if fastest_train_brk_dis > dis_to_blk_end:  #如果刹车距离大于
+                    max_train_track = fastest_train_track
 
             for j, track in enumerate(self.blocks[i].tracks):
                 # if max_train_track >= 0:

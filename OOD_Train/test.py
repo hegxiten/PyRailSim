@@ -66,17 +66,14 @@ def string_diagram(sys, sys_dos, start_time, end_time):
     ax.legend(handles=patches, bbox_to_anchor=(0.85,0.94), ncol=1) #生成legend    
     for n in range(len(x)-1):   
     #     #assert len(x[n]) == len(y[n]) == t_color[n]
-        plt.plot([mdates.date2num(i) for i in x[n]], y[n], '--', color=t_color[n], alpha=0.5)
-    for n in range(len(x_dos) - 1):
-        plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
+        plt.plot([mdates.date2num(i) for i in x[n]], y[n],  color=t_color[n], alpha=0.5)
+    # for n in range(len(x_dos) - 1):
+    #     plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
     
     plt.gca().axhspan(dos_interval[0],dos_interval[1], dos_period_ratio[0], dos_period_ratio[1], color='blue',alpha=0.5)
     for mtbi in multi_track_blk_intervals:
         plt.gca().axhspan(mtbi[0],mtbi[1], color='yellow',alpha=0.5)
 
-
-    # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),0.3,0.4, color='black',alpha=0.5)
-    # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),0.6,0.7, color='black',alpha=0.5)
     plt.show()
 
 def process_data(sys):
@@ -161,8 +158,8 @@ def cal_delay_avg(delay):
 def main():
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
-    sp_container = [random.uniform(0.01, 0.02) for i in range(20)]
-    acc_container = [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
+    sp_container = [random.uniform(0.005, 0.025) for i in range(20)]
+    acc_container = [random.uniform(2.78e-05*0.85 * 2, 2.78e-05*1.15*2) for i in range(20)]
     headway = 200 * random.random() + 400
     sys = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
@@ -195,11 +192,5 @@ def main():
 
     
     string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
-    #===========================================================================
-    # string_diagram(sys, sim_init_time, sim_term_time)
-    # string_diagram(sys_dos, sim_init_time, sim_term_time)
-    #===========================================================================
-
-    
 
 main()

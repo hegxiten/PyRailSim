@@ -335,6 +335,7 @@ class Train():
             return 0
         curr_track = self.system.blocks[self.curr_blk].tracks[self.curr_track]
         target_spd = curr_track.right_signal.tgt_sp
+        '''
         if self.curr_speed < 0 and self.curr_acc < 0:
             self.curr_speed = 0
         # print("{}, {}".format(self.curr_speed, target_spd))
@@ -344,6 +345,15 @@ class Train():
             self.curr_acc = -self.acc
         else:
             self.curr_acc = 0
+        '''
+        dis_to_blk_end = self.system.block_intervals[self.curr_blk][1] - self.curr_pos
+        break_dis = (self.curr_speed ** 2 - target_spd ** 2) / self.acc
+        if self.curr_speed < target_spd:
+            self.curr_acc = self.acc
+        elif dis_to_blk_end > break_dis + 0.5:
+            self.curr_acc = 0
+        else:
+            self.curr_acc = -self.acc
 
     def update_acc(self):
         self.cal_acc()
