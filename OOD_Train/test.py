@@ -66,9 +66,9 @@ def string_diagram(sys, sys_dos, start_time, end_time):
     ax.legend(handles=patches, bbox_to_anchor=(0.85,0.94), ncol=1) #生成legend    
     for n in range(len(x)-1):   
     #     #assert len(x[n]) == len(y[n]) == t_color[n]
-        plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n], alpha=0.5)
-    # for n in range(len(x_dos) - 1):
-        # plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
+        plt.plot([mdates.date2num(i) for i in x[n]], y[n], '--', color=t_color[n], alpha=0.5)
+    for n in range(len(x_dos) - 1):
+        plt.plot([mdates.date2num(i) for i in x_dos[n]], y_dos[n], color=t_color[n])
     
     plt.gca().axhspan(dos_interval[0],dos_interval[1], dos_period_ratio[0], dos_period_ratio[1], color='blue',alpha=0.5)
     for mtbi in multi_track_blk_intervals:
