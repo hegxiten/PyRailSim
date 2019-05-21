@@ -22,32 +22,14 @@ class Observable(object):
         for observer in self.__observers:
             observer.update(self, obj)
             
+from aspect import Aspect
+
 class Observer(object):
     '''
     观察者，当观察的对象发生变化时，依据变化情况增加处理逻辑
     '''
     def update(self, observable, obj):
         pass
-
-class Aspect(object):
-    '''
-    Aspect代表信号的“含义”,用于比较“大小”
-    '''    
-    def __init__(self, color):
-        self.color = color
-
-    def __lt__(self,other):
-        '''
-        r < y < yy <g
-        '''  
-        if self.color == 'r' and other.color != 'r':
-            return True
-        elif self.color == 'y' and (other.color == 'yy' or other.color == 'g'):
-            return True
-        elif self.color == 'yy' and (other.color == 'g'):
-            return True
-        else:
-            return False
 
 class Signal(Observable, Observer):
     def __init__(self, index, type, facing_direction, allow_sp):
