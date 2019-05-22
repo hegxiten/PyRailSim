@@ -14,7 +14,7 @@ class Aspect(object):
     def __lt__(self,other):
         '''
         r < y < yy < g
-        '''  
+        '''
         if self.color == 'r' and other.color != 'r':
             return True
         elif self.color == 'y' and (other.color == 'yy' or other.color == 'g'):
@@ -76,4 +76,4 @@ if __name__ == '__main__':
     g1 = Aspect('g')
     g2 = Aspect('g')
 
-    print(y2 < yy1)
+    print(r1 <= r2)
