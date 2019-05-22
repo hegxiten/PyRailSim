@@ -54,32 +54,30 @@ class Signal(Observable, Observer):
             self.tgt_sp = 0
         self.listener_updates(obj=new_aspect)
 
-    def update(self, observing, new_aspect):
-        # print('^^^')
-        # print(self.__dict__['index'], self.__dict__['facing_direction'], self.__dict__['aspect'].color)
-        # print(observing_old.__dict__['index'], observing_old.__dict__['facing_direction'], observing_old.__dict__['aspect'].color)
-        # print(observing_new.__dict__['index'], observing_new.__dict__['facing_direction'], observing_new.__dict__['aspect'].color)
-        if observing.facing_direction == self.facing_direction:
-            if observing.aspect < observing_old.aspect:         # observable drops down
-                print('####')
-                if observing_new.aspect.color == 'yy':              # observable:      g -> yy
-                    self.change_color_to('g')                       # observer:          -> g
-                elif observing_new.aspect.color == 'y':             # observable:   g/yy -> y
-                    self.change_color_to('yy')                      # observer:          -> yy
-                elif observing_new.aspect.color == 'r':             # observable: g/yy/y -> r
-                    self.change_color_to('y')                       # observer:          -> y
-            if observing_new.aspect > observing_old.aspect:         # observable clears up
-                if observing_new.aspect.color == 'y':               # observable:      r -> y
-                    self.change_color_to('yy')                      # observer:          -> yy
-                elif observing_new.aspect.color == 'yy':            # observable:    r/y -> yy
-                    self.change_color_to('g')                       # observer:          -> g
-                elif observing_new.aspect.color == 'g':             # observable:  r/y/yy -> g
-                    self.change_color_to('g')                       # observer:          -> g
-        if observing_new.facing_direction != observing_old.facing_direction:
-            if observing_new.aspect.color != 'r':                   # 任意反向信号非红                 
+    def update(self, observable, new_aspect):
+        if observable.facing_direction == self.facing_direction:
+            if new_aspect < self.aspect:                    # observable drops down
+                if new_aspect.color == 'yy':                # observable:      g -> yy
+                    self.change_color_to('g')               # observer:          -> g
+                elif new_aspect.color == 'y':               # observable:   g/yy -> y
+                    self.change_color_to('yy')              # observer:          -> yy
+                elif new_aspect.color == 'r':               # observable: g/yy/y -> r
+                    self.change_color_to('y')               # observer:          -> y
+            if new_aspect > self.aspect:                    # observable clears up
+                if new_aspect.color == 'y':                 # observable:      r -> y
+                    self.change_color_to('yy')              # observer:          -> yy
+                elif new_aspect.color == 'yy':              # observable:    r/y -> yy
+                    self.change_color_to('g')               # observer:          -> g
+                elif new_aspect.color == 'g':               # observable: r/y/yy -> g
+                    self.change_color_to('g')               # observer:          -> g
+        if observable.facing_direction != self.facing_direction:
+            if new_aspect.color != 'r':                     # 任意反向信号非红                 
                 self.change_color_to('r')
 
 if __name__ == '__main__':
+    '''
+    测试代码
+    '''
     left_signal = [Signal(i, 'abs', 'left', 70) for i in range(8)]
     right_signal = [Signal(i, 'abs', 'right', 70) for i in range(8)]
 
@@ -98,7 +96,7 @@ if __name__ == '__main__':
     print('left :',[s.aspect.color for s in left_signal])
     print('right:',[s.aspect.color for s in right_signal])
 
-    left_signal[3].change_color_to('y')
+    left_signal[3].change_color_to('y')     # 测试信号变化
 
     print('left :',[s.aspect.color for s in left_signal])
     print('right:',[s.aspect.color for s in right_signal])
