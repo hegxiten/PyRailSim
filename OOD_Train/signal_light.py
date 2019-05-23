@@ -43,71 +43,144 @@ class Signal(Observable, Observer):
     def change_color_to(self, color):
         new_aspect = Aspect(color)
         old_aspect = self.aspect
-        print("\t {} signal {} changed from {} to {}".format(self.facing_direction, str(self.pos), self.aspect.color, color))
+        # print("\t {} signal {} changed from {} to {}".format(self.facing_direction, str(self.pos), self.aspect.color, color))
         self.aspect = new_aspect
         aspect_update = {'old': old_aspect, 'new': new_aspect}
         self.listener_updates(obj=aspect_update)
     
+    
+
+class AutoSignal(Signal):
+    def __init__(self, pos, facing_direction):
+        super().__init__(pos, facing_direction)
+        self.aspect = Aspect('g')
+        self.type = 'abs'
+
     def update(self, observable, update_message):
         # print("{} signal {} is observing {} signal {}".format(self.facing_direction, self.pos, observable.facing_direction, observable.pos))
         # print("Because {} signal {} changed from {} to {}:".format(observable.facing_direction, str(observable.pos), update_message['old'].color, update_message['new'].color))
-        if observable.facing_direction == self.facing_direction:
-            if update_message['new'] < update_message['old']:                  # observable drops down
+        if observable.type == 'block':
+            if update_message:
+                self.change_color_to('r')
+        elif observable.facing_direction == self.facing_direction:
+            if update_message['new'] < update_message['old']:                   # observable drops down
                 if update_message['new'].color == 'yy':                         # observable:        g -> yy
                     self.change_color_to('g')                                   # observer:            -> g
                 elif update_message['new'].color == 'y':                        # observable:     g/yy -> y
                     self.change_color_to('yy')                                  # observer:            -> yy
                 elif update_message['new'].color == 'r':                        # observable: g/yy/y/r -> r
                     self.change_color_to('y')                                   # observer:            -> y
-            if update_message['new'] > update_message['old']:                  # observable clears up
+            if update_message['new'] > update_message['old']:                   # observable clears up
                 if update_message['new'].color == 'y':                          # observable:        r -> y
                     self.change_color_to('yy')                                  # observer:            -> yy
                 elif update_message['new'].color == 'yy':                       # observable:      r/y -> yy
                     self.change_color_to('g')                                   # observer:            -> g
                 elif update_message['new'].color == 'g':                        # observable: r/y/yy/g -> g
                     self.change_color_to('g')                                   # observer:            -> g
-        if observable.facing_direction != self.facing_direction:
-            if observable.type == 'abs':
-                if update_message['new'].color != 'r':                          # 任意反向信号非红                 
+        elif observable.facing_direction != self.facing_direction:
+            if observable.type == 'home':
+                if update_message['new'].color != 'r':                          # 反向主体信号非红                 
                     self.change_color_to('r')
-
-class AutomaticBlockSignal(Signal):
-    def __init__(self, pos, facing_direction):
-        super().__init__(pos, facing_direction)
-        self.aspect = Aspect('g')
-        self.type = 'abs'
 
 class HomeSignal(Signal):
     def __init__(self, pos, facing_direction, route):
         super().__init__(pos, facing_direction)
-        self.aspect = Aspect('r')
+        self.aspect = Aspect('g')
         self.type = 'home'
 
+    def update(self, observable, update_message):
+        if observable.type == 'block':
+            if update_message:
+                self.change_color_to('r')
+        elif self.aspect.color == 'r' and observable.type == 'abs':
+            pass
+        elif observable.facing_direction == self.facing_direction:
+            if update_message['new'] < update_message['old']:                   # observable drops down
+                if update_message['new'].color == 'yy':                         # observable:        g -> yy
+                    self.change_color_to('g')                                   # observer:            -> g
+                elif update_message['new'].color == 'y':                        # observable:     g/yy -> y
+                    self.change_color_to('yy')                                  # observer:            -> yy
+                elif update_message['new'].color == 'r':                        # observable: g/yy/y/r -> r
+                    self.change_color_to('y')                                   # observer:            -> y
+            if update_message['new'] > update_message['old']:                   # observable clears up
+                if update_message['new'].color == 'y':                          # observable:        r -> y
+                    self.change_color_to('yy')                                  # observer:            -> yy
+                elif update_message['new'].color == 'yy':                       # observable:      r/y -> yy
+                    self.change_color_to('g')                                   # observer:            -> g
+                elif update_message['new'].color == 'g':                        # observable: r/y/yy/g -> g
+                    self.change_color_to('g')                                   # observer:            -> g
+        elif observable.facing_direction != self.facing_direction:
+            if observable.type == 'home':
+                if update_message['new'].color != 'r':                          # 反向主体信号非红                 
+                    self.change_color_to('r')
 
+class BlockTrack(Observable):
+    def __init__(self, pos):
+        super().__init__()
+        self.pos = pos
+        self.__occupiers = []
+        self.type = 'block'
+
+    @property
+    def occupiers(self):
+        return self.__occupiers
+
+    def has_occupier(self):
+        return False if not self.__occupiers else True
+
+    def monitor_block(self, add_occupier=None, remove_occupier=None):
+        if add_occupier:
+            self.__occupiers.append(add_occupier)
+        elif remove_occupier:
+            self.__occupiers.remove(remove_occupier)
+        self.listener_updates(obj=self.__occupiers)
 
 if __name__ == '__main__':
-    '''
-    测试代码
-    '''
-    left_signals= [HomeSignal(0, 'left', 'trailingmain')] + [AutomaticBlockSignal(i, 'left') for i in range(1,9)] + [HomeSignal(9, 'left', 'main')]
-    right_signals = [HomeSignal(0, 'right', 'main')] + [AutomaticBlockSignal(i, 'right') for i in range(1,9)] + [HomeSignal(9, 'right', 'trailingmain')]
-    def register():
+    left_signals= [HomeSignal(0, 'left', 'trailingmain')] + [AutoSignal(i, 'left') for i in range(1,9)] + [HomeSignal(9, 'left', 'main')]
+    right_signals = [HomeSignal(0, 'right', 'main')] + [AutoSignal(i, 'right') for i in range(1,9)] + [HomeSignal(9, 'right', 'trailingmain')]
+    blocks = [BlockTrack(i) for i in range(9)]
+    def registersignal():
         for i in range(1,10):
             left_signals[i].add_observer(left_signals[i-1])
         for i in range(0,9):
             right_signals[i].add_observer(right_signals[i+1])
-        for i in range(0,10):
-            left_signals[i].add_observer(right_signals[i])
-            right_signals[i].add_observer(left_signals[i])
-    
-    register()
-    for i in left_signals:
-        print((i.pos, i.type, i.facing_direction),'  \tobservers:', [(j.pos, j.type, j.facing_direction) for j in i._Observable__observers])
+        for i in right_signals:
+            if i.type == 'abs':
+                left_signals[0].add_observer(i)
+        for i in left_signals:
+            if i.type == 'abs':
+                right_signals[0].add_observer(i)
+        
+    def initialize():
+        for i in left_signals + right_signals:
+            if i.type == 'home':
+                i.change_color_to('r')
+
+    def registerblock():
+        for i in range(9):
+            blocks[i].add_observer(left_signals[i])
+            blocks[i].add_observer(right_signals[i+1])
+
+    registersignal()
+    registerblock()
+    initialize()
+
+    '''
+    Print observers
+    '''
+    for i in left_signals + right_signals:
+        print((i.__class__.__name__, i.pos, i.type, i.facing_direction),'  \t\tobservers:', [(j.__class__.__name__, j.pos, j.facing_direction) for j in i._Observable__observers])
+
+    for i in blocks:
+        print((i.__class__.__name__, i.pos, i.type),'  \t\t\tobservers:', [(j.__class__.__name__, j.pos, j.facing_direction) for j in i._Observable__observers])
 
     print('left :',[s.aspect.color for s in left_signals])
     print('right:',[s.aspect.color for s in right_signals])
+    print('pos   ',[str(i) for i in range(10)])
 
-    left_signals[9].change_color_to('y')
+    right_signals[9].change_color_to('g')
 
+    print('\n')
     print('left :',[s.aspect.color for s in left_signals])
     print('right:',[s.aspect.color for s in right_signals])
+    print('pos   ',[str(i) for i in range(10)])
