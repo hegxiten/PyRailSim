@@ -40,15 +40,15 @@ class Signal(Observable, Observer):
         self.aspect = Aspect(None)
         self.type = None
 
-    def change_color_to(self, color):
+    def change_color_to(self, color, isNotified=True):
+        
         new_aspect = Aspect(color)
         old_aspect = self.aspect
         # print("\t {} signal {} changed from {} to {}".format(self.facing_direction, str(self.pos), self.aspect.color, color))
         self.aspect = new_aspect
         aspect_update = {'old': old_aspect, 'new': new_aspect}
-        self.listener_updates(obj=aspect_update)
-    
-    
+        if isNotified:
+            self.listener_updates(obj=aspect_update)
 
 class AutoSignal(Signal):
     def __init__(self, pos, facing_direction):
@@ -57,11 +57,21 @@ class AutoSignal(Signal):
         self.type = 'abs'
 
     def update(self, observable, update_message):
+        assert observable.type in ['','','']
         # print("{} signal {} is observing {} signal {}".format(self.facing_direction, self.pos, observable.facing_direction, observable.pos))
         # print("Because {} signal {} changed from {} to {}:".format(observable.facing_direction, str(observable.pos), update_message['old'].color, update_message['new'].color))
         if observable.type == 'block':
             if update_message:
                 self.change_color_to('r')
+        elif observable.type == 'home':
+            if update_message['new'] != 'r':
+                self.change_color_to('r', False)
+        elif observable.type == 'abs':
+            pass
+
+
+
+
         elif observable.facing_direction == self.facing_direction:
             if update_message['new'] < update_message['old']:                   # observable drops down
                 if update_message['new'].color == 'yy':                         # observable:        g -> yy
