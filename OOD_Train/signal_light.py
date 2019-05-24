@@ -84,29 +84,22 @@ class HomeSignal(Signal):
 
     def update(self, observable, update_message):
         if observable.type == 'block':
-            if update_message:
+            if update_message:      # block 有车
                 self.change_color_to('r')
-        elif self.aspect.color == 'r' and observable.type == 'abs':
-            pass
-        elif observable.facing_direction == self.facing_direction:
-            if update_message['new'] < update_message['old']:                   # observable drops down
-                if update_message['new'].color == 'yy':                         # observable:        g -> yy
-                    self.change_color_to('g')                                   # observer:            -> g
-                elif update_message['new'].color == 'y':                        # observable:     g/yy -> y
-                    self.change_color_to('yy')                                  # observer:            -> yy
-                elif update_message['new'].color == 'r':                        # observable: g/yy/y/r -> r
-                    self.change_color_to('y')                                   # observer:            -> y
-            if update_message['new'] > update_message['old']:                   # observable clears up
-                if update_message['new'].color == 'y':                          # observable:        r -> y
-                    self.change_color_to('yy')                                  # observer:            -> yy
-                elif update_message['new'].color == 'yy':                       # observable:      r/y -> yy
-                    self.change_color_to('g')                                   # observer:            -> g
-                elif update_message['new'].color == 'g':                        # observable: r/y/yy/g -> g
-                    self.change_color_to('g')                                   # observer:            -> g
-        elif observable.facing_direction != self.facing_direction:
-            if observable.type == 'home':
-                if update_message['new'].color != 'r':                          # 反向主体信号非红                 
-                    self.change_color_to('r')
+        elif observable.type == 'home':
+            if update_message.color != 'r':                          # 反向主体信号非红                 
+                self.change_color_to('r', False)
+
+        elif observable.type == 'abs' and 同时还放车进入下一个abs:
+            if update_message.color == 'yy':                         # observable:        g -> yy
+                self.change_color_to('g')                                   # observer:            -> g
+            elif update_message.color == 'y':                        # observable:     g/yy -> y
+                self.change_color_to('yy')                                  # observer:            -> yy
+            elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
+                self.change_color_to('y')  
+        elif observable.type == 'home' and observable.facing_direction != self.facing_direction:
+            if update_message.color != 'r':                          # 反向主体信号非红                 
+                self.change_color_to('r')
 
 class BlockTrack(Observable):
     def __init__(self, pos):
