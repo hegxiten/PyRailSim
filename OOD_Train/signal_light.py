@@ -69,11 +69,11 @@ class AutoSignal(Signal):
                 self.change_color_to('r', False)
         else:
             if update_message.color == 'yy':                         # observable:        g -> yy
-                self.change_color_to('g')                                   # observer:            -> g
+        self.change_color_to('g')                                    # observer:            -> g
             elif update_message.color == 'y':                        # observable:     g/yy -> y
-                self.change_color_to('yy')                                  # observer:            -> yy
+    self.change_color_to('yy')                                       # observer:            -> yy
             elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
-                self.change_color_to('y')                                   # observer:            -> g
+        self.change_color_to('y')                                    # observer:            -> g
 
 class HomeSignal(Signal):
     def __init__(self, facing_direction):
@@ -91,9 +91,9 @@ class HomeSignal(Signal):
 
         elif observable.type == 'abs' and 同时还放车进入下一个abs:
             if update_message.color == 'yy':                         # observable:        g -> yy
-                self.change_color_to('g')                                   # observer:            -> g
+        self.change_color_to('g')                                    # observer:            -> g
             elif update_message.color == 'y':                        # observable:     g/yy -> y
-                self.change_color_to('yy')                                  # observer:            -> yy
+        self.change_color_to('yy')                                   # observer:            -> yy
             elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
                 self.change_color_to('y')  
         elif observable.type == 'home' and observable.facing_direction != self.facing_direction:

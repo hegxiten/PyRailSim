@@ -53,7 +53,7 @@ class System():
                 self.block_intervals.append([left, right]) 
     
     def register(self, blocks):
-        # 次循环作用：将临近siding的blk的左灯或者右灯变为homesignal
+        # 本次循环作用：将临近siding的blk的左灯或者右灯变为homesignal
         multi_track_blk = []
         for i, blk in enumerate(blocks):
             if blk.track_number > 1:
