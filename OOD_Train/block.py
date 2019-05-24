@@ -9,8 +9,11 @@ class Block():
         # There is track_number tracks in this block.
         self.track_number = track_number
         self.tracks = []
-        for i in range(self.track_number):
-            self.tracks.append(Track(self.length, self.max_sp))
+        if self.track_number > 1:
+            for i in range(self.track_number):
+                self.tracks.append(Track(self.length, self.max_sp, 'home'))
+        else:
+            self.tracks.append(Track(self.length, self.max_sp, 'abs'))
 
     def has_train(self):
         for tr in self.tracks:

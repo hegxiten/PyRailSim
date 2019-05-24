@@ -1,10 +1,11 @@
-from signal_light import Signal
+from signal_light import AutoSignal, HomeSignal
 
 class Track:
-    def __init__(self, length, allow_sp):
+    def __init__(self, length, allow_sp, signalType):
         self.length = length
-        self.left_signal = Signal(allow_sp)
-        self.right_signal = Signal(allow_sp)
+        # TODO: 参数含义待定
+        self.left_signal = AutoSignal('right') if signalType == 'abs' else HomeSignal('right')
+        self.right_signal = AutoSignal('left') if signalType == 'abs' else HomeSignal('left')
         self.train = None
         self.is_Occupied = False
         self.allow_sp = allow_sp

@@ -77,7 +77,7 @@ class AutoSignal(Signal):
                 self.change_color_to('y')                                   # observer:            -> g
 
 class HomeSignal(Signal):
-    def __init__(self, pos, facing_direction, route):
+    def __init__(self, pos, facing_direction):
         super().__init__(pos, facing_direction)
         self.aspect = Aspect('g')
         self.type = 'home'

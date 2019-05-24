@@ -4,7 +4,7 @@ import numpy as np
 import random
 from train import Train
 from track import Track
-from signal_light import Signal
+from signal_light import AutoSignal, HomeSignal
 
 class System():
     def __init__(self, init_time, *args, **kwargs):
@@ -50,7 +50,53 @@ class System():
                 left = self.block_intervals[i - 1][1]
                 right = left + _blk_length_list[i]
                 self.block_intervals.append([left, right]) 
+    
+    def register(self, blocks):
+        # 次循环作用：将临近siding的blk的左灯或者右灯变为homesignal
+        multi_track_blk = []
+        for i, blk in enumerate(blocks):
+            if blk.track_number > 1:
+                multi_track_blk.append(i)
+            if i > 0 and blocks[i - 1].track_number > 1:
+                blk.tracks[0].left_signal = HomeSignal(i, 'right')
+            if i < len(blocks) - 1 and blocks[i + 1].track_number > 1:
+                blk.tracsk[0].right_signal = HomeSignal(i, 'left')
+        # 订阅过程
+        # 右灯注册，后一个blk右灯注册前一个blk的右灯，跳过siding
+        for i in range(len(blocks) - 1):
+            if blocks[i + 1].track_number < 1:
+                curr_light = blocks[i].tracks[0].right_signal
+                next_light = blocks[i + 1].tracks[0].right_signal
+                curr_light.add_observer(next_light)
+        # 左灯注册，后一个blk左灯注册前一个blk的左灯，跳过siding
+        for i in range(len(blocks)):
+            if i > 0 and blocks[i - 1].track_number < 1:
+                curr_light = blocks[i].tracks[0].left_signal
+                next_light = blocks[i - 1].tracks[0].left_signal
+                curr_light.add_observer(next_light)
+        # 大blk中的homesignal订阅: single_track_blk右灯注册进入multi_track_blk的home左灯
+        curr_mul_tk_blk_idx = 0
+        for i in range(len(blocks)):
+            if i not in multi_track_blk:
+                sgl_blk_tk = blocks[i].tracks[0]
+                mul_blk = multi_track_blk[curr_mul_tk_blk_idx]
+                for tk_idx in mul_blk.track_number:
+                    mul_blk[i].tracks[tk_idx].left_signal.add_observer(sgl_blk_tk.right_signal)
+            else:
+                curr_mul_tk_blk_idx += 1
         
+        curr_mul_tk_blk_idx = len(multi_track_blk) - 1
+        for i in range(len(blocks),0,-1):
+            if i not in multi_track_blk:
+                sgl_blk_tk = blocks[i].tracks[0]
+                mul_blk = multi_track_blk[curr_mul_tk_blk_idx]
+                for tk_idx in mul_blk.track_number:
+                    mul_blk[i].tracks[tk_idx].right_signal.add_observer(sgl_blk_tk.left_signal)
+            else:
+                curr_mul_tk_blk_idx -= 1
+
+
+
     def generate_train(self, track_idx):
         new_train = Train(self.train_num, 
                           self.train_num, 
