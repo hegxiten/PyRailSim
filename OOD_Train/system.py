@@ -34,6 +34,7 @@ class System():
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains, self.train_num = [], 0
         self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
+        self.register(self.blocks)
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
         self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
@@ -58,44 +59,77 @@ class System():
             if blk.track_number > 1:
                 multi_track_blk.append(i)
             if i > 0 and blocks[i - 1].track_number > 1:
-                blk.tracks[0].left_signal = HomeSignal(i, 'right')
+                blk.tracks[0].left_signal = HomeSignal('right')
             if i < len(blocks) - 1 and blocks[i + 1].track_number > 1:
-                blk.tracsk[0].right_signal = HomeSignal(i, 'left')
+                blk.tracks[0].right_signal = HomeSignal('left')
         # 订阅过程
         # 右灯注册，后一个blk右灯注册前一个blk的右灯，跳过siding
         for i in range(len(blocks) - 1):
-            if blocks[i + 1].track_number < 1:
+            if blocks[i + 1].track_number <= 1:
                 curr_light = blocks[i].tracks[0].right_signal
                 next_light = blocks[i + 1].tracks[0].right_signal
-                curr_light.add_observer(next_light)
+                next_light.add_observer(curr_light)
         # 左灯注册，后一个blk左灯注册前一个blk的左灯，跳过siding
         for i in range(len(blocks)):
-            if i > 0 and blocks[i - 1].track_number < 1:
+            if i > 0 and blocks[i - 1].track_number <= 1:
                 curr_light = blocks[i].tracks[0].left_signal
-                next_light = blocks[i - 1].tracks[0].left_signal
-                curr_light.add_observer(next_light)
+                last_light = blocks[i - 1].tracks[0].left_signal
+                last_light.add_observer(curr_light)
         # 大blk中的homesignal订阅: single_track_blk右灯注册进入multi_track_blk的home左灯
         curr_mul_tk_blk_idx = 0
         for i in range(len(blocks)):
+            if curr_mul_tk_blk_idx == len(multi_track_blk):
+                break
             if i not in multi_track_blk:
                 sgl_blk_tk = blocks[i].tracks[0]
-                mul_blk = multi_track_blk[curr_mul_tk_blk_idx]
-                for tk_idx in mul_blk.track_number:
-                    mul_blk[i].tracks[tk_idx].left_signal.add_observer(sgl_blk_tk.right_signal)
+                mul_blk = blocks[multi_track_blk[curr_mul_tk_blk_idx]]
+                for tk_idx in range(mul_blk.track_number):
+                    mul_blk.tracks[tk_idx].left_signal.add_observer(sgl_blk_tk.right_signal)
             else:
                 curr_mul_tk_blk_idx += 1
-        
+        # 大blk中的homesignal订阅: single_track_blk左灯注册进入multi_track_blk的home右灯        
         curr_mul_tk_blk_idx = len(multi_track_blk) - 1
-        for i in range(len(blocks),0,-1):
+        for i in range(len(blocks) - 1,0,-1):
+            print(i)
+            if curr_mul_tk_blk_idx == -1:
+                break
             if i not in multi_track_blk:
                 sgl_blk_tk = blocks[i].tracks[0]
-                mul_blk = multi_track_blk[curr_mul_tk_blk_idx]
-                for tk_idx in mul_blk.track_number:
-                    mul_blk[i].tracks[tk_idx].right_signal.add_observer(sgl_blk_tk.left_signal)
+                mul_blk = blocks[multi_track_blk[curr_mul_tk_blk_idx]]
+                for tk_idx in range(mul_blk.track_number):
+                    mul_blk.tracks[tk_idx].right_signal.add_observer(sgl_blk_tk.left_signal)
             else:
                 curr_mul_tk_blk_idx -= 1
+        
+        ##############################################################################
+        # 最左和最右的block中两盏灯为homesinal
+        self.blocks[0].tracks[0].right_signal = HomeSignal('left')
+        self.blocks[len(self.blocks) - 1].tracks[0].left_signal = HomeSignal('right')
 
+        most_left_home_signal = self.blocks[0].tracks[0].right_signal
+        most_right_home_singal = self.blocks[len(self.blocks) - 1].tracks[0].left_signal
 
+        # 取出最左和最有的multi_blk_index
+        first_right = len(blocks)
+        first_left = -1
+        if len(multi_track_blk) != 0:
+            first_right = multi_track_blk[0]
+            first_left = multi_track_blk[-1]
+        
+        # 将左边第一个multi_blk_index之前的blk的左灯全部注册到最左边第一个右灯上。
+        for i in range(first_right):
+            curr_left_signal = blocks[i].tracks[0].left_signal
+            most_left_home_signal.add_observer(curr_left_signal)
+
+        # 将右边第一个multi_blk_index之后的blk的右灯全部注册到最右边第一个左灯上。
+        for i in range(len(blocks) - 1, first_left, -1):
+            curr_right_signal = blocks[i].tracks[0].right_signal
+            most_right_home_singal.add_observer(curr_right_signal)
+        ##############################################################################
+
+        
+        self.blocks[0].tracks[0].right_signal.change_color_to('g')
+        # self.blocks[len(self.blocks) - 1].tracks[0].right_signal.change_color_to('r')
 
     def generate_train(self, track_idx):
         new_train = Train(self.train_num, 
@@ -202,3 +236,27 @@ if __name__ =='__main__':
                  headway=headway, 
                  tracks=[1,1,1,1,1,1,1,1,1,1], 
                  dos_pos=-1)
+
+    left_light = []
+    right_light = []
+    for blk in sys.blocks:
+        if blk.track_number > 1:
+            mul_tk_lgt = []
+            for i in blk.track_number:
+                mul_tk_lgt.append(blk.tracks[i].left_signal.aspect.color)
+            left_light.append(mul_tk_lgt)
+        else:
+            left_light.append(blk.tracks[0].left_signal.aspect.color)
+
+    for blk in sys.blocks:
+        if blk.track_number > 1:
+            mul_tk_lgt = []
+            for i in blk.track_number:
+                mul_tk_lgt.append(blk.tracks[i].right_signal.aspect.color)
+            right_light.append(mul_tk_lgt)
+        else:
+            right_light.append(blk.tracks[0].right_signal.aspect.color)
+    
+    print("left light color: {}".format(left_light))
+    print("right light color: {}".format(right_light))
+    

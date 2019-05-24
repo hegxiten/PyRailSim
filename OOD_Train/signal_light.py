@@ -33,9 +33,8 @@ class Observer(object):
         pass
 
 class Signal(Observable, Observer):
-    def __init__(self, pos, facing_direction):
+    def __init__(self, facing_direction):
         super().__init__()
-        self.pos = pos
         self.facing_direction = facing_direction
         self.aspect = Aspect(None)
         self.type = None
@@ -44,14 +43,14 @@ class Signal(Observable, Observer):
         
         new_aspect = Aspect(color)
 
-        print("\t {} signal {} changed from {} to {}".format(self.facing_direction, str(self.pos), self.aspect.color, color))
+        print("\t {} signal changed from {} to {}".format(self.facing_direction, self.aspect.color, color))
         self.aspect = new_aspect
         if isNotified:
             self.listener_updates(obj=self.aspect)
 
 class AutoSignal(Signal):
-    def __init__(self, pos, facing_direction):
-        super().__init__(pos, facing_direction)
+    def __init__(self, facing_direction):
+        super().__init__(facing_direction)
         self.aspect = Aspect('g')
         self.type = 'abs'
         self.lock = False
@@ -77,8 +76,8 @@ class AutoSignal(Signal):
                 self.change_color_to('y')                                   # observer:            -> g
 
 class HomeSignal(Signal):
-    def __init__(self, pos, facing_direction):
-        super().__init__(pos, facing_direction)
+    def __init__(self, facing_direction):
+        super().__init__(facing_direction)
         self.aspect = Aspect('g')
         self.type = 'home'
 
@@ -102,9 +101,8 @@ class HomeSignal(Signal):
                 self.change_color_to('r')
 
 class BlockTrack(Observable):
-    def __init__(self, pos):
+    def __init__(self):
         super().__init__()
-        self.pos = pos
         self.__occupiers = []
         self.type = 'block'
 
@@ -123,9 +121,9 @@ class BlockTrack(Observable):
         self.listener_updates(obj=self.__occupiers)
 
 if __name__ == '__main__':
-    left_signals= [HomeSignal(0, 'left', 'trailingmain')] + [AutoSignal(i, 'left') for i in range(1,9)] + [HomeSignal(9, 'left', 'main')]
-    right_signals = [HomeSignal(0, 'right', 'main')] + [AutoSignal(i, 'right') for i in range(1,9)] + [HomeSignal(9, 'right', 'trailingmain')]
-    blocks = [BlockTrack(i) for i in range(9)]
+    left_signals= [HomeSignal('left')] + [AutoSignal('left') for i in range(1,9)] + [HomeSignal('left')]
+    right_signals = [HomeSignal('right')] + [AutoSignal('right') for i in range(1,9)] + [HomeSignal('right')]
+    blocks = [BlockTrack() for i in range(9)]
     def registersignal():
         for i in range(1,10):
             left_signals[i].add_observer(left_signals[i-1])
@@ -164,7 +162,6 @@ if __name__ == '__main__':
 
     print('left :',[s.aspect.color for s in left_signals])
     print('right:',[s.aspect.color for s in right_signals])
-    print('pos   ',[str(i) for i in range(10)])
 
     # left_signals[0].change_color_to('g')
     right_signals[9].change_color_to('g')
@@ -172,4 +169,3 @@ if __name__ == '__main__':
     print('\n')
     print('left :',[s.aspect.color for s in left_signals])
     print('right:',[s.aspect.color for s in right_signals])
-    print('pos   ',[str(i) for i in range(10)])
