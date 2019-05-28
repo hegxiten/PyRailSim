@@ -60,22 +60,27 @@ class System():
                 multi_track_blk.append(i)
             if i > 0 and blocks[i - 1].track_number > 1:
                 blk.tracks[0].left_signal = HomeSignal('right')
+                blk.tracks[0].left_signal.hs_type = 'B'
             if i < len(blocks) - 1 and blocks[i + 1].track_number > 1:
                 blk.tracks[0].right_signal = HomeSignal('left')
+                blk.tracks[0].right_signal.hs_type = 'B'
         # 订阅过程
-        # 右灯注册，后一个blk右灯注册前一个blk的右灯，跳过siding
+        # 右灯注册，前一个blk右灯注册后一个blk的右灯，跳过siding
+        # ABS订阅ABS
         for i in range(len(blocks) - 1):
             if blocks[i + 1].track_number <= 1:
                 curr_light = blocks[i].tracks[0].right_signal
                 next_light = blocks[i + 1].tracks[0].right_signal
                 next_light.add_observer(curr_light)
         # 左灯注册，后一个blk左灯注册前一个blk的左灯，跳过siding
+        # ABS订阅ABS
         for i in range(len(blocks)):
             if i > 0 and blocks[i - 1].track_number <= 1:
                 curr_light = blocks[i].tracks[0].left_signal
                 last_light = blocks[i - 1].tracks[0].left_signal
                 last_light.add_observer(curr_light)
         # 大blk中的homesignal订阅: single_track_blk右灯注册进入multi_track_blk的home左灯
+        # ABS订阅HS
         curr_mul_tk_blk_idx = 0
         for i in range(len(blocks)):
             if curr_mul_tk_blk_idx == len(multi_track_blk):
@@ -86,8 +91,14 @@ class System():
                 for tk_idx in range(mul_blk.track_number):
                     mul_blk.tracks[tk_idx].left_signal.add_observer(sgl_blk_tk.right_signal)
             else:
+                mul_blk = blocks[i]
+                sgl_blk_tk = blocks[i - 1].tracks[0]
+                for tk_idx in range(mul_blk.track_number):
+                    sgl_blk_tk.right_signal.add_observer(mul_blk.tracks[tk_idx].left_signal)
+                    sgl_blk_tk.left_signal.add_observer(mul_blk.tracks[tk_idx].left_signal)
                 curr_mul_tk_blk_idx += 1
         # 大blk中的homesignal订阅: single_track_blk左灯注册进入multi_track_blk的home右灯        
+        # ABS订阅HS
         curr_mul_tk_blk_idx = len(multi_track_blk) - 1
         for i in range(len(blocks) - 1,0,-1):
             print(i)
@@ -99,12 +110,19 @@ class System():
                 for tk_idx in range(mul_blk.track_number):
                     mul_blk.tracks[tk_idx].right_signal.add_observer(sgl_blk_tk.left_signal)
             else:
+                mul_blk = blocks[i]
+                sgl_blk_tk = blocks[i + 1].tracks[0]
+                for tk_idx in range(mul_blk.track_number):
+                    sgl_blk_tk.left_signal.add_observer(mul_blk.tracks[tk_idx].right_signal)
+                    sgl_blk_tk.right_signal.add_observer(mul_blk.tracks[tk_idx].right_signal)
                 curr_mul_tk_blk_idx -= 1
         
         ##############################################################################
         # 最左和最右的block中两盏灯为homesinal
         self.blocks[0].tracks[0].right_signal = HomeSignal('left')
+        self.blocks[0].tracks[0].right_signal.hs_type = 'B'
         self.blocks[len(self.blocks) - 1].tracks[0].left_signal = HomeSignal('right')
+        self.blocks[len(self.blocks) - 1].tracks[0].left_signal.hs_type = 'B'
 
         most_left_home_signal = self.blocks[0].tracks[0].right_signal
         most_right_home_singal = self.blocks[len(self.blocks) - 1].tracks[0].left_signal
@@ -127,9 +145,17 @@ class System():
             most_right_home_singal.add_observer(curr_right_signal)
         ##############################################################################
 
-        
-        self.blocks[0].tracks[0].right_signal.change_color_to('g')
+        ##### 普通ABS测试
+        # self.blocks[0].tracks[0].right_signal.change_color_to('g')
         # self.blocks[len(self.blocks) - 1].tracks[0].right_signal.change_color_to('r')
+        ##### 头尾HS测试
+        # self.blocks[0].tracks[0].right_signal.change_color_to('g')
+        # self.blocks[9].tracks[0].left_signal.change_color_to('g')
+        ##### multi_track_blk附近的HS测试 （B）
+        # self.blocks[4].tracks[0].left_signal.change_color_to('g')
+        ##### multi_track_blk的某个track灯为非红测试
+        self.blocks[4].tracks[0].right_signal.change_color_to('r')
+        
 
     def generate_train(self, track_idx):
         new_train = Train(self.train_num, 
@@ -234,7 +260,7 @@ if __name__ =='__main__':
     sys = System(sim_init_time, sp_container, acc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,1,1,1,1,1,1,1], 
+                 tracks=[1,1,1,4,1,1,3,1,1,1], 
                  dos_pos=-1)
 
     left_light = []
@@ -242,7 +268,7 @@ if __name__ =='__main__':
     for blk in sys.blocks:
         if blk.track_number > 1:
             mul_tk_lgt = []
-            for i in blk.track_number:
+            for i in range(blk.track_number):
                 mul_tk_lgt.append(blk.tracks[i].left_signal.aspect.color)
             left_light.append(mul_tk_lgt)
         else:
@@ -251,12 +277,31 @@ if __name__ =='__main__':
     for blk in sys.blocks:
         if blk.track_number > 1:
             mul_tk_lgt = []
-            for i in blk.track_number:
+            for i in range(blk.track_number):
                 mul_tk_lgt.append(blk.tracks[i].right_signal.aspect.color)
             right_light.append(mul_tk_lgt)
         else:
             right_light.append(blk.tracks[0].right_signal.aspect.color)
     
-    print("left light color: {}".format(left_light))
-    print("right light color: {}".format(right_light))
+    # for i in range(len(left_light)):
+    #     if len(left_light[i]) == 1:
+    #         print("[" + left_light[i] + "," + right_light[i] + "]", end=" ")
+    #     else:
+    #         print("{", end="")
+    #         for j in range(len(left_light[i])):
+    #             print("[" + left_light[i][j] + "," + right_light[i][j] + "]", end="")
+    #         print("}", end=" ")
+    # print("")
+    for i in range(len(right_light)):
+        if len(right_light[i]) == 1:
+            print("[" + right_light[i] + "]", end=" ")
+        else:
+            print("{", end="")
+            for j in range(len(right_light[i])):
+                print("[" + right_light[i][j] + "]", end="")
+            print("}", end=" ")
+    print("")
+    
+    # print("left light color:  {}".format(left_light))
+    # print("right light color: {}".format(right_light))
     
