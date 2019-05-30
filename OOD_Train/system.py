@@ -5,6 +5,8 @@ import random
 from train import Train
 from track import Track
 from signal_light import AutoSignal, HomeSignal
+from big_block import BigBlock
+from control_point import ControlPoint
 
 class System():
     def __init__(self, init_time, *args, **kwargs):
@@ -33,8 +35,14 @@ class System():
         
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains, self.train_num = [], 0
+        self.tracks = kwargs.get('tracks')
+        # big block的列表
+        self.big_block_list = []
+        # control point的列表
+        self.cp_list = []
+        self.constructor()
         self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
-        self.register(self.blocks)
+        # self.register(self.blocks)
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
         self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
@@ -53,7 +61,7 @@ class System():
                 self.block_intervals.append([left, right]) 
     
     def register(self, blocks):
-        # 本次循环作用：将临近siding的blk的左灯或者右灯变为homesignal
+        # 将临近siding的blk的左灯或者右灯变为homesignal
         multi_track_blk = []
         for i, blk in enumerate(blocks):
             if blk.track_number > 1:
@@ -156,6 +164,26 @@ class System():
         ##### multi_track_blk的某个track灯为非红测试
         self.blocks[4].tracks[0].right_signal.change_color_to('r')
         
+    def constructor(self):
+        # 初始化self.big_block_list和self.cp
+        # 将self.tracks中连续的数字建立为一个big block
+        # 双指针法来完成连续相同数字的big block初始化
+        prev_tk = self.tracks[0]
+        curr_tk = self.tracks[1]
+        same_tk_len = 1
+        for i in range(1, len(self.tracks)):
+            prev_tk = self.tracks[i - 1]
+            curr_tk = self.tracks[i]
+            if self.tracks[i] != self.tracks[i - 1] or i == len(self.tracks) - 1:
+                # 遇到与前一个block的track数目不同，创建新的big block和control point
+                big_blk = BigBlock(same_tk_len)
+                self.big_block_list.append(big_blk)
+                curr_cp = ControlPoint(prev_tk, curr_tk)
+                self.cp_list.append(curr_cp)
+                same_tk_len = 0
+            else:
+                i += 1
+        # TODO:将bigblock与cp进行订阅
 
     def generate_train(self, track_idx):
         new_train = Train(self.train_num, 

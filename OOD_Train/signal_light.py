@@ -55,13 +55,13 @@ class AutoSignal(Signal):
         self.type = 'abs'
     
     def update(self, observable, update_message):
-        assert observable.type in ['abs','home','block']
+        assert observable.type in ['abs','home','block','bigblock']
         # print("{} signal {} is observing {} signal {}".format(self.facing_direction, self.pos, observable.facing_direction, observable.pos))
         # print("Because {} signal {} changed from {} to {}:".format(observable.facing_direction, str(observable.pos), update_message['old'].color, update_message['new'].color))
-        
-        if observable.type == 'block':
-            if update_message:
-                self.change_color_to('r', False)
+        if observable.type == 'bigblock' and observable.direction != self.facing_direction:
+            self.change_color_to('r', False)
+        elif observable.type == 'track':
+            self.change_color_to('r', False)
         elif observable.type == 'home' and observable.facing_direction != self.facing_direction:
             if update_message.color != 'r':
                 self.change_color_to('r', False)

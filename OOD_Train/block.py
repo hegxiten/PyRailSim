@@ -1,6 +1,7 @@
 from track import Track
+from signal_light import Observable
 
-class Block():
+class Block(Observable):
 
     def __init__(self, index, length, max_sp=0.02, track_number=1):
         self.index = index
