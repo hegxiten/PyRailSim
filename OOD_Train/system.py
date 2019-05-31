@@ -8,8 +8,11 @@ from signal_light import AutoSignal, HomeSignal
 from big_block import BigBlock
 from control_point import ControlPoint
 
-class System():
+import networkx as nx
+
+class System(nx.Graph):
     def __init__(self, init_time, *args, **kwargs):
+        super().__init__()
         """
         Parameters
         ----------
@@ -32,17 +35,20 @@ class System():
         """
         _blk_length_list = [5] * 10     if not kwargs.get('blk_length_list') else kwargs.get('blk_length_list')
         _blk_number = len(_blk_length_list)
-        
+
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains, self.train_num = [], 0
+        
         self.tracks = kwargs.get('tracks')
-        # big block的列表
+        # list of big blocks
         self.big_block_list = []
-        # control point的列表
+        # list of control points
         self.cp_list = []
-        self.constructor()
+        self.network_constructor()
+        # network_constructor initializes self.big_block_list & self.cp and create graph instance
         self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
-        # self.register(self.blocks)
+        self.register(self.blocks)
+        # register method links the observation relationships
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
         self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
@@ -51,7 +57,7 @@ class System():
         self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
         self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')
         self.block_intervals = []
-        # interval is the two-element array containing mile posts of boundaries 
+        # interval is the two-element array containing mile posts of boundaries, generated below in the loops
         for i in range(_blk_number):
             if i == 0:
                 self.block_intervals.append([0, _blk_length_list[0]])
@@ -164,10 +170,13 @@ class System():
         ##### multi_track_blk的某个track灯为非红测试
         self.blocks[4].tracks[0].right_signal.change_color_to('r')
         
-    def constructor(self):
+    def network_constructor(self):
         # 初始化self.big_block_list和self.cp
         # 将self.tracks中连续的数字建立为一个big block
         # 双指针法来完成连续相同数字的big block初始化
+        # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式
+        self.add_edges_from(self.edges_bunch) # all control points in the input edges ebunch
+
         prev_tk = self.tracks[0]
         curr_tk = self.tracks[1]
         same_tk_len = 1

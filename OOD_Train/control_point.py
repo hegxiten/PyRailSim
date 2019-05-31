@@ -1,3 +1,4 @@
+import networkx as nx
 from signal_light import HomeSignal, Observable
 
 class ControlPoint(Observable):
