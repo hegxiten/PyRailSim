@@ -6,7 +6,7 @@ from train import Train
 from track import Track
 from signal_light import AutoSignal, HomeSignal
 from big_block import BigBlock
-from control_point import ControlPoint
+from control_point import ControlPoint, AutoPoint
 
 import networkx as nx
 
@@ -38,9 +38,9 @@ class System(nx.Graph):
 
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains, self.train_num = [], 0
-        
-        self.tracks = kwargs.get('tracks')
+        self.tracks = kwargs.get('tracks')      # self.track list determines the current topology
         # list of big blocks
+       
         self.big_block_list = []
         # list of control points
         self.cp_list = []
@@ -175,7 +175,19 @@ class System(nx.Graph):
         # 将self.tracks中连续的数字建立为一个big block
         # 双指针法来完成连续相同数字的big block初始化
         # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式
-        self.add_edges_from(self.edges_bunch) # all control points in the input edges ebunch
+        # construct the nbunch and ebunch list for Graph
+        self.nbunch = []
+        self.ebunch = []
+        for i in range(len(self.tracks) + 1):
+            if i == 0:
+                self.nbunch.append(ControlPoint(1,self.tracks[i+1]))
+            elif 0 < i < len(self.tracks):
+                if self.tracks[i-1] == self.tracks[i] == 0：
+                    self.nbunch.append(AutoPoint())
+                else:
+                    self.nbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))
+            elif i == len(self.tracks):
+                self.nbunch.append(ControlPoint(self.tracks[i-1],1))
 
         prev_tk = self.tracks[0]
         curr_tk = self.tracks[1]
