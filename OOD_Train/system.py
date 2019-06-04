@@ -176,13 +176,47 @@ class System(nx.Graph):
         # 双指针法来完成连续相同数字的big block初始化
         # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式
         # construct the nbunch and ebunch list for Graph
-        self.nbunch = []
-        self.ebunch = []
+        nbunch = [  ControlPoint(idx=0, ports=[0,1]), \
+                    AutoPoint(1), AutoPoint(2), \
+                    ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    AutoPoint(5), \
+                    ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    AutoPoint(8), AutoPoint(9), \
+                    ControlPoint(idx=10, ports=[0,1])]
+        
+        tbunch = [  Track(nbunch[0], 1, nbunch[1], 0), Track(nbunch[1], 1, nbunch[2], 0), Track(nbunch[2], 1, nbunch[3], 0),\
+                    Track(nbunch[3], 1, nbunch[4], 0), Track(nbunch[3], 3, nbunch[4], 2),\
+                    Track(nbunch[4], 1, nbunch[5], 0), Track(nbunch[5], 1, nbunch[6], 0),\
+                    Track(nbunch[6], 1, nbunch[7], 0), Track(nbunch[6], 3, nbunch[7], 2),\
+                    Track(nbunch[7], 1, nbunch[8], 0), Track(nbunch[8], 1, nbunch[9], 0), Track(nbunch[9], 1, nbunch[10], 0)]
+        
+        ebunch = []
+        for t in tbunch:
+            edge = (t.L_point, t.R_point)
+            if # EDGE 的 attributes 在这里加
+            ebunch.append((t.L_point, t.R_point))
+        ebunch = [  (nbunch[0], nbunch[1]), (nbunch[1], nbunch[2]), (nbunch[2],nbunch[3]),\
+                    (nbunch[3], nbunch[4]), (nbunch[3], nbunch[4]),\
+                    (nbunch[4], nbunch[5]), (nbunch[5], nbunch[6]),\
+                    (nbunch[6], nbunch[7]), (nbunch[6], nbunch[7]),\
+                    (nbunch[7], nbunch[8]), (nbunch[8], nbunch[9]), (nbunch[9],nbunch[10])]
+        
+        single_edges = [ebunch[0], ebunch[1], ebunch[2], ebunch[5], ebunch[6], \
+            ebunch[9], ebunch[10], ebunch[11]]
+        siding_edges = list(set(ebunch)-set(single_edges))
+
+        G = nx.Graph()
+        for n in nbunch:
+            G.add_node(n, ports=n.ports, type=n.type)
+        for n in ebunch:
+            pass
+
+
         for i in range(len(self.tracks) + 1):
             if i == 0:
                 self.nbunch.append(ControlPoint(1,self.tracks[i+1]))
             elif 0 < i < len(self.tracks):
-                if self.tracks[i-1] == self.tracks[i] == 0：
+                if self.tracks[i-1] == self.tracks[i] == 0:
                     self.nbunch.append(AutoPoint())
                 else:
                     self.nbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))

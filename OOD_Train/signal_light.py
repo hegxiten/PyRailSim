@@ -37,8 +37,9 @@ class Signal(Observable, Observer):
         super().__init__()
         self.port_idx = port_idx
         self.aspect = Aspect(None)
+        self.track_to_enter = None
         self.type = None
-
+    
     def change_color_to(self, color, isNotified=True):
         
         new_aspect = Aspect(color)
@@ -78,11 +79,17 @@ class AutoSignal(Signal):
                 self.change_color_to('y', True)                            # observer:            -> g
 
 class HomeSignal(Signal):
-    def __init__(self, port_idx, track_number):
+    def __init__(self, port_idx):
         super().__init__(port_idx)
+        self.out_ports = []
         self.aspect = Aspect('r')
         self.type = 'home'
-        self.hs_type = 'A'
+        
+    def clear(self, out_port, condition='fav'):
+        pass
+
+    def close(self):
+        pass
 
     def update(self, observable, update_message):
         if observable.type == 'block':

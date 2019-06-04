@@ -2,47 +2,50 @@ import networkx as nx
 from signal_light import Observable, Observer, AutoSignal, HomeSignal
 
 class AutoPoint(Observable, Observer):
-    def __init__(self):
+    def __init__(self, idx):
         super().__init__()
         self.type = 'at'
-        self.in_ports = [0,1]
-        self.out_ports = [0,1]
+        self.ports = [0,1]
         self.entry_signals = {0:AutoSignal(0), 1:AutoSignal(1)}
         assert len(self.entry_signals) == 2
-        self.open_direction = {0:1, 1:0}
-        self.mutex_routes = {(0,1):[(1,0)], (1,0):[(0,1)]}
-        self.current_route = []
+        self.port_routes = {0:[1], 1:[0]}
+        self.port_tracks = {}
+        self.current_routes = []
 
 class ControlPoint(AutoPoint):
-    def __init__(self, num_ports, ban_routes, mutex_routes):
-        super().__init__()
+    def __init__(self, idx, ports, ban_routes={}, non_mutex_routes={}):
+        super().__init__(idx)
         self.type = 'cp'
         self.entry_signals = []
-        for i in range(num_ports):
-            self.entry_signals.append(HomeSignal('null', i))
-        self.in_ports = [i for i in range(num_ports)]
-        self.out_ports = [i for i in range(num_ports)]
-        self.open_direction = {}
-        for i in self.in_ports:
-            for j in self.out_ports:
-                if ban_routes[i] != j:
-                    self.open_direction[i] = j
-        assert {None} == set([self.open_direction.get(k) for k in ban_routes.keys()])
-        self.current_route = []
+        self.ports = ports
+        self.port_routes = {}
+        self.non_mutex_routes = non_mutex_routes
+        for i in self.ports:
+            for j in self.ports:
+                if j not in ban_routes[i]:
+                    self.port_routes[i].append(j)
+        assert {None} == set([self.port_routes.get(k) for k in ban_routes.keys()])
+        self.port_tracks = {}
+        self.current_routes = []
+
+        for i in self.ports:
+            port_entry_signal = HomeSignal(i)
+            port_entry_signal.out_ports.extend(self.port_routes[i])            
+            self.entry_signals.append(port_entry_signal)
 
     def open_route(self, route, condition='fav'):
-        assert route not in self.current_route
-        self.current_route.append(route)
-        self.entry_signals[route[0]].clear(condition=condition)
-        for r in self.mutex_routes[route]:
-            if r in self.current_route:
+        assert route not in self.current_routes
+        self.current_routes.append(route)
+        self.entry_signals[route[0]].clear(route, condition=condition)
+        for r in self.current_routes:
+            if r not in self.non_mutex_routes[route]:
                 self.close_route(r)
         self.listener_updates(obj=('cleared', route))
 
     def close_route(self, route):
-        assert route in self.current_route
-        self.current_route.remove(route)
+        assert route in self.current_routes
         self.entry_signals[route[0]].close()
+        self.current_routes.remove(route)
         self.listener_updates(obj=('closed', route))
         
     # ------------------------------------------------------------------------- #
@@ -73,5 +76,5 @@ class ControlPoint(AutoPoint):
             for signal in self.R_entry_signals:
                 signal.change_color_to('r')
         # 更新变化之后cp的方向，并且更新观察者的更新。
-        self.open_direction = direction
+        self.port_routes = direction
         self.listener_updates()
