@@ -173,55 +173,62 @@ class System(nx.Graph):
     def network_constructor(self):
         # 初始化self.big_block_list和self.cp
         # 将self.tracks中连续的数字建立为一个big block
-        # 双指针法来完成连续相同数字的big block初始化
-        # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式
-        # construct the nbunch and ebunch list for Graph
-        nbunch = [  ControlPoint(idx=0, ports=[0,1]), \
-                    AutoPoint(1), AutoPoint(2), \
-                    ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
-                    AutoPoint(5), \
-                    ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
-                    AutoPoint(8), AutoPoint(9), \
-                    ControlPoint(idx=10, ports=[0,1])]
+        # 双指针法来完成连续相同数字的big block初始化                       
+        # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式 √
+        # construct the pbunch and ebunch list for Graph
+        _nodes = {  0: ControlPoint(idx=0, ports=[0,1]), \
+                    1: AutoPoint(1), \
+                    2: AutoPoint(2), \
+                    3: ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
+                    4: ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    5: AutoPoint(5), \
+                    6: ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
+                    7: ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    8: AutoPoint(8), \
+                    9: AutoPoint(9), \
+                    10: ControlPoint(idx=10, ports=[0,1])}
+                
+        pbunch = [_nodes[i] for i in range(len(_nodes))]
         
-        tbunch = [  Track(nbunch[0], 1, nbunch[1], 0), Track(nbunch[1], 1, nbunch[2], 0), Track(nbunch[2], 1, nbunch[3], 0),\
-                    Track(nbunch[3], 1, nbunch[4], 0), Track(nbunch[3], 3, nbunch[4], 2),\
-                    Track(nbunch[4], 1, nbunch[5], 0), Track(nbunch[5], 1, nbunch[6], 0),\
-                    Track(nbunch[6], 1, nbunch[7], 0), Track(nbunch[6], 3, nbunch[7], 2),\
-                    Track(nbunch[7], 1, nbunch[8], 0), Track(nbunch[8], 1, nbunch[9], 0), Track(nbunch[9], 1, nbunch[10], 0)]
+        tbunch = [  Track(pbunch[0], 1, pbunch[1], 0), Track(pbunch[1], 1, pbunch[2], 0), Track(pbunch[2], 1, pbunch[3], 0),\
+                    Track(pbunch[3], 1, pbunch[4], 0), Track(pbunch[3], 3, pbunch[4], 2),\
+                    Track(pbunch[4], 1, pbunch[5], 0), Track(pbunch[5], 1, pbunch[6], 0),\
+                    Track(pbunch[6], 1, pbunch[7], 0), Track(pbunch[6], 3, pbunch[7], 2),\
+                    Track(pbunch[7], 1, pbunch[8], 0), Track(pbunch[8], 1, pbunch[9], 0), Track(pbunch[9], 1, pbunch[10], 0)]
         
-        ebunch = []
+        G = nx.Graph()
+        for p in pbunch:
+            G.add_node(p, attr=p.__dict__)              # 实例attributes的变化会自动更新至graph的node中                  
+
         for t in tbunch:
             edge = (t.L_point, t.R_point)
-            if # EDGE 的 attributes 在这里加
-            ebunch.append((t.L_point, t.R_point))
-        ebunch = [  (nbunch[0], nbunch[1]), (nbunch[1], nbunch[2]), (nbunch[2],nbunch[3]),\
-                    (nbunch[3], nbunch[4]), (nbunch[3], nbunch[4]),\
-                    (nbunch[4], nbunch[5]), (nbunch[5], nbunch[6]),\
-                    (nbunch[6], nbunch[7]), (nbunch[6], nbunch[7]),\
-                    (nbunch[7], nbunch[8]), (nbunch[8], nbunch[9]), (nbunch[9],nbunch[10])]
-        
-        single_edges = [ebunch[0], ebunch[1], ebunch[2], ebunch[5], ebunch[6], \
-            ebunch[9], ebunch[10], ebunch[11]]
-        siding_edges = list(set(ebunch)-set(single_edges))
+            t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
+            G.add_edge(*edge, attr=t.__dict__)          # 实例attributes的变化会自动更新至graph的node中
 
-        G = nx.Graph()
-        for n in nbunch:
-            G.add_node(n, ports=n.ports, type=n.type)
-        for n in ebunch:
-            pass
+        for i in G.nodes():
+            i.neighbors.extend([n for n in G.neighbors(i)])              
+            for n in G.neighbors(i):
+                i.add_observer(n)
 
+        F = G.copy()        # shallow copy
+        for i in F.nodes():
+            if i.type == 'at':
+                at_neighbor = [i for i in F.neighbors(i)]
+                assert len(at_neighbor) == 2
+                
+                F.remove_node(i)
+                F.add_edges
 
         for i in range(len(self.tracks) + 1):
             if i == 0:
-                self.nbunch.append(ControlPoint(1,self.tracks[i+1]))
+                self.pbunch.append(ControlPoint(1,self.tracks[i+1]))
             elif 0 < i < len(self.tracks):
                 if self.tracks[i-1] == self.tracks[i] == 0:
-                    self.nbunch.append(AutoPoint())
+                    self.pbunch.append(AutoPoint())
                 else:
-                    self.nbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))
+                    self.pbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))
             elif i == len(self.tracks):
-                self.nbunch.append(ControlPoint(self.tracks[i-1],1))
+                self.pbunch.append(ControlPoint(self.tracks[i-1],1))
 
         prev_tk = self.tracks[0]
         curr_tk = self.tracks[1]
@@ -353,7 +360,7 @@ if __name__ =='__main__':
             mul_tk_lgt = []
             for i in range(blk.track_number):
                 mul_tk_lgt.append(blk.tracks[i].left_signal.aspect.color)
-            left_light.append(mul_tk_lgt)
+            left_light.append(mul_tk_lgt)``
         else:
             left_light.append(blk.tracks[0].left_signal.aspect.color)
 

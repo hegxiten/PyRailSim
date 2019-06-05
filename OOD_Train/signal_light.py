@@ -5,24 +5,24 @@ class Observable(object):
     被观察的对象，实现类需要具体增加被监听的资源
     '''
     def __init__(self):
-        self.observers = []
+        self._observers = []
 
     @property
     def observers(self):
-        return self.observers
-
+        return self._observers
+        
     def has_observer(self):
-        return False if not self.observers else True
+        return False if not self._observers else True
 
     def add_observer(self, observer):
-        if observer not in self.observers:
-            self.observers.append(observer)
+        if observer not in self._observers:
+            self._observers.append(observer)
         
     def remove_observer(self, observer):
-        self.observers.remove(observer)
+        self._observers.remove(observer)
 
     def listener_updates(self, obj=None):
-        for observer in self.observers:
+        for observer in self._observers:
             observer.update(self, obj)
 
 class Observer(object):
@@ -85,7 +85,7 @@ class HomeSignal(Signal):
         self.aspect = Aspect('r')
         self.type = 'home'
         
-    def clear(self, out_port, condition='fav'):
+    def clear(self, port, condition='fav'):
         pass
 
     def close(self):

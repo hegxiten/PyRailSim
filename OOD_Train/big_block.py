@@ -1,11 +1,12 @@
 from block import Block
 from signal_light import Observable, Observer
+from track import Track
 
-class BigBlock(Observable, Observer):
+class BigBlock(Track):
     # 当前写的方法是针对单track的连续blk形成的BigBlock，后续需要将此类进行改变，
     # 将其改成能够容纳多track的block
-    def __init__(self, sgl_blk_num):
-        super().__init__()
+    def __init__(self, L_cp, L_cp_port, R_cp, R_cp_port, sgl_blk_num=None):
+        super().__init__(L_cp, L_cp_port, R_cp, R_cp_port)
         self.type = 'bigblock'
         self.direction = 'neutral'
         self.blocks = []
