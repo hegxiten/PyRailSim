@@ -1,12 +1,9 @@
 from datetime import datetime, timedelta
-from block import Block
 import numpy as np
 import random
 from train import Train
-from track import Track
-from signal_light import AutoSignal, HomeSignal
-from big_block import BigBlock
-from control_point import ControlPoint, AutoPoint
+from infrastructure import Track, Block, BigBlock
+from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 import networkx as nx
 

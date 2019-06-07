@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from datetime import datetime, timedelta
-from signal_light import Signal
+from signaling import Signal
 
 class Train():
     def __init__(self, idx, rank, system, init_time, curr_track, max_sp, max_acc):

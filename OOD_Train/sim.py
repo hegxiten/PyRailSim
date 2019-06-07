@@ -1,4 +1,4 @@
-from block import Block
+from infrastructure import Track, Block, BigBlock
 from system import System
 from train import Train
 import matplotlib.pyplot as plt

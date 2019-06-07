@@ -1,4 +1,4 @@
-from block import Block
+from infrastructure import Track, Block, BigBlock
 from system import System
 from train import Train
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ import matplotlib.patches as mpatches
 from datetime import datetime, timedelta
 import numpy as np
 import time
-from signal_light import Signal
+from signaling import Signal
 import random
 
 def string_diagram(sys, sys_dos, start_time, end_time):
