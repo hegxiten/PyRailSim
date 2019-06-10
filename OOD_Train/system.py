@@ -177,34 +177,33 @@ class System(nx.Graph):
         # 双指针法来完成连续相同数字的big block初始化                       
         # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式 √
         # construct the pbunch and ebunch list for Graph
-        _nodes = {  0: ControlPoint(idx=0, ports=[0,1]), \
-                    1: AutoPoint(1), \
-                    2: AutoPoint(2), \
-                    3: ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
-                    4: ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
-                    5: AutoPoint(5), \
-                    6: ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
-                    7: ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
-                    8: AutoPoint(8), \
-                    9: AutoPoint(9), \
-                    10: ControlPoint(idx=10, ports=[0,1])}
+        _nodes = {  0:ControlPoint(idx=0, ports=[0,1]), \
+                    1:AutoPoint(1), \
+                    2:AutoPoint(2), \
+                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
+                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    5:AutoPoint(5), \
+                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
+                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    8:AutoPoint(8), \
+                    9:AutoPoint(9), \
+                    10:ControlPoint(idx=10, ports=[0,1])}
                 
         pbunch = [_nodes[i] for i in range(len(_nodes))]
         
         tbunch = [  Track(pbunch[0], 1, pbunch[1], 0), Track(pbunch[1], 1, pbunch[2], 0), Track(pbunch[2], 1, pbunch[3], 0),\
-                    Track(pbunch[3], 1, pbunch[4], 0), Track(pbunch[3], 3, pbunch[4], 2),\
+                    Track(pbunch[3], 1, pbunch[4], 0), Track(pbunch[3], 3, pbunch[4], 2, edge_key=1),\
                     Track(pbunch[4], 1, pbunch[5], 0), Track(pbunch[5], 1, pbunch[6], 0),\
-                    Track(pbunch[6], 1, pbunch[7], 0), Track(pbunch[6], 3, pbunch[7], 2),\
+                    Track(pbunch[6], 1, pbunch[7], 0), Track(pbunch[6], 3, pbunch[7], 2, edge_key=1),\
                     Track(pbunch[7], 1, pbunch[8], 0), Track(pbunch[8], 1, pbunch[9], 0), Track(pbunch[9], 1, pbunch[10], 0)]
         
-        G = nx.Graph()
+        G = nx.MultiGraph()
         for p in pbunch:
             G.add_node(p, attr=p.__dict__)              # 实例attributes的变化会自动更新至graph的node中                  
 
         for t in tbunch:
-            edge = (t.L_point, t.R_point)
             t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
-            G.add_edge(*edge, attr=t.__dict__)          # 实例attributes的变化会自动更新至graph的node中
+            G.add_edge(t.L_point, t.R_point, key=t.edge_key, port=t.track_ports, attr=t.__dict__)          # 实例attributes的变化会自动更新至graph的node中
 
         for i in G.nodes():
             i.neighbors.extend([n for n in G.neighbors(i)])              
@@ -212,24 +211,41 @@ class System(nx.Graph):
                 i.add_observer(n)
 
         F = G.copy()        # shallow copy
-        for i in F.nodes():
+        for i in G.nodes():
             if i.type == 'at':
-                at_neighbor = [i for i in F.neighbors(i)]
+                at_neighbor = [j for j in F.neighbors(i)]
                 assert len(at_neighbor) == 2
-                
+                assert len(F.edges(i)) == 2
+                et_L_points = [F[at_neighbor[0]][i][0]['attr']['L_point'], F[i][at_neighbor[1]][0]['attr']['L_point']]
+                et_R_points = [F[at_neighbor[0]][i][0]['attr']['R_point'], F[i][at_neighbor[1]][0]['attr']['R_point']]
+                et_L_points.remove(i)
+                et_R_points.remove(i)
+                new_L_point = et_L_points[0]
+                new_R_point = et_R_points[0]
+                new_length = F[at_neighbor[0]][i][0]['attr']['length'] + F[i][at_neighbor[1]][0]['attr']['length']
+                new_attr = {'length':   new_length,
+                            'L_point':  new_L_point,
+                            'R_point':  new_R_point,
+                            'entry_port_L': F[new_L_point][i][0]['attr']['entry_port_L'],
+                            'entry_port_R': F[i][new_R_point][0]['attr']['entry_port_R'],
+                            'traffic_direction': None,
+                            'track_ports':{}}
                 F.remove_node(i)
-                F.add_edges
+                F.add_edge(new_L_point, new_R_point, attr=new_attr)     # auto-keyed for multiple edges
 
+        ###--------------------------------------------------------###
+        ###----------2019 06 10 Solved MultiGraph Problems. Solved The Setter problems of ControlPoint----------###
+        ###--------------------------------------------------------###
         for i in range(len(self.tracks) + 1):
             if i == 0:
-                self.pbunch.append(ControlPoint(1,self.tracks[i+1]))
+                pbunch.append(ControlPoint(1,self.tracks[i+1]))
             elif 0 < i < len(self.tracks):
                 if self.tracks[i-1] == self.tracks[i] == 0:
-                    self.pbunch.append(AutoPoint())
+                    pbunch.append(AutoPoint())
                 else:
-                    self.pbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))
+                    pbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))
             elif i == len(self.tracks):
-                self.pbunch.append(ControlPoint(self.tracks[i-1],1))
+                pbunch.append(ControlPoint(self.tracks[i-1],1))
 
         prev_tk = self.tracks[0]
         curr_tk = self.tracks[1]
@@ -361,7 +377,7 @@ if __name__ =='__main__':
             mul_tk_lgt = []
             for i in range(blk.track_number):
                 mul_tk_lgt.append(blk.tracks[i].left_signal.aspect.color)
-            left_light.append(mul_tk_lgt)``
+            left_light.append(mul_tk_lgt)
         else:
             left_light.append(blk.tracks[0].left_signal.aspect.color)
 

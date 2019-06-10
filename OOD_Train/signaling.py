@@ -163,7 +163,10 @@ class AutoPoint(Observable, Observer):
         assert len(self.port_entry_signal) == 2
         self.port_track = defaultdict(int)
         self.neighbors = []
-        self.current_routes = []
+        self._current_routes = []
+
+    def __repr__(self):
+        return 'AutoPoint{}'.format(self.idx)
 
 class ControlPoint(AutoPoint):
     def __init__(self, idx, ports, ban_routes=defaultdict(list), non_mutex_routes=defaultdict(list)):
@@ -184,26 +187,29 @@ class ControlPoint(AutoPoint):
             port_entry_signal.out_ports.extend(self.p2p_port_routes[i])            
             self.port_entry_signal[i] = port_entry_signal
     
+    def __repr__(self):
+        return 'ControlPoint{}'.format(self.idx)
+    
     @property
     def current_routes(self):
-        return self.current_routes
+        return self._current_routes
     
     @current_routes.setter
     def current_routes(self, route):
-        if route in self.current_routes:
+        if route in self._current_routes:
             pass
         else:
-            self.current_routes.append(route)
+            self._current_routes.append(route)
             self.port_entry_signal[route[0]].clear(route)
-            for r in self.current_routes:
+            for r in self._current_routes:
                 if r not in self.non_mutex_routes[route]:
                     self.close_route(r)
             self.listener_updates(obj=('cleared', route))
 
     def close_route(self, route):
-        assert route in self.current_routes
+        assert route in self._current_routes
         self.port_entry_signal[route[0]].close()
-        self.current_routes.remove(route)
+        self._current_routes.remove(route)
         self.listener_updates(obj=('closed', route))
    
         
@@ -257,6 +263,11 @@ class BlockTrack(Observable):   #暂时还没改到这里
         elif remove_occupier:
             self.occupiers.remove(remove_occupier)
         self.listener_updates(obj=self.occupiers)
+
+
+if __name__ == '__main__':
+    cp = ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]})
+    print(cp)
 
 if __name__ == '__main__':
     L_signals = [HomeSignal('L')] + [AutoSignal('L') for i in range(1,9)] + [HomeSignal('L')]

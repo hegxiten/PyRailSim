@@ -2,7 +2,7 @@ from signaling import AutoSignal, HomeSignal
 from observe import Observable, Observer
 
 class Track(Observable):
-    def __init__(self, L_point, L_point_port, R_point, R_point_port, length=5, allow_sp=30):    # 30 as mph
+    def __init__(self, L_point, L_point_port, R_point, R_point_port, edge_key=0, length=5, allow_sp=30):    # 30 as mph
         super().__init__()
         self.type = 'track'
         self.length = length
@@ -10,11 +10,12 @@ class Track(Observable):
         self.R_point = R_point
         self.entry_port_L = L_point_port
         self.entry_port_R = R_point_port
+        self.edge_key = edge_key
         self.train = None
         self.traffic_direction = None
         self.is_Occupied = False
         self.allow_sp = allow_sp
-        self.track_ports = {}
+        self.track_ports = {L_point:L_point_port, R_point:R_point_port}   
         self.add_observer(L_point)
         self.add_observer(R_point)
         
