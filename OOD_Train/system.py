@@ -101,12 +101,12 @@ class System():
         # _node and _track will be parameters passed from outside in the future development
         G = nx.MultiGraph()
         for n in nbunch:
-            G.add_node(n, attr=n.__dict__, point=n)              
+            G.add_node(n, attr=n.__dict__, instance=n)              
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
             # attribute dictionary as the node in the MultiGraph
 
         for t in ebunch:
-            G.add_edge(t.L_point, t.R_point, key=t.edge_key, attr=t.__dict__, track=t)          
+            G.add_edge(t.L_point, t.R_point, key=t.edge_key, attr=t.__dict__, instance=t)          
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
@@ -119,50 +119,64 @@ class System():
         return G
 
     def graph_extractor(self, G):         
-        '''Extract the skeletion MultiGraph with only ControlPoints and Bigblocks'''
+        '''
+        Extract the skeletion MultiGraph with only ControlPoints and Bigblocks
+        ----------
+        Parameter:
+            G: networkx MultiGraph instance of the raw network with only Track as edges.
+        ----------
+        Return:
+            F: networkx MultiGraph instance with only BigBlock as edges.
+        '''
         F = G.copy()        
         # F is a shallow copy of G: attrbutes of G/F components 
         # are pointing at the same memory.
+        
+        def _get_new_edge(node, length=False):
+            at_neighbor = [j for j in F.neighbors(i)]
+            assert len(at_neighbor) == len(F.edges(i)) == 2
+            edgetrk_L_points = [F[at_neighbor[0]][node][0]['instance'].L_point, F[node][at_neighbor[1]][0]['instance'].L_point]
+            edgetrk_R_points = [F[at_neighbor[0]][node][0]['instance'].R_point, F[node][at_neighbor[1]][0]['instance'].R_point]
+            edgetrk_L_points.remove(i)
+            edgetrk_R_points.remove(i)
+            new_edge_length = F[at_neighbor[0]][i][0]['instance'].length + F[i][at_neighbor[1]][0]['instance'].length
+            if length:
+                return edgetrk_L_points[0], edgetrk_R_points[0], new_edge_length
+            else:  
+                return edgetrk_L_points[0], edgetrk_R_points[0]
+
         for i in G.nodes():
             # only use G.nodes() instead of F.nodes() to get original nodes 
             # to avoid dictionary size changing issues. 
             # all the following graph updates are targeted on F
             if i.type == 'at':
-                at_neighbor = [j for j in F.neighbors(i)]
-                assert len(at_neighbor) == len(F.edges(i)) == 2
-                edgetrk_L_points = [F[at_neighbor[0]][i][0]['attr']['L_point'], F[i][at_neighbor[1]][0]['attr']['L_point']]
-                edgetrk_R_points = [F[at_neighbor[0]][i][0]['attr']['R_point'], F[i][at_neighbor[1]][0]['attr']['R_point']]
-                edgetrk_L_points.remove(i)
-                edgetrk_R_points.remove(i)
-                new_L_point, new_R_point = edgetrk_L_points[0], edgetrk_R_points[0]               
-                new_length = F[at_neighbor[0]][i][0]['attr']['length'] + F[i][at_neighbor[1]][0]['attr']['length']
-                '''This Attr dict is not binded with the track __dict__
-                Need to resolve that'''
-                new_attr = {'length':   new_length,
-                            'L_point':  new_L_point,
-                            'R_point':  new_R_point,
-                            'entry_port_L': F[new_L_point][i][0]['attr']['entry_port_L'],
-                            'entry_port_R': F[i][new_R_point][0]['attr']['entry_port_R'],
-                            'train':        [],
-                            'traffic_direction': None,
-                            'track_ports': {new_L_point: F[new_L_point][i][0]['attr']['track_ports'][new_L_point],
-                                            new_R_point: F[i][new_R_point][0]['attr']['track_ports'][new_R_point]}}
+                new_L_point, new_R_point, new_length = _get_new_edge(i, length=True)
+                assert len(F[new_L_point][i]) == len(F[i][new_R_point]) == 1
+                new_track =  Track( new_L_point, F[new_L_point][i][0]['instance'].entry_port_L,\
+                                    new_R_point, F[i][new_R_point][0]['instance'].entry_port_R,\
+                                    edge_key=0, length=new_length)
+
                 F.remove_node(i)
-                F.add_edge(new_L_point, new_R_point, attr=new_attr)     
+                F.add_edge(new_L_point, new_R_point, attr=new_track.__dict__, instance=new_track)     
                 # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
                 # default 0 as mainline, idx as track number
 
         for (u, v, k) in F.edges(keys=True):
             blk_path = nx.shortest_path(G, u, v)
             big_block_edges = [(blk_path[i], blk_path[i+1]) for i in range(len(blk_path) - 1)]
-            big_block_tracks = []
+            big_block_instance = BigBlock(  u, F[u][v][k]['instance'].entry_port_L,\
+                                            v, F[u][v][k]['instance'].entry_port_R,\
+                                            edge_key=k, length=F[u][v][k]['instance'].length, \
+                                            raw_graph=G, cp_graph=F)
             for (n, m) in big_block_edges:
-                big_block_tracks.extend([G[n][m][kk]['track'] for kk in G[n][m]])
+                if G[n][m][k]['instance'] not in big_block_instance.tracks:
+                    big_block_instance.tracks.append(G[n][m][k]['instance'])
                 # get the list of track unit components of a bigblock, and record in the instance
-            big_block_instance = BigBlock(  u, F[u][v][k]['attr']['entry_port_L'],\
-                                            v, F[u][v][k]['attr']['entry_port_R'],\
-                                            edge_key=k, raw_graph=G, cp_graph=F)
-            F[u][v][k]['track'] = big_block_instance            
+            
+            F[u][v][k]['attr'] = big_block_instance.__dict__
+            F[u][v][k]['instance'] = big_block_instance
+            for t in F[u][v][k]['instance'].tracks:
+                t.bigblock = F[u][v][k]['instance']
         return F
 
     def register(self, blocks):
@@ -214,7 +228,6 @@ class System():
         # ABS订阅HS
         curr_mul_tk_blk_idx = len(multi_track_blk) - 1
         for i in range(len(blocks) - 1,0,-1):
-            print(i)
             if curr_mul_tk_blk_idx == -1:
                 break
             if i not in multi_track_blk:

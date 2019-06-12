@@ -1,6 +1,8 @@
 from signaling import AutoSignal, HomeSignal
 from observe import Observable, Observer
 
+import networkx as nx
+
 class Track(Observable):
     '''
     现在的问题是networkx的edge与track对象绑定的不够好，node和Autopoint对象已经可以实现完美绑定。需要想想办法。
@@ -32,6 +34,15 @@ class Track(Observable):
         return self._train
 
     @property
+    def bigblock(self):
+        return self.__bigblock
+
+    @bigblock.setter
+    def bigblock(self, bblk):
+        assert isinstance(bblk,BigBlock)
+        self.__bigblock = bblk
+
+    @property
     def traffic_direction(self):
         return self._traffic_direction
 
@@ -39,15 +50,6 @@ class Track(Observable):
     def traffic_direction(self, direction):
         assert direction == self.__bigblock.traffic_direction
         self._traffic_direction = direction
-
-    @property
-    def bigblock(self):
-        return self.__bigblock
-
-    @bigblock.setter
-    def bigblock(self, bigblockobject):
-        assert isinstance(bigblockobject,BigBlock)
-        self.__bigblock = bigblockobject
 
     def let_in(self, train):
         assert self.is_Occupied == False
@@ -62,24 +64,35 @@ class Track(Observable):
         self.listener_updates()
     
 class BigBlock(Track):
-    def __init__(self, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=0, raw_graph=None, cp_graph=None):
-        super().__init__(L_cp, L_cp_port, R_cp, R_cp_port, edge_key)
+    def __init__(self, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=0, length=None, raw_graph=None, cp_graph=None):
+        super().__init__(L_cp, L_cp_port, R_cp, R_cp_port, edge_key, length)
         assert isinstance(raw_graph, nx.MultiGraph)
         assert isinstance(cp_graph, nx.MultiGraph)
         self.type = 'bigblock'
         self._traffic_direction = None
         self.tracks = []
+        self.track_ports = {L_cp:L_cp_port, R_cp:R_cp_port}   
+        self.length = self.R_point.MP - self.L_point.MP 
+        self.MP = (self.L_point.MP, self.R_point.MP)
+    
+        self.add_observer(L_cp)
+        self.add_observer(R_cp)
+
+    def __repr__(self):
+        return 'BigBlock MP: {} to MP: {} idx: {}'.format(self.L_point.MP, self.R_point.MP, self.edge_key)
     
     @property
     def traffic_direction(self):
         return self._traffic_direction
-
+    
     @traffic_direction.setter
     def traffic_direction(self, direction):
         self._traffic_direction = direction
-        for (u,v,k) in self.tracks:
-            G[u][v][k]._traffic_direction = direction
+        for t in self.tracks:
+            t.traffic_direction = direction
 
+class OldBigBlock():
+    def FOO():
         # 将每个block加入到bigblock中的列表里，并且添加block为bigblock的观察者
         # 目前block的长度写死了，固定为10，后期可以改为参数
         for i in range(sgl_blk_num):
