@@ -75,7 +75,7 @@ class System():
     def graph_constructor(self):      
         '''Initialize the MultiGraph object with railroad components 
         (CP, AT as nodes, Tracks as edges)'''
-        # TODO: construct the pbunch and ebunch list for Graph in network_constructor.py
+        # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
         _node = {  0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
@@ -88,30 +88,31 @@ class System():
                     7:ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
                     8:AutoPoint(8), \
                     9:AutoPoint(9), \
-                    10:ControlPoint(idx=10, ports=[0,1])}
-                
-        pbunch = [_node[i] for i in range(len(_node))]
+                    10:ControlPoint(idx=10, ports=[0,1])}       
+        nbunch = [_node[i] for i in range(len(_node))]
 
-        tbunch = [  Track(pbunch[0], 1, pbunch[1], 0), Track(pbunch[1], 1, pbunch[2], 0), Track(pbunch[2], 1, pbunch[3], 0),\
-                    Track(pbunch[3], 1, pbunch[4], 0), Track(pbunch[3], 3, pbunch[4], 2, edge_key=1),\
-                    Track(pbunch[4], 1, pbunch[5], 0), Track(pbunch[5], 1, pbunch[6], 0),\
-                    Track(pbunch[6], 1, pbunch[7], 0), Track(pbunch[6], 3, pbunch[7], 2, edge_key=1),\
-                    Track(pbunch[7], 1, pbunch[8], 0), Track(pbunch[8], 1, pbunch[9], 0), Track(pbunch[9], 1, pbunch[10], 0)]
-        # pbunch and tbunch will be parameters passed from outside in the future development
+        _track = [  Track(nbunch[0], 1, nbunch[1], 0), Track(nbunch[1], 1, nbunch[2], 0), Track(nbunch[2], 1, nbunch[3], 0),\
+                    Track(nbunch[3], 1, nbunch[4], 0), Track(nbunch[3], 3, nbunch[4], 2, edge_key=1),\
+                    Track(nbunch[4], 1, nbunch[5], 0), Track(nbunch[5], 1, nbunch[6], 0),\
+                    Track(nbunch[6], 1, nbunch[7], 0), Track(nbunch[6], 3, nbunch[7], 2, edge_key=1),\
+                    Track(nbunch[7], 1, nbunch[8], 0), Track(nbunch[8], 1, nbunch[9], 0), Track(nbunch[9], 1, nbunch[10], 0)]
+        ebunch = [_track[i] for i in range(len(_track))]
+        
+        # _node and _track will be parameters passed from outside in the future development
         G = nx.MultiGraph()
-        for p in pbunch:
-            G.add_node(p, attr=p.__dict__)              
+        for n in nbunch:
+            G.add_node(n, attr=n.__dict__, point=n)              
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
             # attribute dictionary as the node in the MultiGraph
 
-        for t in tbunch:
-            t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
-            G.add_edge(t.L_point, t.R_point, key=t.edge_key, attr=t.__dict__)          
+        for t in ebunch:
+            G.add_edge(t.L_point, t.R_point, key=t.edge_key, attr=t.__dict__, track=t)          
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
+            t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
 
-        for i in G.nodes():
+        for i in G.nodes():     # register the neighbor nodes as observers to each node
             i.neighbors.extend([n for n in G.neighbors(i)])              
             for n in G.neighbors(i):
                 i.add_observer(n)
@@ -135,6 +136,8 @@ class System():
                 edgetrk_R_points.remove(i)
                 new_L_point, new_R_point = edgetrk_L_points[0], edgetrk_R_points[0]               
                 new_length = F[at_neighbor[0]][i][0]['attr']['length'] + F[i][at_neighbor[1]][0]['attr']['length']
+                '''This Attr dict is not binded with the track __dict__
+                Need to resolve that'''
                 new_attr = {'length':   new_length,
                             'L_point':  new_L_point,
                             'R_point':  new_R_point,
@@ -147,21 +150,19 @@ class System():
                 F.remove_node(i)
                 F.add_edge(new_L_point, new_R_point, attr=new_attr)     
                 # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
-                # default 0 as mainline
+                # default 0 as mainline, idx as track number
 
         for (u, v, k) in F.edges(keys=True):
-            big_block = BigBlock(   u, F[u][v][k]['attr']['entry_port_L'],\
-                                    v, F[u][v][k]['attr']['entry_port_R'],\
-                                    edge_key=k, raw_graph=G, cp_graph=F)
             blk_path = nx.shortest_path(G, u, v)
             big_block_edges = [(blk_path[i], blk_path[i+1]) for i in range(len(blk_path) - 1)]
             big_block_tracks = []
             for (n, m) in big_block_edges:
-                big_block_tracks.extend([(n, m, kk) for kk in G[n][m]])
-            big_block.tracks = big_block_tracks
-        
-
-
+                big_block_tracks.extend([G[n][m][kk]['track'] for kk in G[n][m]])
+                # get the list of track unit components of a bigblock, and record in the instance
+            big_block_instance = BigBlock(  u, F[u][v][k]['attr']['entry_port_L'],\
+                                            v, F[u][v][k]['attr']['entry_port_R'],\
+                                            edge_key=k, raw_graph=G, cp_graph=F)
+            F[u][v][k]['track'] = big_block_instance            
         return F
 
     def register(self, blocks):
