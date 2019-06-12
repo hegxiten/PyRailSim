@@ -5,9 +5,13 @@ class Aspect(object):
     '''
     Aspect代表信号的“含义”,用于比较“大小”
     '''    
-    def __init__(self, color):
+    def __init__(self, color, route=None):
         self.color = color
+        self.route = None
     
+    def __repr__(self):
+        return 'Aspect: {}, route {}'.format(self.color, self.route)
+
     def __eq__(self,other):
         return self.color == other.color
 
@@ -72,7 +76,7 @@ class Aspect(object):
 
 
 class Signal(Observable, Observer):
-    def __init__(self, port_idx):
+    def __init__(self, port_idx, MP=None):
         super().__init__()
         self.port_idx = port_idx
         self.aspect = Aspect(None)
@@ -89,8 +93,9 @@ class Signal(Observable, Observer):
             self.listener_updates(obj=self.aspect)
 
 class AutoSignal(Signal):
-    def __init__(self, port_idx):
-        super().__init__(port_idx)
+    def __init__(self, port_idx, MP=None):
+        super().__init__(port_idx, MP)
+        self.at = None
         if (port_idx % 2) == 0:
             self.facing_direction = 'L'
         else:
@@ -98,6 +103,9 @@ class AutoSignal(Signal):
         self.aspect = Aspect('g')
         self.type = 'abs'
     
+    def __repr__(self):
+        return 'AutoSignal of {}, port: {}'.format(self.at, self.port_idx)
+
     def update(self, observable, update_message):
         assert observable.type in ['abs','home','block','bigblock']
         # print("{} signal {} is observing {} signal {}".format(self.port_idx, self.pos, observable.port_idx, observable.pos))
@@ -118,12 +126,16 @@ class AutoSignal(Signal):
                 self.change_color_to('y', True)                            # observer:            -> g
 
 class HomeSignal(Signal):
-    def __init__(self, port_idx):
+    def __init__(self, port_idx, MP=None):
         super().__init__(port_idx)
         self.out_ports = []
+        self.cp = None
         self.aspect = Aspect('r')
         self.type = 'home'
-        
+    
+    def __repr__(self):
+        return 'HomeSignal of {}, port: {}'.format(self.cp, self.port_idx)
+
     def clear(self, port, condition='fav'):
         pass
 
@@ -152,16 +164,22 @@ class HomeSignal(Signal):
                 self.change_color_to('y', False)  
 
 class AutoPoint(Observable, Observer):
-    def __init__(self, idx):
+    def __init__(self, idx, MP=None):
         super().__init__()
         self.idx = idx
         self.type = 'at'
+        self.MP = MP
         self.ports = [0,1]
-        self.port_entry_signal = {0:AutoSignal(0), 1:AutoSignal(1)}
-        self.p2p_port_routes = {0:[1], 1:[0]}
+        # build up signals
+        self.port_entry_signal = {0:AutoSignal(0, MP=self.MP), 1:AutoSignal(1, MP=self.MP)}
+        # define legal routes
+        self.available_p2p_routes = {0:[1], 1:[0]}
         self.non_mutex_routes = {(0,1):[(1,0)], (1,0):[(0,1)]}
         assert len(self.port_entry_signal) == 2
         self.port_track = defaultdict(int)
+        # add the ownership of signals
+        for _, v in self.port_entry_signal.items():
+            v.at = self
         self.neighbors = []
         self._current_routes = []
 
@@ -169,24 +187,31 @@ class AutoPoint(Observable, Observer):
         return 'AutoPoint{}'.format(self.idx)
 
 class ControlPoint(AutoPoint):
-    def __init__(self, idx, ports, ban_routes=defaultdict(list), non_mutex_routes=defaultdict(list)):
-        super().__init__(idx)
+    def __init__(self, idx, ports, MP=None, ban_routes=defaultdict(list), non_mutex_routes=defaultdict(list)):
+        super().__init__(idx, MP)
         self.type = 'cp'
         self.ports = ports
         self.port_entry_signal = defaultdict(list)
-        self.p2p_port_routes = defaultdict(list)
+        self.available_p2p_routes = defaultdict(list)   # port to port - p2p
         self.non_mutex_routes = non_mutex_routes
-        self.cp_neighbors = []
+        
+        # ban illegal routes
         for i in self.ports:
             for j in self.ports:
                 if j not in ban_routes.get(i, []):
-                    self.p2p_port_routes[i].append(j)
-
+                    self.available_p2p_routes[i].append(j)
+        
+        # build up signals
         for i in self.ports:
             port_entry_signal = HomeSignal(i)
-            port_entry_signal.out_ports.extend(self.p2p_port_routes[i])            
+            port_entry_signal.out_ports.extend(self.available_p2p_routes[i])            
             self.port_entry_signal[i] = port_entry_signal
-    
+        # add the ownership of signals
+        for _, v in self.port_entry_signal.items():
+            v.cp = self
+
+        self._current_routes = []
+
     def __repr__(self):
         return 'ControlPoint{}'.format(self.idx)
     
@@ -241,29 +266,8 @@ class ControlPoint(AutoPoint):
             for signal in self.R_port_entry_signal:
                 signal.change_color_to('r')
         # 更新变化之后cp的方向，并且更新观察者的更新。
-        self.p2p_port_routes = direction
+        self.available_p2p_routes = direction
         self.listener_updates()
-
-class BlockTrack(Observable):   #暂时还没改到这里
-    def __init__(self):
-        super().__init__()
-        self.occupiers = []
-        self.type = 'block'
-
-    @property
-    def occupiers(self):
-        return self.occupiers
-
-    def has_occupier(self):
-        return False if not self.occupiers else True
-
-    def monitor_block(self, add_occupier=None, remove_occupier=None):
-        if add_occupier:
-            self.occupiers.append(add_occupier)
-        elif remove_occupier:
-            self.occupiers.remove(remove_occupier)
-        self.listener_updates(obj=self.occupiers)
-
 
 if __name__ == '__main__':
     cp = ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]})

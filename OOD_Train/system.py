@@ -11,29 +11,29 @@ from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 import networkx as nx
 
-class System(nx.Graph):
+class System():
+    """
+    Parameters
+    ----------
+    :_blk_length_list: list (**kw)
+        A list of block lengths for each block.
+    :tracks: list (**kw)
+        A list of total number of tracks per block.
+    :dos_period: list or tuple (**kw)
+        2-element list or tuple showing the starting and finishing time of DoS attacks.
+    :headway: (**kw)
+        Traffic headway in seconds for unidirectional trains. 500 by default.
+    :dos_pos: int (**kw)
+        Index of block to be attacked by DoS. -1 by default (no DoS).
+    :refresh_time: int (**kw)
+        Seconds between two consecutive traverse calculations of the simulation.
+    :sp_containter: list (**kw)
+        A list of randomized speed values for trains to initialize by. Uniform range.
+    :add_container: list (**kw)
+        A list of randomized acceleration values for trains to initialize by. Uniform range.
+    """
     def __init__(self, init_time, *args, **kwargs):
         super().__init__()
-        """
-        Parameters
-        ----------
-        :_blk_length_list: list (**kw)
-            A list of block lengths for each block.
-        :tracks: list (**kw)
-            A list of total number of tracks per block.
-        :dos_period: list or tuple (**kw)
-            2-element list or tuple showing the starting and finishing time of DoS attacks.
-        :headway: (**kw)
-            Traffic headway in seconds for unidirectional trains. 500 by default.
-        :dos_pos: int (**kw)
-            Index of block to be attacked by DoS. -1 by default (no DoS).
-        :refresh_time: int (**kw)
-            Seconds between two consecutive traverse calculations of the simulation.
-        :sp_containter: list (**kw)
-            A list of randomized speed values for trains to initialize by. Uniform range.
-        :add_container: list (**kw)
-            A list of randomized acceleration values for trains to initialize by. Uniform range.
-        """
         _blk_length_list = [5] * 10     if not kwargs.get('blk_length_list') else kwargs.get('blk_length_list')
         _blk_number = len(_blk_length_list)
 
@@ -45,10 +45,12 @@ class System(nx.Graph):
         self.big_block_list = []
         # list of control points
         self.cp_list = []
-        self.network_constructor()
-        # network_constructor initializes self.big_block_list & self.cp and create graph instance
+        self.G_origin = self.graph_constructor()
+        self.G_skeleton = self.graph_extractor(self.G_origin)
+        # graph_constructor initializes self.big_block_list & self.cp and create graph instance
         self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
         self.register(self.blocks)
+        
         # register method links the observation relationships
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
@@ -57,16 +59,111 @@ class System(nx.Graph):
         self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
         self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
         self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')
-        self.block_intervals = []
-        # interval is the two-element array containing mile posts of boundaries, generated below in the loops
-        for i in range(_blk_number):
-            if i == 0:
-                self.block_intervals.append([0, _blk_length_list[0]])
-            else:
-                left = self.block_intervals[i - 1][1]
-                right = left + _blk_length_list[i]
-                self.block_intervals.append([left, right]) 
-    
+        
+        #------------deprecated------------#
+        #self.block_intervals = []
+        ## interval is the two-element array containing mile posts of boundaries, generated below in the loops
+        #for i in range(_blk_number):
+        #    if i == 0:
+        #        self.block_intervals.append([0, _blk_length_list[0]])
+        #    else:
+        #        left = self.block_intervals[i - 1][1]
+        #        right = left + _blk_length_list[i]
+        #        self.block_intervals.append([left, right]) 
+        #------------deprecated------------#
+
+    def graph_constructor(self):      
+        '''Initialize the MultiGraph object with railroad components 
+        (CP, AT as nodes, Tracks as edges)'''
+        # TODO: construct the pbunch and ebunch list for Graph in network_constructor.py
+        # TODO: automation of port connecting and index assignment
+        # TODO: to be achieved in network_constructor.py
+        _node = {  0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
+                    1:AutoPoint(1), \
+                    2:AutoPoint(2), \
+                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
+                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    5:AutoPoint(5), \
+                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
+                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    8:AutoPoint(8), \
+                    9:AutoPoint(9), \
+                    10:ControlPoint(idx=10, ports=[0,1])}
+                
+        pbunch = [_node[i] for i in range(len(_node))]
+
+        tbunch = [  Track(pbunch[0], 1, pbunch[1], 0), Track(pbunch[1], 1, pbunch[2], 0), Track(pbunch[2], 1, pbunch[3], 0),\
+                    Track(pbunch[3], 1, pbunch[4], 0), Track(pbunch[3], 3, pbunch[4], 2, edge_key=1),\
+                    Track(pbunch[4], 1, pbunch[5], 0), Track(pbunch[5], 1, pbunch[6], 0),\
+                    Track(pbunch[6], 1, pbunch[7], 0), Track(pbunch[6], 3, pbunch[7], 2, edge_key=1),\
+                    Track(pbunch[7], 1, pbunch[8], 0), Track(pbunch[8], 1, pbunch[9], 0), Track(pbunch[9], 1, pbunch[10], 0)]
+        # pbunch and tbunch will be parameters passed from outside in the future development
+        G = nx.MultiGraph()
+        for p in pbunch:
+            G.add_node(p, attr=p.__dict__)              
+            # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
+            # attribute dictionary as the node in the MultiGraph
+
+        for t in tbunch:
+            t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
+            G.add_edge(t.L_point, t.R_point, key=t.edge_key, attr=t.__dict__)          
+            # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
+            # attribute dictionary as the edge in the MultiGraph
+            # key is the index of parallel edges between two nodes
+
+        for i in G.nodes():
+            i.neighbors.extend([n for n in G.neighbors(i)])              
+            for n in G.neighbors(i):
+                i.add_observer(n)
+        return G
+
+    def graph_extractor(self, G):         
+        '''Extract the skeletion MultiGraph with only ControlPoints and Bigblocks'''
+        F = G.copy()        
+        # F is a shallow copy of G: attrbutes of G/F components 
+        # are pointing at the same memory.
+        for i in G.nodes():
+            # only use G.nodes() instead of F.nodes() to get original nodes 
+            # to avoid dictionary size changing issues. 
+            # all the following graph updates are targeted on F
+            if i.type == 'at':
+                at_neighbor = [j for j in F.neighbors(i)]
+                assert len(at_neighbor) == len(F.edges(i)) == 2
+                edgetrk_L_points = [F[at_neighbor[0]][i][0]['attr']['L_point'], F[i][at_neighbor[1]][0]['attr']['L_point']]
+                edgetrk_R_points = [F[at_neighbor[0]][i][0]['attr']['R_point'], F[i][at_neighbor[1]][0]['attr']['R_point']]
+                edgetrk_L_points.remove(i)
+                edgetrk_R_points.remove(i)
+                new_L_point, new_R_point = edgetrk_L_points[0], edgetrk_R_points[0]               
+                new_length = F[at_neighbor[0]][i][0]['attr']['length'] + F[i][at_neighbor[1]][0]['attr']['length']
+                new_attr = {'length':   new_length,
+                            'L_point':  new_L_point,
+                            'R_point':  new_R_point,
+                            'entry_port_L': F[new_L_point][i][0]['attr']['entry_port_L'],
+                            'entry_port_R': F[i][new_R_point][0]['attr']['entry_port_R'],
+                            'train':        [],
+                            'traffic_direction': None,
+                            'track_ports': {new_L_point: F[new_L_point][i][0]['attr']['track_ports'][new_L_point],
+                                            new_R_point: F[i][new_R_point][0]['attr']['track_ports'][new_R_point]}}
+                F.remove_node(i)
+                F.add_edge(new_L_point, new_R_point, attr=new_attr)     
+                # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
+                # default 0 as mainline
+
+        for (u, v, k) in F.edges(keys=True):
+            big_block = BigBlock(   u, F[u][v][k]['attr']['entry_port_L'],\
+                                    v, F[u][v][k]['attr']['entry_port_R'],\
+                                    edge_key=k, raw_graph=G, cp_graph=F)
+            blk_path = nx.shortest_path(G, u, v)
+            big_block_edges = [(blk_path[i], blk_path[i+1]) for i in range(len(blk_path) - 1)]
+            big_block_tracks = []
+            for (n, m) in big_block_edges:
+                big_block_tracks.extend([(n, m, kk) for kk in G[n][m]])
+            big_block.tracks = big_block_tracks
+        
+
+
+        return F
+
     def register(self, blocks):
         # 将临近siding的blk的左灯或者右灯变为homesignal
         multi_track_blk = []
@@ -170,99 +267,7 @@ class System(nx.Graph):
         # self.blocks[4].tracks[0].left_signal.change_color_to('g')
         ##### multi_track_blk的某个track灯为非红测试
         self.blocks[4].tracks[0].right_signal.change_color_to('r')
-        
-    def network_constructor(self):
-        # 初始化self.big_block_list和self.cp
-        # 将self.tracks中连续的数字建立为一个big block
-        # 双指针法来完成连续相同数字的big block初始化                       
-        # 输入的是一个每个track个数的列表 TODO: 输入改为networkx的ebunch格式 √
-        # construct the pbunch and ebunch list for Graph
-        _nodes = {  0:ControlPoint(idx=0, ports=[0,1]), \
-                    1:AutoPoint(1), \
-                    2:AutoPoint(2), \
-                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
-                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
-                    5:AutoPoint(5), \
-                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
-                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
-                    8:AutoPoint(8), \
-                    9:AutoPoint(9), \
-                    10:ControlPoint(idx=10, ports=[0,1])}
-                
-        pbunch = [_nodes[i] for i in range(len(_nodes))]
-        
-        tbunch = [  Track(pbunch[0], 1, pbunch[1], 0), Track(pbunch[1], 1, pbunch[2], 0), Track(pbunch[2], 1, pbunch[3], 0),\
-                    Track(pbunch[3], 1, pbunch[4], 0), Track(pbunch[3], 3, pbunch[4], 2, edge_key=1),\
-                    Track(pbunch[4], 1, pbunch[5], 0), Track(pbunch[5], 1, pbunch[6], 0),\
-                    Track(pbunch[6], 1, pbunch[7], 0), Track(pbunch[6], 3, pbunch[7], 2, edge_key=1),\
-                    Track(pbunch[7], 1, pbunch[8], 0), Track(pbunch[8], 1, pbunch[9], 0), Track(pbunch[9], 1, pbunch[10], 0)]
-        
-        G = nx.MultiGraph()
-        for p in pbunch:
-            G.add_node(p, attr=p.__dict__)              # 实例attributes的变化会自动更新至graph的node中                  
-
-        for t in tbunch:
-            t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
-            G.add_edge(t.L_point, t.R_point, key=t.edge_key, port=t.track_ports, attr=t.__dict__)          # 实例attributes的变化会自动更新至graph的node中
-
-        for i in G.nodes():
-            i.neighbors.extend([n for n in G.neighbors(i)])              
-            for n in G.neighbors(i):
-                i.add_observer(n)
-
-        F = G.copy()        # shallow copy
-        for i in G.nodes():
-            if i.type == 'at':
-                at_neighbor = [j for j in F.neighbors(i)]
-                assert len(at_neighbor) == 2
-                assert len(F.edges(i)) == 2
-                et_L_points = [F[at_neighbor[0]][i][0]['attr']['L_point'], F[i][at_neighbor[1]][0]['attr']['L_point']]
-                et_R_points = [F[at_neighbor[0]][i][0]['attr']['R_point'], F[i][at_neighbor[1]][0]['attr']['R_point']]
-                et_L_points.remove(i)
-                et_R_points.remove(i)
-                new_L_point = et_L_points[0]
-                new_R_point = et_R_points[0]
-                new_length = F[at_neighbor[0]][i][0]['attr']['length'] + F[i][at_neighbor[1]][0]['attr']['length']
-                new_attr = {'length':   new_length,
-                            'L_point':  new_L_point,
-                            'R_point':  new_R_point,
-                            'entry_port_L': F[new_L_point][i][0]['attr']['entry_port_L'],
-                            'entry_port_R': F[i][new_R_point][0]['attr']['entry_port_R'],
-                            'traffic_direction': None,
-                            'track_ports':{}}
-                F.remove_node(i)
-                F.add_edge(new_L_point, new_R_point, attr=new_attr)     # auto-keyed for multiple edges
-
-        ###--------------------------------------------------------###
-        ###----------2019 06 10 Solved MultiGraph Problems. Solved The Setter problems of ControlPoint----------###
-        ###--------------------------------------------------------###
-        for i in range(len(self.tracks) + 1):
-            if i == 0:
-                pbunch.append(ControlPoint(1,self.tracks[i+1]))
-            elif 0 < i < len(self.tracks):
-                if self.tracks[i-1] == self.tracks[i] == 0:
-                    pbunch.append(AutoPoint())
-                else:
-                    pbunch.append(ControlPoint(self.tracks[i-1],self.tracks[i]))
-            elif i == len(self.tracks):
-                pbunch.append(ControlPoint(self.tracks[i-1],1))
-
-        prev_tk = self.tracks[0]
-        curr_tk = self.tracks[1]
-        same_tk_len = 1
-        for i in range(1, len(self.tracks)):
-            prev_tk = self.tracks[i - 1]
-            curr_tk = self.tracks[i]
-            if self.tracks[i] != self.tracks[i - 1] or i == len(self.tracks) - 1:
-                # 遇到与前一个block的track数目不同，创建新的big block和control point
-                big_blk = BigBlock(same_tk_len)
-                self.big_block_list.append(big_blk)
-                curr_cp = ControlPoint(prev_tk, curr_tk)
-                self.cp_list.append(curr_cp)
-                same_tk_len = 0
-            else:
-                i += 1
-        # TODO:将bigblock与cp进行订阅
+    
 
     def generate_train(self, track_idx):
         new_train = Train(self.train_num, 
@@ -412,3 +417,4 @@ if __name__ =='__main__':
     # print("left light color:  {}".format(left_light))
     # print("right light color: {}".format(right_light))
     
+print('a')
