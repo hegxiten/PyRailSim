@@ -78,14 +78,14 @@ class System():
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        _node = {  0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
+        _node = {   0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
                     1:AutoPoint(1), \
                     2:AutoPoint(2), \
-                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
-                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes_port={1:[3],3:[1]}), \
+                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes_port={0:[2],2:[0]}), \
                     5:AutoPoint(5), \
-                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \
-                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \
+                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes_port={1:[3],3:[1]}), \
+                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes_port={0:[2],2:[0]}), \
                     8:AutoPoint(8), \
                     9:AutoPoint(9), \
                     10:ControlPoint(idx=10, ports=[0,1])}       
@@ -110,7 +110,7 @@ class System():
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
-            t.L_point.port_track[t.entry_port_L] = t.R_point.port_track[t.entry_port_R] = t
+            t.L_point.port_track[t.L_point_port] = t.R_point.port_track[t.R_point_port] = t
 
         for i in G.nodes():     # register the neighbor nodes as observers to each node
             i.neighbors.extend([n for n in G.neighbors(i)])              
@@ -152,8 +152,8 @@ class System():
             if i.type == 'at':
                 new_L_point, new_R_point, new_length = _get_new_edge(i, length=True)
                 assert len(F[new_L_point][i]) == len(F[i][new_R_point]) == 1
-                new_track =  Track( new_L_point, F[new_L_point][i][0]['instance'].entry_port_L,\
-                                    new_R_point, F[i][new_R_point][0]['instance'].entry_port_R,\
+                new_track =  Track( new_L_point, F[new_L_point][i][0]['instance'].L_point_port,\
+                                    new_R_point, F[i][new_R_point][0]['instance'].R_point_port,\
                                     edge_key=0, length=new_length)
 
                 F.remove_node(i)
@@ -164,10 +164,12 @@ class System():
         for (u, v, k) in F.edges(keys=True):
             blk_path = nx.shortest_path(G, u, v)
             big_block_edges = [(blk_path[i], blk_path[i+1]) for i in range(len(blk_path) - 1)]
-            big_block_instance = BigBlock(  u, F[u][v][k]['instance'].entry_port_L,\
-                                            v, F[u][v][k]['instance'].entry_port_R,\
+            big_block_instance = BigBlock(  u, F[u][v][k]['instance'].L_point_port,\
+                                            v, F[u][v][k]['instance'].R_point_port,\
                                             edge_key=k, length=F[u][v][k]['instance'].length, \
                                             raw_graph=G, cp_graph=F)
+            u.port_bigblock[F[u][v][k]['instance'].L_point_port] = v.port_bigblock[F[u][v][k]['instance'].R_point_port] = big_block_instance
+
             for (n, m) in big_block_edges:
                 if G[n][m][k]['instance'] not in big_block_instance.tracks:
                     big_block_instance.tracks.append(G[n][m][k]['instance'])

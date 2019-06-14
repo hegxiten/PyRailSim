@@ -8,7 +8,7 @@ class Aspect(object):
     '''    
     def __init__(self, color, route=None):
         self.color = color
-        self.route = None
+        self.route = ()
     
     def __repr__(self):
         return 'Aspect: {}, route {}'.format(self.color, self.route)
@@ -71,19 +71,56 @@ class Aspect(object):
 
 
 class Signal(Observable, Observer):
-    def __init__(self, port_idx, MP=None):
+    def __init__(self, port_idx, signalpoint, MP=None):
         super().__init__()
+        self.signalpoint = signalpoint
         self.port_idx = port_idx
-        self.aspect = Aspect(None)
-        self.signalpoint = None
-        self.type = None
+        self._aspect = Aspect('r', route=self.route)
+
+    @property
+    def route(self):
+        return self.signalpoint.current_route_port.get(self.port_idx)
     
-    def change_color_to(self, color, isNotified=True):
-        new_aspect = Aspect(color)
-        print("\t {} signal changed from {} to {}".format(self.port_idx, self.aspect.color, color))
-        self.aspect = new_aspect
-        if isNotified:
-            self.listener_updates(obj=self.aspect)
+    @property
+    def aspect(self):
+        self._aspect.route = self.route
+        if not self.route:
+            self._aspect.color = 'r'
+            return self._aspect
+        elif self.permit_track.is_Occupied:
+            self._aspect.color = 'r'
+            return self._aspect
+        elif self.permit_track_exit_signal.aspect.color == 'r':
+            self._aspect.color = 'y'
+            return self._aspect
+        elif self.permit_track_exit_signal.aspect.color == 'y':
+            self._aspect.color = 'yy'
+            return self._aspect
+        elif self.permit_track_exit_signal.aspect.color == 'yy':
+            self._aspect.color = 'g'
+            return self._aspect
+        else:
+            self._aspect.color = 'g'
+            return self._aspect
+
+    @property
+    def permit_track(self):
+        assert self.route
+        return self.signalpoint.port_track[self.route[1]]
+
+    @property
+    def next_enroute_signal_point(self):    # call a point instance from signal instance
+        if self.signalpoint == self.permit_track.L_point:
+            return self.permit_track.R_point
+        elif self.signalpoint == self.permit_track.R_point:
+            return self.permit_track.L_point
+
+    @property
+    def permit_track_exit_signal(self):
+        if self.signalpoint == self.permit_track.L_point:
+            return self.next_enroute_signal_point.entry_signal_port[self.permit_track.L_point_port]
+        elif self.signalpoint == self.permit_track.R_point:
+            return self.next_enroute_signal_point.entry_signal_port[self.permit_track.R_point_port]
 
     def clear(self, route):
         pass
@@ -91,31 +128,26 @@ class Signal(Observable, Observer):
     def close(self, route):
         pass
 
+    def change_color_to(self, color, isNotified=True):
+        new_aspect = Aspect(color)
+        print("\t {} signal changed from {} to {}".format(self.port_idx, self.aspect.color, color))
+        self.aspect = new_aspect
+        if isNotified:
+            self.listener_updates(obj=self.aspect)
+
 class AutoSignal(Signal):
-    def __init__(self, port_idx, MP=None):
-        super().__init__(port_idx, MP)
-        if (port_idx % 2) == 0:
-            self.facing_direction = 'L'
-        else:
-            self.facing_direction = 'R'
-        self.aspect = Aspect('g')
+    def __init__(self, port_idx, signalpoint, MP=None):
+        super().__init__(port_idx, signalpoint, MP)
         self.type = 'abs'
     
     def __repr__(self):
         return 'AutoSignal of {}, port: {}'.format(self.signalpoint, self.port_idx)
-
-    @property
-    def tracks_to_enter(self):
-        _tracks_to_enter = []
-        for enter_r in self.signalpoint._current_routes:
-            _tracks_to_enter.append(self.signalpoint.port_track[r[1]])
 
     def clear(self, port):
         pass
 
     def close(self, port):
         pass
-
 
     def update(self, observable, update_message):
         assert observable.type in ['abs','home','block','bigblock']
@@ -137,11 +169,9 @@ class AutoSignal(Signal):
                 self.change_color_to('y', True)                            # observer:            -> g
 
 class HomeSignal(Signal):
-    def __init__(self, port_idx, MP=None):
-        super().__init__(port_idx)
-        self.out_ports = []
+    def __init__(self, port_idx, signalpoint, MP=None):
+        super().__init__(port_idx, signalpoint, MP)
         self.signalpoint = None
-        self.aspect = Aspect('r')
         self.type = 'home'
     
     def __repr__(self):
@@ -175,58 +205,57 @@ class AutoPoint(Observable, Observer):
         self.idx = idx
         self.type = 'at'
         self.ports = [0,1]
+        self.available_routes_p2p = {0:[1], 1:[0]}          # define legal routes
+        self.non_mutex_routes = {}
+        self.ban_routes_port = {}
+        self.all_valid_routes = [(0,1),(1,0)]
+
+        self._current_routes = []
+        self.neighbors = []
+        self.port_track = {}
+        
         # build up signals
-        self.entry_signal_port = {0:AutoSignal(0, MP=self.MP), 1:AutoSignal(1, MP=self.MP)}
-        # define legal routes
-        self.available_routes_p2p = {0:[1], 1:[0]}
-        self.non_mutex_routes = {(0,1):[(1,0)], (1,0):[(0,1)]}
+        self.entry_signal_port = {0:AutoSignal(0, self, MP=self.MP), 1:AutoSignal(1, self, MP=self.MP)}
         assert len(self.entry_signal_port) == 2
-        self.port_track = defaultdict(int)
+        
         # add the ownership of signals
         for _, v in self.entry_signal_port.items():
             v.signalpoint = self
-        self.neighbors = []
-        self._current_routes = []
-
+        
     def __repr__(self):
         return 'AutoPoint{}'.format(self.idx)
-
-class ControlPoint(AutoPoint):
-    def __init__(self, idx, ports, MP=None, ban_routes_port=defaultdict(list), non_mutex_routes=defaultdict(list)):
-        super().__init__(idx, MP)
-        self.type = 'cp'
-        self.ports = ports
-        self.non_mutex_routes = non_mutex_routes
-        self.ban_routes_port = ban_routes_port
-
-        self.available_routes_p2p = defaultdict(list)   # available options for routes, dict[port] = list(options)
-        for i in self.ports:
-            for j in self.ports:
-                if j not in self.ban_routes_port.get(i, []) and j != i:
-                    self.available_routes_p2p[i].append(j)
-        
-        self.entry_signal_port = defaultdict(list)      # build up signals
-        for i in self.ports:
-            entry_signal_port = HomeSignal(i)
-            entry_signal_port.out_ports.extend(self.available_routes_p2p[i])            
-            self.entry_signal_port[i] = entry_signal_port
-
-        self.all_valid_routes = []                      # available options for routes, list of routes
-        for p, plist in self.available_routes_p2p.items():
-            for rp in plist:
-                if (p, rp) not in self.all_valid_routes:
-                    self.all_valid_routes.append((p,rp))
-                if (rp, p) not in self.all_valid_routes:
-                    self.all_valid_routes.append((rp,p))
-
-        for _, v in self.entry_signal_port.items():     # add the ownership of signals
-            v.signalpoint = self
     
-        self._current_routes = []
+    @property
+    def current_routes(self):
+        for r1,r2 in permutations(self._current_routes,2):
+            assert r2 not in self.mutex_routes[r1]
+            assert r1[1] not in self.ban_routes_port[r1[0]] and r2[1] not in self.ban_routes_port[r2[0]]
+        return self._current_routes
 
-    def __repr__(self):
-        return 'ControlPoint{}'.format(self.idx)
+    @current_routes.setter
+    def current_routes(self, new_route_list):
+        assert isinstance(new_route_list, list)
+        for i in new_route_list:
+            assert i in self.all_valid_routes
+        self._current_routes = new_route_list
 
+    @property
+    def current_route_port(self):
+        _current_route_port = {}
+        for r in self.current_routes:
+            _current_route_port[r[0]] = r
+        return _current_route_port
+
+    @property
+    def mutex_routes(self):
+        '''mutex routes DO NOT contain banned routes'''
+        _mutex_routes = defaultdict(list)
+        for r, nmrl in self.non_mutex_routes.items():
+            for vr in self.all_valid_routes:
+                if vr not in nmrl:
+                    _mutex_routes[r].append(vr)
+        return _mutex_routes
+    
     @property
     def current_invalid_routes(self):
         _current_invalid_routes = []
@@ -244,47 +273,103 @@ class ControlPoint(AutoPoint):
                     _current_invalid_routes.append(vr)
         return _current_invalid_routes
 
-    @property
-    def current_routes(self):
-        return self._current_routes
+class ControlPoint(AutoPoint):
+    def __init__(self, idx, ports, MP=None, ban_routes_port=defaultdict(list), non_mutex_routes=defaultdict(list)):
+        super().__init__(idx, MP)
+        self.type = 'cp'
+        self.ports = ports
+        self.ban_routes_port = ban_routes_port
+        self.non_mutex_routes = non_mutex_routes
+        self.port_bigblock = {}
+        self.available_routes_p2p = defaultdict(list)   # available options for routes, dict[port] = list(options)
+        for i in self.ports:
+            for j in self.ports:
+                if j not in self.ban_routes_port.get(i, []) and j != i:
+                    self.available_routes_p2p[i].append(j)
+        
+        self.entry_signal_port = {}      # build up signals
+        for i in self.ports:
+            self.entry_signal_port[i] = HomeSignal(i, self, MP)
+
+        self.all_valid_routes = []                      # available options for routes, list of routes
+        for p, plist in self.available_routes_p2p.items():
+            for rp in plist:
+                if (p, rp) not in self.all_valid_routes:
+                    self.all_valid_routes.append((p,rp))
+                if (rp, p) not in self.all_valid_routes:
+                    self.all_valid_routes.append((rp,p))
+
+        for _, v in self.entry_signal_port.items():     # add the ownership of signals
+            v.signalpoint = self
+    
+    def __repr__(self):
+        return 'ControlPoint{}'.format(self.idx)
+
 
     def open_route(self, route):
         assert len(route) == 2
         assert isinstance(route, tuple)
-        if route in self._current_routes:       # do nothing when trying to open an existing route
+        if route in self.current_routes:       # do nothing when trying to open an existing route
             raise ValueError('route for {} already opened'.format(self))
-        if route not in self._current_routes:   
+        if route not in self.current_routes:   
             if route not in self.all_valid_routes:
                 raise ValueError('illegal route for {}: banned or non-existing routes'.format(self))
             if route in self.all_valid_routes:
                 if route in self.current_invalid_routes:
                     conflict_routes = []
-                    for cr in self._current_routes:
+                    for cr in self.current_routes:
                         if route not in self.non_mutex_routes[cr]:
                             conflict_routes.append(cr)
                     raise ValueError('illegal route for {}: conflicting with routes: {}'.format(self, conflict_routes))
                 if route not in self.current_invalid_routes:
-                    for cr in self._current_routes:
+                    for cr in self.current_routes:
                         if cr not in self.non_mutex_routes:
                             self.close_route(cr)
                             print('conflicting route {} closed because {} is to open'.format(cr,route))
                     print('route {} is opened'.format(route))
-                    self._current_routes.append(route)
+                    self.current_routes.append(route)
+                    # ControlPoint port traffic direction: route[0] -> route[1]
+                    # BigBlock traffic direction: flip(route[0]) and flip(route[1])
+                    self.port_bigblock[route[0]].traffic_direction = route[0]   
+                    self.port_bigblock[route[1]].traffic_direction = route[1]
+                    self.update_autopoints(route)
                     self.listener_updates(obj=('cleared', route))
-                    self.update_signal(self._current_routes)
 
-    def close_route(self, route):
-        assert route in self._current_routes
-        self.entry_signal_port[route[0]].close(route)
-        self._current_routes.remove(route)
-        self.listener_updates(obj=('closed', route))
-        self.update_signal(self._current_routes)
+    def close_route(self, route=None):
+        if route:
+            assert route in self._current_routes
+            self.entry_signal_port[route[0]].close(route)
+            self.current_routes.remove(route)
+            self.listener_updates(obj=('closed', route))
+        else:
+            self._current_routes = []
+
+    def update_autopoints(self, route):
+        for t in self.port_bigblock[route[0]].tracks:
+            if isinstance(t.L_point, AutoPoint):
+                t.L_point.current_routes = [t.traffic_direction]
+            if isinstance(t.R_point, AutoPoint):
+                t.R_point.current_routes = [t.traffic_direction]
+        for t in self.port_bigblock[route[1]].tracks:
+            if isinstance(t.L_point, AutoPoint):
+                t.L_point.current_routes = [t.traffic_direction]
+            if isinstance(t.R_point, AutoPoint):
+                t.R_point.current_routes = [t.traffic_direction]
 
     def update_signal(self, all_routes):
-        pass
+        '''update the signals in a ControlPoint according to current routes'''
+        for (p1, p2) in self.all_valid_routes:
+            self.entry_signal_port[p1].close()
+            self.entry_signal_port[p2].close()
+        for (p1, p2) in self.current_routes:
+            self.entry_signal_port[p2].close()
+            self.entry_signal_port[p1].clear()
+            
+            
+        
     # ------------------------------------------------------------------------- #
     # ------------------------------------------------------------------------- #
-
+    
     def open_route_old(self, direction, track_idx, color):
         # 打开cp中的某个方向某条通路，打开一侧的某个灯，反向的变红
         if direction == 'R' or direction == 'L':

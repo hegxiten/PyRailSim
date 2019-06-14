@@ -4,9 +4,6 @@ from observe import Observable, Observer
 import networkx as nx
 
 class Track(Observable):
-    '''
-    现在的问题是networkx的edge与track对象绑定的不够好，node和Autopoint对象已经可以实现完美绑定。需要想想办法。
-    '''
     def __init__(self, L_point, L_point_port, R_point, R_point_port, edge_key=0, length=5, allow_sp=30):    # 30 as mph
         super().__init__()
         self._train = []
@@ -14,7 +11,7 @@ class Track(Observable):
         self.type = 'track'
         self.length = length
         self.L_point, self.R_point = L_point, R_point
-        self.entry_port_L, self.entry_port_R = L_point_port, R_point_port
+        self.L_point_port, self.R_point_port = L_point_port, R_point_port
         self.edge_key = edge_key
         self.is_Occupied = False
         self.allow_sp = allow_sp
@@ -86,10 +83,20 @@ class BigBlock(Track):
         return self._traffic_direction
     
     @traffic_direction.setter
-    def traffic_direction(self, direction):
-        self._traffic_direction = direction
-        for t in self.tracks:
-            t.traffic_direction = direction
+    def traffic_direction(self, cp_direction_token):
+        if isinstance(cp_direction_token, int):
+            if (cp_direction_token % 2) == 0:
+                self._traffic_direction = (0, 1)
+                for t in self.tracks:
+                    t.traffic_direction = (0, 1)
+            else:
+                self._traffic_direction = (1, 0)
+                for t in self.tracks:
+                    t.traffic_direction = (1, 0)
+        else: 
+            self._traffic_direction = None
+            for t in self.tracks:
+                t.traffic_direction = None
 
 class OldBigBlock():
     def FOO():
