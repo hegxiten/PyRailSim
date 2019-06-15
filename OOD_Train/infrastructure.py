@@ -1,4 +1,4 @@
-from signaling import AutoSignal, HomeSignal
+from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 from observe import Observable, Observer
 
 import networkx as nx
@@ -13,9 +13,8 @@ class Track(Observable):
         self.L_point, self.R_point = L_point, R_point
         self.L_point_port, self.R_point_port = L_point_port, R_point_port
         self.edge_key = edge_key
-        self.is_Occupied = False
         self.allow_sp = allow_sp
-        self.track_ports = {L_point:L_point_port, R_point:R_point_port}   
+        self.port_by_sigpoint = {L_point:L_point_port, R_point:R_point_port}   
         self.add_observer(L_point)
         self.add_observer(R_point)
 
@@ -31,6 +30,10 @@ class Track(Observable):
         return self._train
 
     @property
+    def is_Occupied(self):
+        return False if not self.train else True
+
+    @property
     def bigblock(self):
         return self.__bigblock
 
@@ -41,12 +44,14 @@ class Track(Observable):
 
     @property
     def traffic_direction(self):
-        return self._traffic_direction
+        assert self.__bigblock.traffic_direction in [(1,0), (0,1), None]
+        return self.__bigblock.traffic_direction
 
-    @traffic_direction.setter
-    def traffic_direction(self, direction):
-        assert direction == self.__bigblock.traffic_direction
-        self._traffic_direction = direction
+    def update_route_of_connected_autopoints(self):
+        _all_sigpoints = self.port_by_sigpoint.keys()
+        for p in _all_sigpoints:
+            if isinstance(p, AutoPoint):
+                p.current_routes = [(self.traffic_direction[1], self.traffic_direction[0])]
 
     def let_in(self, train):
         assert self.is_Occupied == False
@@ -68,7 +73,7 @@ class BigBlock(Track):
         self.type = 'bigblock'
         self._traffic_direction = None
         self.tracks = []
-        self.track_ports = {L_cp:L_cp_port, R_cp:R_cp_port}   
+        self.port_by_sigpoint = {L_cp:L_cp_port, R_cp:R_cp_port}   
         self.length = self.R_point.MP - self.L_point.MP 
         self.MP = (self.L_point.MP, self.R_point.MP)
     
@@ -83,20 +88,12 @@ class BigBlock(Track):
         return self._traffic_direction
     
     @traffic_direction.setter
-    def traffic_direction(self, cp_direction_token):
-        if isinstance(cp_direction_token, int):
-            if (cp_direction_token % 2) == 0:
-                self._traffic_direction = (0, 1)
-                for t in self.tracks:
-                    t.traffic_direction = (0, 1)
-            else:
-                self._traffic_direction = (1, 0)
-                for t in self.tracks:
-                    t.traffic_direction = (1, 0)
+    def traffic_direction(self, direction_token):
+        if isinstance(direction_token, tuple):
+            assert len(direction_token) == 2
+            self._traffic_direction = direction_token
         else: 
             self._traffic_direction = None
-            for t in self.tracks:
-                t.traffic_direction = None
 
 class OldBigBlock():
     def FOO():

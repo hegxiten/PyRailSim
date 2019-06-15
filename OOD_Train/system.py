@@ -81,11 +81,11 @@ class System():
         _node = {   0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
                     1:AutoPoint(1), \
                     2:AutoPoint(2), \
-                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes_port={1:[3],3:[1]}), \
-                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes_port={0:[2],2:[0]}), \
+                    3:ControlPoint(idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \
+                    4:ControlPoint(idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \
                     5:AutoPoint(5), \
-                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes_port={1:[3],3:[1]}), \
-                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes_port={0:[2],2:[0]}), \
+                    6:ControlPoint(idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \
+                    7:ControlPoint(idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \
                     8:AutoPoint(8), \
                     9:AutoPoint(9), \
                     10:ControlPoint(idx=10, ports=[0,1])}       
@@ -110,10 +110,10 @@ class System():
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same 
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
-            t.L_point.port_track[t.L_point_port] = t.R_point.port_track[t.R_point_port] = t
+            t.L_point.track_by_port[t.L_point_port] = t.R_point.track_by_port[t.R_point_port] = t
 
         for i in G.nodes():     # register the neighbor nodes as observers to each node
-            i.neighbors.extend([n for n in G.neighbors(i)])              
+            i.neighbor_nodes.extend([n for n in G.neighbors(i)])              
             for n in G.neighbors(i):
                 i.add_observer(n)
         return G
@@ -168,7 +168,7 @@ class System():
                                             v, F[u][v][k]['instance'].R_point_port,\
                                             edge_key=k, length=F[u][v][k]['instance'].length, \
                                             raw_graph=G, cp_graph=F)
-            u.port_bigblock[F[u][v][k]['instance'].L_point_port] = v.port_bigblock[F[u][v][k]['instance'].R_point_port] = big_block_instance
+            u.bigblock_by_port[F[u][v][k]['instance'].L_point_port] = v.bigblock_by_port[F[u][v][k]['instance'].R_point_port] = big_block_instance
 
             for (n, m) in big_block_edges:
                 if G[n][m][k]['instance'] not in big_block_instance.tracks:
