@@ -1,7 +1,8 @@
 import random
 import numpy as np
 from datetime import datetime, timedelta
-from signaling import Signal
+from infrastructure import Track, Block, BigBlock
+from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 class Train():
     def __init__(self, idx, rank, system, init_time, curr_track, max_sp, max_acc):
@@ -18,7 +19,6 @@ class Train():
         self.system = system
         self.blk_interval = system.block_intervals
         self.time_pos_list = [[init_time, self.blk_interval[0][0]]]
-
 
     def __lt__(self, other):
         if self.curr_pos > other.curr_pos:
@@ -116,7 +116,7 @@ class Train():
             self.proceed(self.system)
         # If the next block has no available tracks 
         # the train will stop at end of current block.
-        elif (not self.system.blocks[self.curr_blk+1].has_available_track()): 
+        elif (not self.system.blocks[self.curr_blk+1].is_Occupied()): 
             self.stop_at_block_end(self.curr_blk)
         # If or there is a dos at the end of current block
         # the train will stop at end of current block.
@@ -129,7 +129,7 @@ class Train():
             and self.max_speed < self.system.trains[self.rank + 1].max_speed\
             and self.system.trains[self.rank + 1].curr_pos >=\
                 self.system.block_intervals[self.system.trains[self.rank].curr_blk - 1][0]\
-            and self.system.blocks[self.curr_blk].has_available_track():
+            and self.system.blocks[self.curr_blk].is_Occupied():
                 self.stop_at_block_end(self.curr_blk)
         # If the train will enter the next block in next refresh time,
         # update the system info and the train info.
@@ -239,7 +239,7 @@ class Train():
                 self.curr_acc = -self.acc
             delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
             if self.curr_pos + delta_s > self.system.block_intervals[self.curr_blk][1]:
-                if self.system.blocks[self.curr_blk + 1].has_available_track():
+                if self.system.blocks[self.curr_blk + 1].is_Occupied():
                     next_block_ava_track = self.system.blocks[self.curr_blk + 1].find_available_track()
                     self.leave_block(self.curr_blk)
                     self.curr_blk += 1
@@ -268,7 +268,7 @@ class Train():
             # print('7')
             # print('train',self.train_idx,self.rank,self.curr_blk)
             #===================================================================
-            if self.system.blocks[self.curr_blk + 1].has_available_track():
+            if self.system.blocks[self.curr_blk + 1].is_Occupied():
                 next_block_ava_track = self.system.blocks[self.curr_blk + 1].find_available_track()
             self.leave_block(self.curr_blk)
             self.enter_block(self.curr_blk+1, next_block_ava_track)
@@ -295,7 +295,7 @@ class Train():
         Determined the train should stop or not because of the next block has a train.
         @return: True or False
         '''
-        return self.is_leaving_block(delta_s) and (not self.system.blocks[self.curr_blk+1].has_available_track())
+        return self.is_leaving_block(delta_s) and (not self.system.blocks[self.curr_blk+1].is_Occupied())
 
     def is_normal_proceed(self, delta_s):
         '''
@@ -326,7 +326,7 @@ class Train():
         '''
         return self.rank < self.system.train_num - 1 and self.max_speed < self.system.trains[self.rank + 1].max_speed\
             and ((self.system.trains[self.rank + 1].curr_blk == self.curr_blk - 1\
-                and self.system.blocks[self.curr_blk].has_available_track())\
+                and self.system.blocks[self.curr_blk].is_Occupied())\
             or self.system.trains[self.rank + 1].curr_blk == self.curr_blk)
 
     def cal_acc(self):

@@ -71,6 +71,14 @@ class System():
         #        right = left + _blk_length_list[i]
         #        self.block_intervals.append([left, right]) 
         #------------deprecated------------#
+        self.G = self.graph_constructor
+        self.F = self.graph_extractor(self.G)
+
+        self.signal_points = list(self.G.nodes())
+        self.control_points = list(self.F.nodes())
+        self.tracks = [data['instance'] for (u,v,data) in list(self.G.edges(data=True))]
+        self.bigblocks = [data['instance'] for (u,v,data) in list(self.F.edges(data=True))]
+        
 
     def graph_constructor(self):      
         '''Initialize the MultiGraph object with railroad components 
@@ -181,7 +189,118 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
+    def generate_train(self, sigpoint, port):
+        '''
+        generate train only. Not containing train generation logic (when and where to generate a train)
+        '''
+        new_train = Train(idx=self.train_num, 
+                          rank=self.train_num, 
+                          system=self, 
+                          init_time=self.sys_time, 
+                          curr_track=sigpoint.track_by_port[port], 
+                          max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                          max_acc=self.acc_container[self.train_num % len(self.acc_container)])
+        self.trains.append(new_train)
+        self.train_num += 1
+        self.last_train_init_time = self.sys_time
+        sigpoint.track_by_port[port].train.append(new_train)
+
+    def update_blk_right(self, i):
+        '''
+        logics of overpassing, manipulating controlpoints
+        TODO: translate the operations below into ControlPoint manipulations'''
+        # 只管变化（若满足条件更新CP route，否则无操作）
+        # for track in self.blocks[i].tracks:
+        #     if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
+        #         track.right_signal.update_signal('r')
+        #     elif i + 1 < len(self.blocks) and not self.blocks[i + 1].is_Occupied():
+        #         track.right_signal.update_signal('r')
+        #     elif i + 2 < len(self.blocks) and not self.blocks[i + 2].is_Occupied():
+        #         track.right_signal.update_signal('yy')
+        #     elif i + 3 < len(self.blocks) and not self.blocks[i + 3].is_Occupied():
+        #         track.right_signal.update_signal('y')
+        #     else:
+        #         track.right_signal.update_signal('g')
+
+        # 如果track数量超过1才考虑让车情况。（第一个blk暂不考虑为多track）
+        if i > 0 and len(self.blocks[i].tracks) > 1 and self.blocks[i].has_train():
+            # 让车情况下的变灯。
+            last_blk_has_train = False
+            if not self.blocks[i - 1].is_Occupied(): #后一个blk有车
+                last_blk_has_train = True
+
+            ava_track = -1
+            prev_train_spd = 0
+
+            if last_blk_has_train and self.blocks[i].is_Occupied():
+                ava_track = self.blocks[i].find_available_track()
+                prev_train_spd = self.blocks[i - 1].tracks[0].train.max_speed
+            
+            # 找到速度最快火车的track
+            max_train_track = ava_track
+            top_speed = prev_train_spd
+            if not self.blocks[i].is_Occupied():
+                top_speed = -1
+            fastest_train_track = 0
+            fastest_speed = -1
+            for j, track in enumerate(self.blocks[i].tracks):
+                if track.train != None and track.train.max_speed > top_speed:
+                    max_train_track = j
+                    top_speed = track.train.max_speed
+                if track.train != None and track.train.max_speed > fastest_speed:
+                    fastest_train_track = j
+                    fastest_speed = track.train.max_speed
+            if max_train_track != fastest_train_track: #说明最快车是后一个block的车。
+                fastest_train = self.blocks[i].tracks[fastest_train_track].train
+                target_spd = 0
+                fastest_train_brk_dis = (fastest_train.curr_speed ** 2 - target_spd ** 2) / fastest_train.acc
+                dis_to_blk_end = self.block_intervals[i][1] - fastest_train.curr_pos
+                if fastest_train_brk_dis > dis_to_blk_end:  #如果刹车距离大于
+                    max_train_track = fastest_train_track
+
+            for j, track in enumerate(self.blocks[i].tracks):
+                # if max_train_track >= 0:
+                #     print(max_train_track)
+                if j != max_train_track:
+                    if j == max_train_track:
+                        print(j)
+                    track.right_signal.update_signal('r')
+    
+    def refresh(self):
+        self.update_track_signal_color()    # 每个刷新都通过本方法监控让车逻辑（CP变更逻辑）
+        headway = self.headway#np.random.normal(exp_buffer, var_buffer)
+        # If the time slot between now and the time of last train generation
+        # is bigger than headway, it will generate a new train at start point.
+        
+        if self.train_num == 0:             # 第一辆车进入系统，TODO: 判断是否还需要段代码
+            track_idx = self.blocks[0].find_available_track()
+            self.generate_train(track_idx)
+            
+        if self.sys_time - self.last_train_init_time >= headway and self.blocks[0].is_Occupied():
+            track_idx = self.blocks[0].find_available_track()
+            self.generate_train(track_idx)  # 生成列车的逻辑在这里，双向跑不通的原因就是列车源源不断的进入系统，系统没有保护逻辑
+
+        for t in self.trains:
+            t.update_acc()                  # 每列列车在这里进行时序状态的更新
+        self.trains.sort()                  # 更新完每列列车后进行排序，为调度逻辑做准备
+        for i, tr in enumerate(self.trains):
+            tr.rank = i
+        self.sys_time += self.refresh_time
+
+    def update_track_signal_color(self):
+        '''
+        TODO: confirm if no longer needed or not
+        '''
+        for i in range(len(self.blocks)):
+            self.update_blk_right(i)        # 每次只更新右侧信号，是因为仅考虑从左到右的车流。
+            
     def register(self, blocks):
+        '''
+        TODO: confirm if no longer needed or not
+        '''
+        pass
+        return
+        # 本段代码及以下所有方法应该都用不上了。（除了self.__name__ = '__main__' 的测试代码）
         # 将临近siding的blk的左灯或者右灯变为homesignal
         multi_track_blk = []
         for i, blk in enumerate(blocks):
@@ -285,100 +404,6 @@ class System():
         self.blocks[4].tracks[0].right_signal.change_color_to('r')
     
 
-    def generate_train(self, track_idx):
-        new_train = Train(self.train_num, 
-                          self.train_num, 
-                          self, 
-                          self.sys_time, 
-                          track_idx, 
-                          self.sp_container[self.train_num % len(self.sp_container)], 
-                          self.acc_container[self.train_num % len(self.acc_container)])
-        self.trains.append(new_train)
-        self.train_num += 1
-        self.last_train_init_time = self.sys_time
-        self.blocks[0].occupied_track(track_idx, new_train)
-
-    def update_blk_right(self, i):
-        for track in self.blocks[i].tracks:
-            if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
-                track.right_signal.update_signal('r')
-            elif i + 1 < len(self.blocks) and not self.blocks[i + 1].has_available_track():
-                track.right_signal.update_signal('r')
-            elif i + 2 < len(self.blocks) and not self.blocks[i + 2].has_available_track():
-                track.right_signal.update_signal('yy')
-            elif i + 3 < len(self.blocks) and not self.blocks[i + 3].has_available_track():
-                track.right_signal.update_signal('y')
-            else:
-                track.right_signal.update_signal('g')
-
-        # 如果track数量超过1才考虑让车情况。（第一个blk暂不考虑为多track）
-        if i > 0 and len(self.blocks[i].tracks) > 1 and self.blocks[i].has_train():
-            # 让车情况下的变灯。
-            last_blk_has_train = False
-            if not self.blocks[i - 1].has_available_track(): #后一个blk有车
-                last_blk_has_train = True
-
-            ava_track = -1
-            prev_train_spd = 0
-
-            if last_blk_has_train and self.blocks[i].has_available_track():
-                ava_track = self.blocks[i].find_available_track()
-                prev_train_spd = self.blocks[i - 1].tracks[0].train.max_speed
-            
-            # 找到速度最快火车的track
-            max_train_track = ava_track
-            top_speed = prev_train_spd
-            if not self.blocks[i].has_available_track():
-                top_speed = -1
-            fastest_train_track = 0
-            fastest_speed = -1
-            for j, track in enumerate(self.blocks[i].tracks):
-                if track.train != None and track.train.max_speed > top_speed:
-                    max_train_track = j
-                    top_speed = track.train.max_speed
-                if track.train != None and track.train.max_speed > fastest_speed:
-                    fastest_train_track = j
-                    fastest_speed = track.train.max_speed
-            if max_train_track != fastest_train_track: #说明最快车是后一个block的车。
-                fastest_train = self.blocks[i].tracks[fastest_train_track].train
-                target_spd = 0
-                fastest_train_brk_dis = (fastest_train.curr_speed ** 2 - target_spd ** 2) / fastest_train.acc
-                dis_to_blk_end = self.block_intervals[i][1] - fastest_train.curr_pos
-                if fastest_train_brk_dis > dis_to_blk_end:  #如果刹车距离大于
-                    max_train_track = fastest_train_track
-
-            for j, track in enumerate(self.blocks[i].tracks):
-                # if max_train_track >= 0:
-                #     print(max_train_track)
-                if j != max_train_track:
-                    if j == max_train_track:
-                        print(j)
-                    track.right_signal.update_signal('r')
-            
-    def update_track_signal_color(self):
-        for i in range(len(self.blocks)):
-            self.update_blk_right(i)
-            
-    def refresh(self):
-        self.update_track_signal_color()
-        headway = self.headway#np.random.normal(exp_buffer, var_buffer)
-        # If the time slot between now and the time of last train generation
-        # is bigger than headway, it will generate a new train at start point.
-        if self.train_num == 0:
-            track_idx = self.blocks[0].find_available_track()
-            self.generate_train(track_idx)
-            
-        if self.sys_time - self.last_train_init_time >= headway and self.blocks[0].has_available_track():
-            track_idx = self.blocks[0].find_available_track()
-            self.generate_train(track_idx)
-
-        for t in self.trains:
-            t.update_acc()
-        self.trains.sort()
-        for i, tr in enumerate(self.trains):
-            tr.rank = i
-        self.sys_time += self.refresh_time
-        
 if __name__ =='__main__':
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
