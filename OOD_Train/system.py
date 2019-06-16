@@ -45,12 +45,10 @@ class System():
         self.big_block_list = []
         # list of control points
         self.cp_list = []
-        self.G_origin = self.graph_constructor()
-        self.G_skeleton = self.graph_extractor(self.G_origin)
         # graph_constructor initializes self.big_block_list & self.cp and create graph instance
-        self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
-        self.register(self.blocks)
-        
+        # self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
+        # self.register(self.blocks)
+        self.blocks = []
         # register method links the observation relationships
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
@@ -58,8 +56,10 @@ class System():
         self.last_train_init_time = self.sys_time
         self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
         self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
+        self.dcc_container = args[2]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
         self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')
-        
+        self.G_origin = self.graph_constructor()
+        self.G_skeleton = self.graph_extractor(self.G_origin)
         #------------deprecated------------#
         #self.block_intervals = []
         ## interval is the two-element array containing mile posts of boundaries, generated below in the loops
@@ -71,13 +71,11 @@ class System():
         #        right = left + _blk_length_list[i]
         #        self.block_intervals.append([left, right]) 
         #------------deprecated------------#
-        self.G = self.graph_constructor
-        self.F = self.graph_extractor(self.G)
 
-        self.signal_points = list(self.G.nodes())
-        self.control_points = list(self.F.nodes())
-        self.tracks = [data['instance'] for (u,v,data) in list(self.G.edges(data=True))]
-        self.bigblocks = [data['instance'] for (u,v,data) in list(self.F.edges(data=True))]
+        self.signal_points = list(self.G_origin.nodes())
+        self.control_points = list(self.G_skeleton.nodes())
+        self.tracks = [data['instance'] for (u,v,data) in list(self.G_origin.edges(data=True))]
+        self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
         
 
     def graph_constructor(self):      
@@ -189,21 +187,23 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
-    def generate_train(self, sigpoint, port):
+    def generate_train(self, init_direction, port):
         '''
         generate train only. Not containing train generation logic (when and where to generate a train)
         '''
+        assert len(init_direction) == 2 and isinstance(init_direction, tuple)
         new_train = Train(idx=self.train_num, 
                           rank=self.train_num, 
                           system=self, 
                           init_time=self.sys_time, 
-                          curr_track=sigpoint.track_by_port[port], 
+                          init_direction=init_direction, 
                           max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
-                          max_acc=self.acc_container[self.train_num % len(self.acc_container)])
+                          max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                          max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time
-        sigpoint.track_by_port[port].train.append(new_train)
+        new_train.curr_track.train.append(new_train)
 
     def update_blk_right(self, i):
         '''
@@ -409,8 +409,9 @@ if __name__ =='__main__':
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
     sp_container = [random.uniform(0.01, 0.02) for i in range(20)]
     acc_container = [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
+    dcc_container = [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
     headway = 200 * random.random() + 400
-    sys = System(sim_init_time, sp_container, acc_container,
+    sys = System(sim_init_time, sp_container, acc_container, dcc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
                  tracks=[1,1,1,4,1,1,3,1,1,1], 
@@ -458,4 +459,3 @@ if __name__ =='__main__':
     # print("left light color:  {}".format(left_light))
     # print("right light color: {}".format(right_light))
     
-print('a')

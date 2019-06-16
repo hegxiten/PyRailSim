@@ -44,24 +44,40 @@ class Track(Observable):
 
     @property
     def traffic_direction(self):
-        assert self.__bigblock.traffic_direction in [(1,0), (0,1), None]
-        return self.__bigblock.traffic_direction
+        return self._traffic_direction
+
+    @traffic_direction.setter
+    def traffic_direction(self, new_direction):
+        if new_direction:
+            for (p, pport) in new_direction:
+                assert p in [self.L_point, self.R_point]
+                assert pport in [self.L_point_port, self.R_point_port]
+            self._traffic_direction = new_direction
+        else:
+            self._traffic_direction = None
+        
 
     def has_train(self):
         return True if len(self.train) != 0 else False
 
     def find_available_track(self):
+        pass
+        return
         assert self.is_Occupied()
         for idx, tk in enumerate(self.tracks):
             if not tk.is_Occupied:
                 return idx
 
     def occupied_track(self, idx, train):
+        pass
+        return
         train.curr_blk = self.index
         train.curr_track = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
+        pass
+        return
         train = self.tracks[idx].train
         train.curr_blk = -1
         train.curr_track = 0
@@ -106,12 +122,20 @@ class BigBlock(Track):
         return self._traffic_direction
     
     @traffic_direction.setter
-    def traffic_direction(self, direction_token):
-        if isinstance(direction_token, tuple):
-            assert len(direction_token) == 2
-            self._traffic_direction = direction_token
+    def traffic_direction(self, new_direction):
+        if isinstance(new_direction, tuple):
+            assert len(new_direction) == 2
+            self._traffic_direction = new_direction
+            (start_point, start_port) = new_direction[0]
+            for i in range(len(self.tracks)-1):
+                (next_point, next_port) = (self.tracks[i].L_point, self.tracks[i].L_point_port) if start_point == self.tracks[i].R_point else (self.tracks[i].R_point, self.tracks[i].R_point_port)
+                self.tracks[i].traffic_direction = ((start_point, start_port), (next_point, next_port))
+                start_point, start_port = next_point, self.tracks[i+1].port_by_sigpoint[next_point]
+            self.tracks[-1].traffic_direction = ((start_point, start_port), new_direction[1])
         else: 
             self._traffic_direction = None
+            for t in self.tracks:
+                t.traffic_direction = None
 
 class Block(Observable):
     def __init__(self, index, length, max_sp=0.02, track_number=1):
@@ -128,29 +152,39 @@ class Block(Observable):
             self.tracks.append(Track(self.length, self.max_sp, 'abs'))
 
     def has_train(self):
+        pass
+        return
         for tr in self.tracks:
             if tr.is_Occupied:
                 return True
         return False
 
     def is_Occupied(self):
+        pass
+        return
         for tk in self.tracks:
             if not tk.is_Occupied:
                 return True
         return False
 
     def find_available_track(self):
+        pass
+        return
         assert self.is_Occupied()
         for idx, tk in enumerate(self.tracks):
             if not tk.is_Occupied:
                 return idx
 
     def occupied_track(self, idx, train):
+        pass
+        return
         train.curr_blk = self.index
         train.curr_track = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
+        pass
+        return
         train = self.tracks[idx].train
         train.curr_blk = -1
         train.curr_track = 0

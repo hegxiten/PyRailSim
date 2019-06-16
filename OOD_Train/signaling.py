@@ -11,7 +11,7 @@ class Aspect(object):
         self.route = ()
     
     def __repr__(self):
-        return 'Aspect: {}, route {}'.format(self.color, self.route)
+        return 'Aspect: {}, route {}, target speed'.format(self.color, self.route, self.target_speed)
 
     def __eq__(self,other):
         return self.color == other.color
@@ -69,6 +69,16 @@ class Aspect(object):
         else:
             return False
 
+    @property
+    def target_speed(self):
+        if self.color == 'r':
+            return 0
+        elif self.color == 'y':
+            return 20
+        elif self.color == 'yy':
+            return 40
+        elif self.color == 'g':
+            return 72
 
 class Signal(Observable, Observer):
     def __init__(self, port_idx, sigpoint, MP=None):
@@ -236,9 +246,9 @@ class AutoPoint(Observable, Observer):
         self._current_routes = []
         for p,t in self.track_by_port.items():
             if t.traffic_direction:
-                if p == 0 and p == t.traffic_direction[1]:
+                if p == 0 and p == t.traffic_direction[1][1]:
                     self._current_routes = [(0,1)]
-                elif p == 0 and p == t.traffic_direction[0]:
+                elif p == 0 and p == t.traffic_direction[0][1]:
                     self._current_routes = [(1,0)]
         return self._current_routes
 
@@ -365,14 +375,19 @@ class ControlPoint(AutoPoint):
 
     def set_bigblock_direction_by_route(self, route):
         (x, y) = route
-        if (x % 2) == 0:
-            self.bigblock_by_port[x].traffic_direction = (1, 0)
-        else:
-            self.bigblock_by_port[x].traffic_direction = (0, 1)
-        if (y % 2) == 0:
-            self.bigblock_by_port[y].traffic_direction = (0, 1)
-        else:
-            self.bigblock_by_port[y].traffic_direction = (1, 0)
+        _in_port, _in_bblk = x, self.bigblock_by_port[x]
+        _out_port, _out_bblk = y, self.bigblock_by_port[y]
+        (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
+            (_in_bblk.L_point, _in_bblk.L_point_port) \
+                if self == _in_bblk.R_point \
+                    else (_in_bblk.R_point, _in_bblk.R_point_port)
+        (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
+            (_out_bblk.L_point, _out_bblk.L_point_port) \
+                if self == _out_bblk.R_point \
+                    else (_out_bblk.R_point, _out_bblk.R_point_port)
+        
+        _in_bblk.traffic_direction = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
+        _out_bblk.traffic_direction = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
 
     def cancel_bigblock_direction_by_route(self, route):
         if route:
