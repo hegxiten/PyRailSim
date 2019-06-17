@@ -42,13 +42,9 @@ class System():
         self.tracks = kwargs.get('tracks')      # self.track list determines the current topology
         # list of big blocks
        
-        self.big_block_list = []
         # list of control points
-        self.cp_list = []
-        # graph_constructor initializes self.big_block_list & self.cp and create graph instance
         # self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
         # self.register(self.blocks)
-        self.blocks = []
         # register method links the observation relationships
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
@@ -77,7 +73,6 @@ class System():
         self.tracks = [data['instance'] for (u,v,data) in list(self.G_origin.edges(data=True))]
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
         
-
     def graph_constructor(self):      
         '''Initialize the MultiGraph object with railroad components 
         (CP, AT as nodes, Tracks as edges)'''

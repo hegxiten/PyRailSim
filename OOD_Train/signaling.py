@@ -8,10 +8,9 @@ class Aspect(object):
     '''    
     def __init__(self, color, route=None):
         self.color = color
-        self.route = ()
     
     def __repr__(self):
-        return 'Aspect: {}, route {}, target speed'.format(self.color, self.route, self.target_speed)
+        return 'Aspect: {}, \t route {}, target speed {} mph'.format(self.color, self.route, self.target_speed*3600)
 
     def __eq__(self,other):
         return self.color == other.color
@@ -72,13 +71,13 @@ class Aspect(object):
     @property
     def target_speed(self):
         if self.color == 'r':
-            return 0
+            return 0/3600
         elif self.color == 'y':
-            return 20
+            return 20/3600
         elif self.color == 'yy':
-            return 40
+            return 40/3600
         elif self.color == 'g':
-            return 72
+            return 72/3600
 
 class Signal(Observable, Observer):
     def __init__(self, port_idx, sigpoint, MP=None):
@@ -97,9 +96,13 @@ class Signal(Observable, Observer):
         if not self.route:
             self._aspect.color = 'r'
             return self._aspect
+        elif self.route and not self.permit_track:
+            self._aspect.color = 'g'
+            return self._aspect
         elif self.permit_track.is_Occupied:
             self._aspect.color = 'r'
             return self._aspect
+        # 这下面迭代的有点多。。。。计算巨慢
         elif self.next_enroute_signal.aspect.color == 'r':
             self._aspect.color = 'y'
             return self._aspect
@@ -116,7 +119,7 @@ class Signal(Observable, Observer):
     @property
     def permit_track(self):
         assert self.route
-        return self.sigpoint.track_by_port[self.route[1]]
+        return self.sigpoint.track_by_port.get(self.route[1])
 
     @property
     def next_enroute_sigpoint(self):    # call a point instance from signal instance
@@ -132,6 +135,16 @@ class Signal(Observable, Observer):
         elif self.sigpoint == self.permit_track.R_point:
             port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
         return self.next_enroute_sigpoint.signal_by_port[port_of_next_enroute_signal]
+
+
+    @property
+    def next_enroute_sigpoint_port(self):
+        if self.sigpoint == self.permit_track.L_point:
+            port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
+        elif self.sigpoint == self.permit_track.R_point:
+            port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
+        return port_of_next_enroute_signal
+
 
     def clear(self, route):
         pass
@@ -366,37 +379,48 @@ class ControlPoint(AutoPoint):
             print('route {} for {} is closed'.format(route, self))
             self.signal_by_port[route[0]].close(route)
             self.current_routes.remove(route)
-            self.cancel_bigblock_direction_by_route(route)
+            self.cancel_bigblock_direction_by_port(route[0])
             self.listener_updates(obj=('closed', route))
         else:
-            print('all routes for {} are closed'.format(self))
+            print('all incoming routes for {} are closed'.format(self))
             self._current_routes = []
-            self.cancel_bigblock_direction_by_route(None)
+            for p in self.ports:
+                self.cancel_bigblock_direction_by_port(p)
 
     def set_bigblock_direction_by_route(self, route):
+        assert route
         (x, y) = route
-        _in_port, _in_bblk = x, self.bigblock_by_port[x]
-        _out_port, _out_bblk = y, self.bigblock_by_port[y]
-        (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
-            (_in_bblk.L_point, _in_bblk.L_point_port) \
-                if self == _in_bblk.R_point \
-                    else (_in_bblk.R_point, _in_bblk.R_point_port)
-        (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
-            (_out_bblk.L_point, _out_bblk.L_point_port) \
-                if self == _out_bblk.R_point \
-                    else (_out_bblk.R_point, _out_bblk.R_point_port)
-        
-        _in_bblk.traffic_direction = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
-        _out_bblk.traffic_direction = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+        _in_port, _in_bblk = x, self.bigblock_by_port.get(x)
+        _out_port, _out_bblk = y, self.bigblock_by_port.get(y)
+        if _in_bblk and _out_bblk:
+            (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
+                (_in_bblk.L_point, _in_bblk.L_point_port) \
+                    if self == _in_bblk.R_point \
+                        else (_in_bblk.R_point, _in_bblk.R_point_port)
+            (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
+                (_out_bblk.L_point, _out_bblk.L_point_port) \
+                    if self == _out_bblk.R_point \
+                        else (_out_bblk.R_point, _out_bblk.R_point_port)
+            _in_bblk.traffic_direction = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
+            _out_bblk.traffic_direction = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+        elif not _in_bblk and _out_bblk:
+            (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
+                (_out_bblk.L_point, _out_bblk.L_point_port) \
+                    if self == _out_bblk.R_point \
+                        else (_out_bblk.R_point, _out_bblk.R_point_port)
+            _out_bblk.traffic_direction = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+        elif _in_bblk and not _out_bblk:
+            (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
+                (_in_bblk.L_point, _in_bblk.L_point_port) \
+                    if self == _in_bblk.R_point \
+                        else (_in_bblk.R_point, _in_bblk.R_point_port)
+            _in_bblk.traffic_direction = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
 
-    def cancel_bigblock_direction_by_route(self, route):
-        if route:
-            (x, y) = route
-            self.bigblock_by_port[x].traffic_direction = None
-            self.bigblock_by_port[y].traffic_direction = None
-        else:
-            for p in self.bigblock_by_port.keys():
-                self.bigblock_by_port[p].traffic_direction = None
+
+    def cancel_bigblock_direction_by_port(self, port):
+        _in_port, _in_bblk = port, self.bigblock_by_port.get(port)
+        if _in_bblk:
+            _in_bblk.traffic_direction = None
 
     def update_signal(self, all_routes):
         pass

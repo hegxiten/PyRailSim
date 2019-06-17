@@ -8,10 +8,7 @@ class Train():
     def __init__(self, idx, rank, system, init_time, init_direction, max_sp, max_acc, max_dcc):        
         ((_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_direction
         self._curr_direction = init_direction
-        self._curr_sigpoint, self._curr_sigport = _curr_sigpoint, _prev_sigport
-        self._prev_sigpoint, self._prev_sigport = _prev_sigpoint, _prev_sigport
-        self._curr_sig = self._curr_sigpoint.signal_by_port[self._curr_sigport]
-        self._curr_MP = self._curr_sigpoint.MP
+        self._curr_MP = self.curr_sigpoint.MP
         self._curr_track = None
         self.train_idx = idx
         self.rank = rank
@@ -19,30 +16,52 @@ class Train():
         self.max_speed = max_sp
         self.max_acc = max_acc
         self.max_dcc = max_dcc
-        self._curr_acc = 0
         self._curr_speed = 0
         
         # self.blk_interval = system.block_intervals
-        self.time_pos_list = [[init_time, self.curr_MP]]        
+        self.time_pos_list = []        
         # self.status = 1
+    
+    @property
+    def stopped(self):
+        if self.curr_speed == 0 and self.curr_sig.aspect.color == 'r':
+            return True
+        else:
+            return False
+    
     @property
     def curr_MP(self):
         return self._curr_MP
 
     @curr_MP.setter
     def curr_MP(self, new_MP):
-        if self.curr_track.MP[0] < new_MP < self.curr_track.MP[1]: 
+        if self.prev_sigpoint and self.curr_sigpoint:
+            _MP_pair = (self.prev_sigpoint.MP, self.curr_sigpoint.MP)
+            if min(_MP_pair) < new_MP < max(_MP_pair): 
+                self._curr_MP = new_MP
+            elif self.curr_sig.permit_track:
+                self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
+                self._curr_MP = new_MP
+            else:
+                self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP, terminate=True)
+                self._curr_MP = self.curr_sigpoint.MP
+        elif not self.prev_sigpoint:
+            assert self.curr_sigpoint
+            self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP, initiate=True)
             self._curr_MP = new_MP
-        # 越界了怎么办？！ 在这里写方法
-        else:
-            if isinstance(self.curr_sigpoint, ControlPoint):
-                self.curr_sigpoint.close_route(self.curr_sig.route)
-            self.curr_track = self.curr_sig.permit_track
-            self._curr_MP = new_MP
-            
+        else: 
+            raise ValueError('Setting MP Failed: current MP: {}, new MP: {}, current track: {}, current aspect: {}, permit track: {}'\
+                .format(self._curr_MP, new_MP, self._curr_track, self.curr_sig.aspect, self.curr_sig.permit_track))
+        self.time_pos_list.append([self.system.sys_time + self.system.refresh_time, self._curr_MP])
+
     @property
     def curr_direction(self):
-        return self.curr_track.traffic_direction
+        return self._curr_direction
+
+    @curr_direction.setter
+    def curr_direction(self,new_direction):
+        assert isinstance(new_direction, tuple) and len(new_direction) == 2
+        self._curr_direction = new_direction
 
     @property
     def curr_track(self):
@@ -59,10 +78,43 @@ class Train():
     @property
     def curr_sigport(self):
         return self.curr_direction[1][1]
-
+    
+    @property
+    def prev_sigpoint(self):
+        return self.curr_direction[0][0]    
+    
     @property
     def curr_sig(self):
         return self.curr_sigpoint.signal_by_port[self.curr_sigport]
+
+    @property
+    def curr_acc(self):
+        if not self.stopped:
+            if self.curr_target_speed > self.curr_speed:
+                return self.max_acc
+            elif self.curr_target_speed == self.curr_speed:
+                return 0
+            else:
+                return -self.max_dcc
+        else:
+            return 0
+                # braking distance有可能要写到acc的setter里 
+
+    @property
+    def curr_speed(self):
+        return self._curr_speed
+
+    @curr_speed.setter
+    def curr_speed(self, new_speed):
+        _old_speed = self._curr_speed
+        if new_speed * _old_speed < 0:  
+            self._curr_speed = 0
+        else: 
+            self._curr_speed = new_speed
+        # 这里判断braking distance有可能要写到acc里
+        if self.curr_brake_distance > self.curr_dis_to_curr_sig:
+            self._curr_speed = _old_speed
+        assert self.curr_brake_distance <= self.curr_dis_to_curr_sig
 
     @property
     def curr_target_speed(self):
@@ -73,37 +125,15 @@ class Train():
         if abs(self.curr_target_speed) < abs(self.curr_speed):
             return abs(self.curr_target_speed ** 2 - self.curr_speed ** 2) / self.curr_acc
         else:
-            return 0
+            return 0.0
 
     @property
     def curr_dis_to_curr_sig(self):
         return abs(self.curr_sigpoint.MP - self.curr_MP)
 
-    @property
-    def curr_acc(self):
-        if self.curr_target_speed > self.curr_speed:
-            return self.max_acc
-        elif self.curr_target_speed == self.curr_speed:
-            return 0
-        else:
-            return self.max_dcc
-    
-    @property
-    def curr_speed(self):
-        return self._curr_speed
-
-    @curr_speed.setter
-    def curr_speed(self, new_speed):
-        self._curr_speed = new_speed
-        assert self.curr_brake_distance < self.curr_dis_to_curr_sig
-
-    @curr_track.setter
-    def curr_track(self, new_track):
-        self._curr_track = new_track
-
     def __repr__(self):
         return 'train index {}, current direction {}'\
-            .format(self.train_idx, (self.curr_direction[0][0], self.curr_direction[1][0]))
+            .format(self.train_idx, self.curr_direction)
 
     def __lt__(self, othertrain):
         if self.curr_MP > othertrain.curr_MP:
@@ -119,6 +149,77 @@ class Train():
         #     return False
         else:
             return True
+
+    def cross_sigpoint(self, sigpoint, curr_MP, new_MP, initiate=False, terminate=False):
+        assert self.curr_sig.route in sigpoint.current_routes
+        assert min(curr_MP, new_MP) <= sigpoint.MP <= max(curr_MP, new_MP)
+        assert not self.stopped
+        if self.curr_speed != 0:
+            timestamp = self.system.sys_time + abs(curr_MP - sigpoint.MP)/abs(self.curr_speed)
+        else:
+            timestamp = self.system.sys_time
+        self.time_pos_list.append([timestamp, sigpoint.MP])
+
+        if initiate:
+            assert isinstance(sigpoint, ControlPoint)
+            assert len(self.curr_sig.permit_track.train) == 0
+            print('train {} moved into track {}'.format(self, self.curr_sig.permit_track))
+            self.curr_sig.permit_track.train.append(self)
+            self.curr_direction = ((sigpoint, self.curr_sig.route[1]), (self.curr_sig.next_enroute_sigpoint, self.curr_sig.next_enroute_sigpoint_port))
+            sigpoint.close_route(self.curr_sig.route)
+        elif terminate:
+            assert isinstance(sigpoint, ControlPoint)
+            self.curr_track.train.remove(self)
+            self.curr_direction = ((sigpoint, self.curr_sig.route[1]), (None, None))
+            sigpoint.close_route(self.curr_sig.route)
+        elif not initiate and not terminate:
+            assert len(self.curr_sig.permit_track.train) == 0
+            self.curr_sig.permit_track.train.append(self)
+            self.curr_track.train.remove(self)
+            self.curr_direction = ((sigpoint, self.curr_sig.route[1]), (self.curr_sig.next_enroute_sigpoint, self.curr_sig.next_enroute_sigpoint_port))
+            if isinstance(sigpoint, ControlPoint):
+                sigpoint.close_route(self.curr_sig.route)
+        else:
+            raise ValueError('train {} crossing signalpoint {} failed unexpectedly'\
+                .format(self, sigpoint))
+    
+    def update_acc(self):
+        if not self.stopped:
+            delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
+            self.curr_speed = self.curr_speed + self.curr_acc * self.system.refresh_time
+            self.curr_MP += delta_s
+            self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_MP])
+            # # 下一个delta_s之后，要越界且还没有减速到target speed.
+            # if self.curr_MP > self.curr_track.MP:
+            #     set new curr_track
+            #     curr_track = self.system.blocks[self.curr_track]     
+            #     # 如果当前的blk是最后一个blk  
+            #     if self.curr_track == len(self.system.blocks) - 1:
+            #         curr_track.free_track(self.curr_track)
+            #         return
+            #     if self.curr_track == -1:
+            #         self.curr_MP = self.system.block_intervals[-1][1]
+            #         return 
+            #     curr_track = curr_track.tracks[self.curr_track]
+            #     signal_color = curr_track.right_signal.color
+            #     trgt_spd = curr_track.allow_sp
+            #     next_blk = self.system.blocks[self.curr_track + 1]
+
+            #     # 如果不是红色，正常往前走delta_s, 速度变为traget speed, 并且变化curr_track, curr_track
+            #     if signal_color != 'r':
+            #         next_ava_track = next_blk.find_available_track()
+            #         self.curr_track += 1
+            #         curr_track.free_track(self.curr_track)
+            #         next_blk.occupied_track(next_ava_track, self)
+            #     # 如果信号灯为红色，立即停车，火车属性不做改变。
+            #     if signal_color == 'r':
+            #         self.curr_MP = self.system.block_intervals[self.curr_track][1]
+            #         self.curr_speed = 0
+                
+            #     if self.curr_speed > trgt_spd:
+            #         self.curr_speed = trgt_spd
+        
+        
 
     def stop(self):
         self.curr_speed = 0
@@ -412,41 +513,8 @@ class Train():
                 and self.system.blocks[self.curr_track].is_Occupied())\
             or self.system.trains[self.rank + 1].curr_track == self.curr_track)
 
-    def update_acc(self):
-        delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
-        # 更新当前速度
-        self.curr_speed += self.curr_acc * self.system.refresh_time
-        self.curr_MP += delta_s
-        # # 下一个delta_s之后，要越界且还没有减速到target speed.
-        # if self.curr_MP > self.curr_track.MP:
-        #     set new curr_track
-        #     curr_track = self.system.blocks[self.curr_track]     
-        #     # 如果当前的blk是最后一个blk  
-        #     if self.curr_track == len(self.system.blocks) - 1:
-        #         curr_track.free_track(self.curr_track)
-        #         return
-        #     if self.curr_track == -1:
-        #         self.curr_MP = self.system.block_intervals[-1][1]
-        #         return 
-        #     curr_track = curr_track.tracks[self.curr_track]
-        #     signal_color = curr_track.right_signal.color
-        #     trgt_spd = curr_track.allow_sp
-        #     next_blk = self.system.blocks[self.curr_track + 1]
-
-        #     # 如果不是红色，正常往前走delta_s, 速度变为traget speed, 并且变化curr_track, curr_track
-        #     if signal_color != 'r':
-        #         next_ava_track = next_blk.find_available_track()
-        #         self.curr_track += 1
-        #         curr_track.free_track(self.curr_track)
-        #         next_blk.occupied_track(next_ava_track, self)
-        #     # 如果信号灯为红色，立即停车，火车属性不做改变。
-        #     if signal_color == 'r':
-        #         self.curr_MP = self.system.block_intervals[self.curr_track][1]
-        #         self.curr_speed = 0
-            
-        #     if self.curr_speed > trgt_spd:
-        #         self.curr_speed = trgt_spd
-            
-        self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_MP])
+    
                 
             
+                    
+                
