@@ -72,7 +72,13 @@ class System():
         self.control_points = list(self.G_skeleton.nodes())
         self.tracks = [data['instance'] for (u,v,data) in list(self.G_origin.edges(data=True))]
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
-        
+        self._curr_routing_paths = []
+    
+    @property
+    def curr_routing_paths(self):
+        raise NotImplementedError('please return a valid routing from a big block')
+        return _curr_routing_paths
+
     def graph_constructor(self):      
         '''Initialize the MultiGraph object with railroad components 
         (CP, AT as nodes, Tracks as edges)'''
