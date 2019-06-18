@@ -279,6 +279,15 @@ class AutoPoint(Observable, Observer):
         return 'AutoPoint{}'.format(self.idx)
     
     @property
+    def mutex_routes_by_route(self):
+        _mutex_routes_by_route = defaultdict(list)
+        for r, nmrl in self.non_mutex_routes_by_route.items():
+            for vr in self.all_valid_routes:
+                if vr not in nmrl:
+                    _mutex_routes_by_route[r].append(vr)
+        return _mutex_routes_by_route    
+    
+    @property
     def current_routes(self):
         self._current_routes = []
         for p,t in self.track_by_port.items():
@@ -296,15 +305,6 @@ class AutoPoint(Observable, Observer):
             _current_route_by_port[r[0]] = r
         return _current_route_by_port
 
-    @property
-    def mutex_routes_by_route(self):
-        _mutex_routes_by_route = defaultdict(list)
-        for r, nmrl in self.non_mutex_routes_by_route.items():
-            for vr in self.all_valid_routes:
-                if vr not in nmrl:
-                    _mutex_routes_by_route[r].append(vr)
-        return _mutex_routes_by_route
-    
     @property
     def current_invalid_routes(self):
         _current_invalid_routes = []
@@ -374,44 +374,54 @@ class ControlPoint(AutoPoint):
         assert isinstance(route, tuple)
         if route in self.current_routes:       # do nothing when trying to open an existing route
             print('route {} for {} already opened'.format(route, self))
-        if route not in self.current_routes:   
+        elif route not in self.current_routes:   
+            # if not in all_valid routes, the route to open is banned
             if route not in self.all_valid_routes:
-                raise ValueError('illegal route for {}: banned or non-existing routes'.format(self))
-            if route in self.all_valid_routes:
+                raise ValueError('illegal route for {}: banned/non-existing routes'.format(self))
+            elif route in self.all_valid_routes:
+                # being in all_valid_routes means the route to open is not banned
+                # it is only possible to be conflicting with somrane existing routes
+                conflict_routes = []
                 if route in self.current_invalid_routes:
-                    conflict_routes = []
                     for cr in self.current_routes:
                         if route not in self.non_mutex_routes_by_route[cr]:
                             conflict_routes.append(cr)
-                    raise ValueError('illegal route for {}: conflicting with routes: {}'.format(self, conflict_routes))
-                if route not in self.current_invalid_routes:
-                    for cr in self.current_routes:
-                        if cr not in self.non_mutex_routes_by_route:
-                            self.close_route(cr)
-                            print('conflicting route {} closed because {} is to open'.format(cr,route))
-                    print('route {} is opened'.format(route))
-                    self.current_routes.append(route)
-                    # ControlPoint port traffic direction: route[0] -> route[1]
-                    # BigBlock traffic direction: flip(route[0]) and flip(route[1])
-                    # x, y are ports of the sigpoints that connecting to the bigblock
-                    self.set_bigblock_direction_by_route(route)
-                    self.listener_updates(obj=('cleared', route))
-
+                    for cr in conflict_routes:
+                        self.close_route(cr)
+                    print('conflicting routes {} are closed for {} to open'.format(conflict_routes, route))
+                elif route not in self.current_invalid_routes:
+                    # if conflicting with bigblock routing, don't open route
+                    if self.bigblock_by_port.get(route[1]) and self.bigblock_by_port[route[1]].routing:
+                        assert self == self.bigblock_by_port[route[1]].routing[0][0]
+                        if self.bigblock_by_port[route[1]].routing[1] == self \
+                            and self.bigblock_by_port[route[1]].routing[1][1] == route[1]:
+                            raise ValueError('Conflicting route with existing routing {}'.format(self.bigblock_by_port[route[1]]))
+                        else:
+                            print('route {} of {} is opened'.format(route, self))
+                            self.current_routes.append(route)
+                            self.set_bigblock_routing_by_controlpoint_route(route)    
+                    else:
+                        print('route {} of {} is opened'.format(route, self))
+                        self.current_routes.append(route)
+                        self.set_bigblock_routing_by_controlpoint_route(route)
+                        # ControlPoint port traffic routing: route[0] -> route[1]
+                        # BigBlock routing: 
+                        #   (somewhere, someport) -> (self, route[0]) and 
+                        #   (self, route[1]) to (somewhere, someport)
+                    
     def close_route(self, route=None):
         if route:
             assert route in self._current_routes
-            print('route {} for {} is closed'.format(route, self))
-            self.signal_by_port[route[0]].close(route)
+            print('route {} of {} is closed'.format(route, self))
             self.current_routes.remove(route)
-            self.cancel_bigblock_direction_by_port(route[0])
-            self.listener_updates(obj=('closed', route))
+            self.cancel_bigblock_routing_by_port(route[1])
         else:
-            print('all incoming routes for {} are closed'.format(self))
-            self._current_routes = []
+            print('all routes fof {} are closed'.format(self))
+            self.current_routes = []
             for p in self.ports:
-                self.cancel_bigblock_direction_by_port(p)
+                self.cancel_bigblock_routing_by_port(p)
 
-    def set_bigblock_direction_by_route(self, route):
+    def set_bigblock_routing_by_controlpoint_route(self, route):
         assert route
         (x, y) = route
         _in_port, _in_bblk = x, self.bigblock_by_port.get(x)
@@ -441,10 +451,11 @@ class ControlPoint(AutoPoint):
             _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
 
 
-    def cancel_bigblock_direction_by_port(self, port):
-        _in_port, _in_bblk = port, self.bigblock_by_port.get(port)
-        if _in_bblk:
-            _in_bblk.routing = None
+    def cancel_bigblock_routing_by_port(self, port):
+        assert port in self.ports
+        _port, _bblk = port, self.bigblock_by_port.get(port)
+        if _bblk:
+            _bblk.routing = None
 
     def update_signal(self, all_routes):
         pass

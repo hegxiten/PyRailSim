@@ -6,10 +6,9 @@ from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 class Train():
     def __init__(self, idx, rank, system, init_time, init_segment, max_sp, max_acc, max_dcc):        
-        ((_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_segment
+        ((_curr_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_segment
         self._curr_segment = init_segment
         self._curr_MP = self.curr_sigpoint.MP
-        self._curr_track = None
         self.train_idx = idx
         self.rank = rank
         self.system = system
@@ -17,32 +16,40 @@ class Train():
         self.max_acc = max_acc
         self.max_dcc = max_dcc
         self._curr_speed = 0
-        
+        self._curr_track = self.system.get_track_by_points((init_segment[0][0]),(init_segment[1][0]))
         # self.blk_interval = system.block_intervals
+        self._stopped = True
         self.time_pos_list = []        
         # self.status = 1
-    
+        if self.curr_track:
+            if self not in self.curr_track.train:
+                self.curr_track.train.append(self)
+        
+
     @property
     def stopped(self):
         if self.curr_speed == 0 and self.curr_sig.aspect.color == 'r':
-            return True
+            self._stopped = True
+        elif not self.curr_sigpoint:
+            self._stopped = True
         else:
-            return False
-    
+            self._stopped = False
+        return self._stopped
+
     @property
     def curr_MP(self):
         return self._curr_MP
 
     @curr_MP.setter
     def curr_MP(self, new_MP):
-        if self.prev_sigpoint and self.curr_sigpoint:
-            _MP_pair = (self.prev_sigpoint.MP, self.curr_sigpoint.MP)
+        if self.curr_prev_sigpoint and self.curr_sigpoint:
+            _MP_pair = (self.curr_prev_sigpoint.MP, self.curr_sigpoint.MP)
             if min(_MP_pair) < new_MP < max(_MP_pair): 
                 self._curr_MP = new_MP
             else:
                 self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
-                self._curr_MP = self.curr_sigpoint.MP
-        elif not self.prev_sigpoint:
+                self._curr_MP = new_MP
+        elif not self.curr_prev_sigpoint:
             assert self.curr_sigpoint
             self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
             self._curr_MP = new_MP
@@ -62,10 +69,7 @@ class Train():
 
     @property
     def curr_track(self):
-        (_prev_point, _prev_port) = self._curr_segment[0]
-        (_next_point, _next_port) = self._curr_segment[1]
-        assert _next_point.track_by_port.get(_next_port) == _next_point.track_by_port.get(_next_port)
-        self._curr_track = _next_point.track_by_port.get(_next_port)
+        self._curr_track = self.system.get_track_by_points((self._curr_segment[0][0]),(self._curr_segment[1][0]))
         return self._curr_track
     
     @property
@@ -73,12 +77,12 @@ class Train():
         return self.curr_segment[1][0]
     
     @property
-    def curr_sigport(self):
-        return self.curr_segment[1][1]
+    def curr_prev_sigpoint(self):
+        return self.curr_segment[0][0]    
     
     @property
-    def prev_sigpoint(self):
-        return self.curr_segment[0][0]    
+    def curr_sigport(self):
+        return self.curr_segment[1][1]
     
     @property
     def curr_sig(self):
@@ -156,7 +160,7 @@ class Train():
         _next_enroute_sigpoint = getattr(self.curr_sig,'next_enroute_sigpoint')
         _next_enroute_sigpoint_port = getattr(self.curr_sig, 'next_enroute_sigpoint_port')
         terminate = False if _next_enroute_sigpoint else True
-        initiate = False if self.prev_sigpoint else True
+        initiate = False if self.curr_prev_sigpoint else True
         
         if self.curr_speed != 0:
             timestamp = self.system.sys_time + abs(curr_MP - sigpoint.MP)/abs(self.curr_speed)

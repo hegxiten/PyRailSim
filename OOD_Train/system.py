@@ -206,6 +206,24 @@ class System():
         self.last_train_init_time = self.sys_time
         new_train.curr_track.train.append(new_train)
 
+    def get_track_by_points(self, p1, p2):
+        _t = None
+        for t in self.tracks:
+            if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
+                _t = t
+        return _t
+
+    def get_instance_by_routing(self, routing):
+        _i = None
+        for i in self.tracks + self.bigblocks:
+            if routing == i.routing:
+                _i = i
+        return _i
+
+    def get_routing_path_by_bigblock(self, bigblock):
+        (start_point, start_port) = bigblock.routing[0]
+        reverse = True if start_point in self.tracks[-1].port_by_sigpoint.keys() else False
+        
     def update_blk_right(self, i):
         '''
         logics of overpassing, manipulating controlpoints

@@ -11,7 +11,7 @@ def string_diagram(sys, start_time, end_time):
     '''
     colors = ['red','green','blue','black','orange','cyan','magenta']
     color_num = len(colors)
-    x = []; y = []; 
+    x, y = [], []
     for i in range(len(sys.trains)-1):
         x.append([])
         y.append([])
@@ -91,5 +91,3 @@ def main():
         i += 1
         sys.refresh()
     string_diagram(sys, sim_init_time, sim_term_time)
-
-main()
