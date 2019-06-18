@@ -182,16 +182,16 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
-    def generate_train(self, init_direction, port):
+    def generate_train(self, init_segment, port):
         '''
         generate train only. Not containing train generation logic (when and where to generate a train)
         '''
-        assert len(init_direction) == 2 and isinstance(init_direction, tuple)
+        assert len(init_segment) == 2 and isinstance(init_segment, tuple)
         new_train = Train(idx=self.train_num, 
                           rank=self.train_num, 
                           system=self, 
                           init_time=self.sys_time, 
-                          init_direction=init_direction, 
+                          init_segment=init_segment, 
                           max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
                           max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
                           max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
@@ -204,7 +204,7 @@ class System():
         '''
         logics of overpassing, manipulating controlpoints
         TODO: translate the operations below into ControlPoint manipulations'''
-        # 只管变化（若满足条件更新CP route，否则无操作）
+        # 只管变化（若满足条件更新CP 路径，否则无操作）
         # for track in self.blocks[i].tracks:
         #     if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
         #         track.right_signal.update_signal('r')

@@ -7,7 +7,7 @@ class Track(Observable):
     def __init__(self, L_point, L_point_port, R_point, R_point_port, edge_key=0, length=5, allow_sp=30):    # 30 as mph
         super().__init__()
         self._train = []
-        self._traffic_direction = None
+        self._routing = None
         self.type = 'track'
         self.length = length
         self.L_point, self.R_point = L_point, R_point
@@ -43,18 +43,18 @@ class Track(Observable):
         self.__bigblock = bblk
 
     @property
-    def traffic_direction(self):
-        return self._traffic_direction
+    def routing(self):
+        return self._routing
 
-    @traffic_direction.setter
-    def traffic_direction(self, new_direction):
+    @routing.setter
+    def routing(self, new_direction):
         if new_direction:
             for (p, pport) in new_direction:
                 assert p in [self.L_point, self.R_point]
                 assert pport in [self.L_point_port, self.R_point_port]
-            self._traffic_direction = new_direction
+            self._routing = new_direction
         else:
-            self._traffic_direction = None
+            self._routing = None
         
 
     def has_train(self):
@@ -105,7 +105,7 @@ class BigBlock(Track):
         assert isinstance(raw_graph, nx.MultiGraph)
         assert isinstance(cp_graph, nx.MultiGraph)
         self.type = 'bigblock'
-        self._traffic_direction = None
+        self._routing = None
         self.tracks = []
         self.port_by_sigpoint = {L_cp:L_cp_port, R_cp:R_cp_port}   
         self.length = self.R_point.MP - self.L_point.MP 
@@ -118,24 +118,24 @@ class BigBlock(Track):
         return 'BigBlock MP: {} to MP: {} idx: {}'.format(self.L_point.MP, self.R_point.MP, self.edge_key)
     
     @property
-    def traffic_direction(self):
-        return self._traffic_direction
+    def routing(self):
+        return self._routing
     
-    @traffic_direction.setter
-    def traffic_direction(self, new_direction):
+    @routing.setter
+    def routing(self, new_direction):
         if isinstance(new_direction, tuple):
             assert len(new_direction) == 2
-            self._traffic_direction = new_direction
+            self._routing = new_direction
             (start_point, start_port) = new_direction[0]
             for i in range(len(self.tracks)-1):
                 (next_point, next_port) = (self.tracks[i].L_point, self.tracks[i].L_point_port) if start_point == self.tracks[i].R_point else (self.tracks[i].R_point, self.tracks[i].R_point_port)
-                self.tracks[i].traffic_direction = ((start_point, start_port), (next_point, next_port))
+                self.tracks[i].routing = ((start_point, start_port), (next_point, next_port))
                 start_point, start_port = next_point, self.tracks[i+1].port_by_sigpoint[next_point]
-            self.tracks[-1].traffic_direction = ((start_point, start_port), new_direction[1])
+            self.tracks[-1].routing = ((start_point, start_port), new_direction[1])
         else: 
-            self._traffic_direction = None
+            self._routing = None
             for t in self.tracks:
-                t.traffic_direction = None
+                t.routing = None
 
 class Block(Observable):
     def __init__(self, index, length, max_sp=0.02, track_number=1):

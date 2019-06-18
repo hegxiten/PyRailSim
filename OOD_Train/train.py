@@ -5,9 +5,9 @@ from infrastructure import Track, Block, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 class Train():
-    def __init__(self, idx, rank, system, init_time, init_direction, max_sp, max_acc, max_dcc):        
-        ((_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_direction
-        self._curr_direction = init_direction
+    def __init__(self, idx, rank, system, init_time, init_segment, max_sp, max_acc, max_dcc):        
+        ((_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_segment
+        self._curr_segment = init_segment
         self._curr_MP = self.curr_sigpoint.MP
         self._curr_track = None
         self.train_idx = idx
@@ -39,15 +39,12 @@ class Train():
             _MP_pair = (self.prev_sigpoint.MP, self.curr_sigpoint.MP)
             if min(_MP_pair) < new_MP < max(_MP_pair): 
                 self._curr_MP = new_MP
-            elif self.curr_sig.permit_track:
-                self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
-                self._curr_MP = new_MP
             else:
-                self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP, terminate=True)
+                self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
                 self._curr_MP = self.curr_sigpoint.MP
         elif not self.prev_sigpoint:
             assert self.curr_sigpoint
-            self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP, initiate=True)
+            self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
             self._curr_MP = new_MP
         else: 
             raise ValueError('Setting MP Failed: current MP: {}, new MP: {}, current track: {}, current aspect: {}, permit track: {}'\
@@ -55,33 +52,33 @@ class Train():
         self.time_pos_list.append([self.system.sys_time + self.system.refresh_time, self._curr_MP])
 
     @property
-    def curr_direction(self):
-        return self._curr_direction
+    def curr_segment(self):
+        return self._curr_segment
 
-    @curr_direction.setter
-    def curr_direction(self,new_direction):
-        assert isinstance(new_direction, tuple) and len(new_direction) == 2
-        self._curr_direction = new_direction
+    @curr_segment.setter
+    def curr_segment(self,new_segment):
+        assert isinstance(new_segment, tuple) and len(new_segment) == 2
+        self._curr_segment = new_segment
 
     @property
     def curr_track(self):
-        (_prev_point, _prev_port) = self._curr_direction[0]
-        (_next_point, _next_port) = self._curr_direction[1]
+        (_prev_point, _prev_port) = self._curr_segment[0]
+        (_next_point, _next_port) = self._curr_segment[1]
         assert _next_point.track_by_port.get(_next_port) == _next_point.track_by_port.get(_next_port)
         self._curr_track = _next_point.track_by_port.get(_next_port)
         return self._curr_track
     
     @property
     def curr_sigpoint(self):
-        return self.curr_direction[1][0]
+        return self.curr_segment[1][0]
     
     @property
     def curr_sigport(self):
-        return self.curr_direction[1][1]
+        return self.curr_segment[1][1]
     
     @property
     def prev_sigpoint(self):
-        return self.curr_direction[0][0]    
+        return self.curr_segment[0][0]    
     
     @property
     def curr_sig(self):
@@ -132,8 +129,8 @@ class Train():
         return abs(self.curr_sigpoint.MP - self.curr_MP)
 
     def __repr__(self):
-        return 'train index {}, current direction {}'\
-            .format(self.train_idx, self.curr_direction)
+        return 'train index {}, current segment/direction {}'\
+            .format(self.train_idx, self.curr_segment)
 
     def __lt__(self, othertrain):
         if self.curr_MP > othertrain.curr_MP:
@@ -150,10 +147,17 @@ class Train():
         else:
             return True
 
-    def cross_sigpoint(self, sigpoint, curr_MP, new_MP, initiate=False, terminate=False):
+    def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         assert self.curr_sig.route in sigpoint.current_routes
         assert min(curr_MP, new_MP) <= sigpoint.MP <= max(curr_MP, new_MP)
         assert not self.stopped
+        _route = getattr(self.curr_sig, 'route')
+        _permit_track = getattr(self.curr_sig,'permit_track')
+        _next_enroute_sigpoint = getattr(self.curr_sig,'next_enroute_sigpoint')
+        _next_enroute_sigpoint_port = getattr(self.curr_sig, 'next_enroute_sigpoint_port')
+        terminate = False if _next_enroute_sigpoint else True
+        initiate = False if self.prev_sigpoint else True
+        
         if self.curr_speed != 0:
             timestamp = self.system.sys_time + abs(curr_MP - sigpoint.MP)/abs(self.curr_speed)
         else:
@@ -163,22 +167,25 @@ class Train():
         if initiate:
             assert isinstance(sigpoint, ControlPoint)
             assert len(self.curr_sig.permit_track.train) == 0
-            print('train {} moved into track {}'.format(self, self.curr_sig.permit_track))
+            print('train {} moved into track {}'.format(self, _permit_track))
             self.curr_sig.permit_track.train.append(self)
-            self.curr_direction = ((sigpoint, self.curr_sig.route[1]), (self.curr_sig.next_enroute_sigpoint, self.curr_sig.next_enroute_sigpoint_port))
-            sigpoint.close_route(self.curr_sig.route)
+            sigpoint.close_route(_route)
+            self.curr_segment = ((sigpoint, _route[1]), (_next_enroute_sigpoint, _next_enroute_sigpoint_port))
+            
         elif terminate:
             assert isinstance(sigpoint, ControlPoint)
             self.curr_track.train.remove(self)
-            self.curr_direction = ((sigpoint, self.curr_sig.route[1]), (None, None))
-            sigpoint.close_route(self.curr_sig.route)
+            sigpoint.close_route(_route)
+            self.curr_segment = ((sigpoint, _route[1]), (None, None))
+            
         elif not initiate and not terminate:
             assert len(self.curr_sig.permit_track.train) == 0
             self.curr_sig.permit_track.train.append(self)
             self.curr_track.train.remove(self)
-            self.curr_direction = ((sigpoint, self.curr_sig.route[1]), (self.curr_sig.next_enroute_sigpoint, self.curr_sig.next_enroute_sigpoint_port))
             if isinstance(sigpoint, ControlPoint):
-                sigpoint.close_route(self.curr_sig.route)
+                sigpoint.close_route(_route)
+            self.curr_segment = ((sigpoint, _route[1]), (_next_enroute_sigpoint, _next_enroute_sigpoint_port))
+            
         else:
             raise ValueError('train {} crossing signalpoint {} failed unexpectedly'\
                 .format(self, sigpoint))

@@ -115,7 +115,23 @@ class Signal(Observable, Observer):
         else:
             self._aspect.color = 'g'
             return self._aspect
-
+        # else:
+        #     _1st_next_signal = self.next_enroute_signal
+        #     _2nd_next_signal = getattr(_1st_next_signal, 'next_enroute_signal')
+        #     _3rd_next_signal = getattr(_2nd_next_signal, 'next_enroute_signal')
+        #     if _3rd_next_signal:
+        #         if _1st_next_signal.aspect.color == 'r':
+        #             self._aspect.color = 'y'
+        #             return self._aspect
+        #         elif _1st_next_signal.aspect.color == 'y':
+        #             self._aspect.color = 'yy'
+        #             return self._aspect
+        #         elif _1st_next_signal.aspect.color == 'yy':
+        #             self._aspect.color = 'g'
+        #             return self._aspect
+        #         else:
+        #             self._aspect.color = 'g'
+        #             return self._aspect
     @property
     def permit_track(self):
         assert self.route
@@ -123,27 +139,35 @@ class Signal(Observable, Observer):
 
     @property
     def next_enroute_sigpoint(self):    # call a point instance from signal instance
-        if self.sigpoint == self.permit_track.L_point:
-            return self.permit_track.R_point
-        elif self.sigpoint == self.permit_track.R_point:
-            return self.permit_track.L_point
-
+        if self.permit_track:
+            if self.sigpoint == self.permit_track.L_point:
+                return self.permit_track.R_point
+            elif self.sigpoint == self.permit_track.R_point:
+                return self.permit_track.L_point
+        else:
+            return None
     @property
     def next_enroute_signal(self):
-        if self.sigpoint == self.permit_track.L_point:
-            port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
-        elif self.sigpoint == self.permit_track.R_point:
-            port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
-        return self.next_enroute_sigpoint.signal_by_port[port_of_next_enroute_signal]
+        if self.permit_track:
+            if self.sigpoint == self.permit_track.L_point:
+                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
+            elif self.sigpoint == self.permit_track.R_point:
+                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
+            return self.next_enroute_sigpoint.signal_by_port[port_of_next_enroute_signal]
+        else:
+            return None
 
 
     @property
     def next_enroute_sigpoint_port(self):
-        if self.sigpoint == self.permit_track.L_point:
-            port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
-        elif self.sigpoint == self.permit_track.R_point:
-            port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
-        return port_of_next_enroute_signal
+        if self.permit_track:
+            if self.sigpoint == self.permit_track.L_point:
+                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
+            elif self.sigpoint == self.permit_track.R_point:
+                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
+            return port_of_next_enroute_signal
+        else:
+            return None
 
 
     def clear(self, route):
@@ -258,10 +282,10 @@ class AutoPoint(Observable, Observer):
     def current_routes(self):
         self._current_routes = []
         for p,t in self.track_by_port.items():
-            if t.traffic_direction:
-                if p == 0 and p == t.traffic_direction[1][1]:
+            if t.routing:
+                if p == 0 and p == t.routing[1][1]:
                     self._current_routes = [(0,1)]
-                elif p == 0 and p == t.traffic_direction[0][1]:
+                elif p == 0 and p == t.routing[0][1]:
                     self._current_routes = [(1,0)]
         return self._current_routes
 
@@ -401,26 +425,26 @@ class ControlPoint(AutoPoint):
                 (_out_bblk.L_point, _out_bblk.L_point_port) \
                     if self == _out_bblk.R_point \
                         else (_out_bblk.R_point, _out_bblk.R_point_port)
-            _in_bblk.traffic_direction = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
-            _out_bblk.traffic_direction = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+            _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
+            _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
         elif not _in_bblk and _out_bblk:
             (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
                 (_out_bblk.L_point, _out_bblk.L_point_port) \
                     if self == _out_bblk.R_point \
                         else (_out_bblk.R_point, _out_bblk.R_point_port)
-            _out_bblk.traffic_direction = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+            _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
         elif _in_bblk and not _out_bblk:
             (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
                 (_in_bblk.L_point, _in_bblk.L_point_port) \
                     if self == _in_bblk.R_point \
                         else (_in_bblk.R_point, _in_bblk.R_point_port)
-            _in_bblk.traffic_direction = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
+            _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
 
 
     def cancel_bigblock_direction_by_port(self, port):
         _in_port, _in_bblk = port, self.bigblock_by_port.get(port)
         if _in_bblk:
-            _in_bblk.traffic_direction = None
+            _in_bblk.routing = None
 
     def update_signal(self, all_routes):
         pass
