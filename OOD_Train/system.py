@@ -8,7 +8,6 @@ import random
 from train import Train
 from infrastructure import Track, Block, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
-
 import networkx as nx
 
 class System():
@@ -76,8 +75,39 @@ class System():
     
     @property
     def curr_routing_paths(self):
-        raise NotImplementedError('please return a valid routing from a big block')
-        return _curr_routing_paths
+        def connectable(rp1,rp2):
+            if rp1 and rp2:
+                rp1_head, rp1_tail = rp1[0][0][0], rp1[-1][-1][0]
+                rp2_head, rp2_tail = rp2[0][0][0], rp2[-1][-1][0]
+                rp1_head_port, rp1_tail_port = rp1[0][0][1], rp1[-1][-1][1]
+                rp2_head_port, rp2_tail_port = rp2[0][0][1], rp2[-1][-1][1]
+                if rp1_tail == rp2_head:
+                    assert (rp1_tail_port, rp2_head_port) in rp1_tail.current_routes \
+                        and (rp1_tail_port, rp2_head_port) in rp2_head.current_routes
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
+        _routing_list = [i for i in [getattr(_bblk,'routing_path') for _bblk in sys.bigblocks] if i]
+        _all_curr_bblk_routing_paths = [i for i in [getattr(_bblk,'routing_path') for _bblk in sys.bigblocks] if i]
+        _visited = []
+        _final_routing_paths = []
+
+        while len(_visited) != len(_all_curr_bblk_routing_paths):
+            print(len(_all_curr_bblk_routing_paths), len(_all_curr_bblk_routing_paths))
+            for i in range(len(_routing_list)):
+                for _rp in _all_curr_bblk_routing_paths:
+                    if _rp not in _visited:
+                        if connectable(_routing_list[i], _rp):
+                            _routing_list[i].extend(_rp)
+                        elif connectable(_rp, _routing_list[i]):
+                            _rp.extend(_routing_list[i])
+                            _routing_list[i]=_rp
+                        _visited.append(_rp)
+
+
 
     def graph_constructor(self):      
         '''Initialize the MultiGraph object with railroad components 
@@ -86,16 +116,16 @@ class System():
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
         _node = {   0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
-                    1:AutoPoint(1), \
-                    2:AutoPoint(2), \
-                    3:ControlPoint(idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \
-                    4:ControlPoint(idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \
-                    5:AutoPoint(5), \
-                    6:ControlPoint(idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \
-                    7:ControlPoint(idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \
-                    8:AutoPoint(8), \
-                    9:AutoPoint(9), \
-                    10:ControlPoint(idx=10, ports=[0,1])}       
+                    1:AutoPoint(1, MP=5.0), \
+                    2:AutoPoint(2, MP=10.0), \
+                    3:ControlPoint(idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=15.0), \
+                    4:ControlPoint(idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=20.0), \
+                    5:AutoPoint(5, MP=25.0), \
+                    6:ControlPoint(idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=30.0), \
+                    7:ControlPoint(idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=35.0), \
+                    8:AutoPoint(8, MP=40.0), \
+                    9:AutoPoint(9, MP=45.0), \
+                    10:ControlPoint(idx=10, ports=[0,1], MP=50.0)}       
         nbunch = [_node[i] for i in range(len(_node))]
 
         _track = [  Track(nbunch[0], 1, nbunch[1], 0), Track(nbunch[1], 1, nbunch[2], 0), Track(nbunch[2], 1, nbunch[3], 0),\
@@ -157,11 +187,11 @@ class System():
             # to avoid dictionary size changing issues. 
             # all the following graph updates are targeted on F
             if i.type == 'at':
-                new_L_point, new_R_point, new_length = _get_new_edge(i, length=True)
+                new_L_point, new_R_point = _get_new_edge(i)
                 assert len(F[new_L_point][i]) == len(F[i][new_R_point]) == 1
                 new_track =  Track( new_L_point, F[new_L_point][i][0]['instance'].L_point_port,\
                                     new_R_point, F[i][new_R_point][0]['instance'].R_point_port,\
-                                    edge_key=0, length=new_length)
+                                    edge_key=0)
 
                 F.remove_node(i)
                 F.add_edge(new_L_point, new_R_point, attr=new_track.__dict__, instance=new_track)     
@@ -173,7 +203,7 @@ class System():
             big_block_edges = [(blk_path[i], blk_path[i+1]) for i in range(len(blk_path) - 1)]
             big_block_instance = BigBlock(  u, F[u][v][k]['instance'].L_point_port,\
                                             v, F[u][v][k]['instance'].R_point_port,\
-                                            edge_key=k, length=F[u][v][k]['instance'].length, \
+                                            edge_key=k, \
                                             raw_graph=G, cp_graph=F)
             u.bigblock_by_port[F[u][v][k]['instance'].L_point_port] = v.bigblock_by_port[F[u][v][k]['instance'].R_point_port] = big_block_instance
 
@@ -206,23 +236,13 @@ class System():
         self.last_train_init_time = self.sys_time
         new_train.curr_track.train.append(new_train)
 
-    def get_track_by_points(self, p1, p2):
+    def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
         _t = None
         for t in self.tracks:
             if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
-                _t = t
+                if p1_port in (t.L_point_port, t.R_point_port) and p2_port in (t.L_point_port, t.R_point_port):
+                    _t = t
         return _t
-
-    def get_instance_by_routing(self, routing):
-        _i = None
-        for i in self.tracks + self.bigblocks:
-            if routing == i.routing:
-                _i = i
-        return _i
-
-    def get_routing_path_by_bigblock(self, bigblock):
-        (start_point, start_port) = bigblock.routing[0]
-        reverse = True if start_point in self.tracks[-1].port_by_sigpoint.keys() else False
         
     def update_blk_right(self, i):
         '''
@@ -421,7 +441,6 @@ class System():
         # self.blocks[4].tracks[0].left_signal.change_color_to('g')
         ##### multi_track_blk的某个track灯为非红测试
         self.blocks[4].tracks[0].right_signal.change_color_to('r')
-    
 
 if __name__ =='__main__':
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")

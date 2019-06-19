@@ -16,21 +16,23 @@ class Train():
         self.max_acc = max_acc
         self.max_dcc = max_dcc
         self._curr_speed = 0
-        self._curr_track = self.system.get_track_by_points((init_segment[0][0]),(init_segment[1][0]))
-        # self.blk_interval = system.block_intervals
+        self._curr_track = self.system.get_track_by_point_port_pairs\
+            (init_segment[0][0], init_segment[0][1],init_segment[1][0], init_segment[1][1])
         self._stopped = True
         self.time_pos_list = []        
-        # self.status = 1
         if self.curr_track:
             if self not in self.curr_track.train:
                 self.curr_track.train.append(self)
         
+    @property
+    def out_of_sys(self):
+        return True if not self.curr_segment[1][0] else False
 
     @property
     def stopped(self):
-        if self.curr_speed == 0 and self.curr_sig.aspect.color == 'r':
+        if self.out_of_sys:
             self._stopped = True
-        elif not self.curr_sigpoint:
+        elif self.curr_speed == 0 and self.curr_sig.aspect.color == 'r':
             self._stopped = True
         else:
             self._stopped = False
@@ -49,8 +51,8 @@ class Train():
             else:
                 self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
                 self._curr_MP = new_MP
-        elif not self.curr_prev_sigpoint:
-            assert self.curr_sigpoint
+        elif not self.curr_prev_sigpoint:   # special case: entering the system; initiating
+            assert self.curr_sigpoint       # train entering the system must have a signal to enter
             self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
             self._curr_MP = new_MP
         else: 
@@ -69,7 +71,8 @@ class Train():
 
     @property
     def curr_track(self):
-        self._curr_track = self.system.get_track_by_points((self._curr_segment[0][0]),(self._curr_segment[1][0]))
+        self._curr_track = self.system.get_track_by_point_port_pairs\
+            (self.curr_prev_sigpoint, self.curr_prev_sigport,self.curr_sigpoint, self.curr_sigport)
         return self._curr_track
     
     @property
@@ -83,6 +86,10 @@ class Train():
     @property
     def curr_sigport(self):
         return self.curr_segment[1][1]
+
+    @property
+    def curr_prev_sigport(self):
+        return self.curr_segment[0][1]
     
     @property
     def curr_sig(self):
@@ -91,18 +98,24 @@ class Train():
     @property
     def curr_acc(self):
         if not self.stopped:
-            if self.curr_target_speed > self.curr_speed:
-                return self.max_acc
-            elif self.curr_target_speed == self.curr_speed:
+            if self.curr_target_speed > abs(self.curr_speed):
+                return self.max_acc \
+                    if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
+                    else -self.max_acc
+            elif self.curr_target_speed == abs(self.curr_speed):
                 return 0
             else:
-                return -self.max_dcc
-        else:
+                return -self.max_dcc \
+                    if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
+                    else self.max_dcc
+        else:   # either stopped or out of system
             return 0
-                # braking distance有可能要写到acc的setter里 
+                # TODO: check if brake calculation is needed to be implemented here or self.curr_speed.
 
     @property
     def curr_speed(self):
+        if self.out_of_sys:
+            self._curr_speed = 0
         return self._curr_speed
 
     @curr_speed.setter
@@ -112,14 +125,16 @@ class Train():
             self._curr_speed = 0
         else: 
             self._curr_speed = new_speed
-        # 这里判断braking distance有可能要写到acc里
+        # TODO: check if brake calculation is needed to be implemented here or self.curr_acc
         if self.curr_brake_distance > self.curr_dis_to_curr_sig:
             self._curr_speed = _old_speed
         assert self.curr_brake_distance <= self.curr_dis_to_curr_sig
 
     @property
     def curr_target_speed(self):
-        return self.curr_sig.aspect.target_speed
+        _tgt_spd = self.curr_sig.aspect.target_speed
+        assert _tgt_spd >= 0
+        return _tgt_spd
 
     @property
     def curr_brake_distance(self):
@@ -152,7 +167,9 @@ class Train():
             return True
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
+        # not yet implemented interlockings with geographical spans
         assert self.curr_sig.route in sigpoint.current_routes
+        assert self.curr_sig in [sig for p,sig in sigpoint.signal_by_port.items()]
         assert min(curr_MP, new_MP) <= sigpoint.MP <= max(curr_MP, new_MP)
         assert not self.stopped
         _route = getattr(self.curr_sig, 'route')

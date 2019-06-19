@@ -2,6 +2,7 @@ from collections import defaultdict
 from itertools import combinations, permutations
 from observe import Observable, Observer
 
+
 class Aspect(object):
     '''
     Aspect代表信号的“含义”,用于比较“大小”
@@ -83,6 +84,7 @@ class Signal(Observable, Observer):
     def __init__(self, port_idx, sigpoint, MP=None):
         super().__init__()
         self.sigpoint = sigpoint
+        self._MP = MP
         self.port_idx = port_idx
         self._aspect = Aspect('r', route=self.route)
 
@@ -90,6 +92,18 @@ class Signal(Observable, Observer):
     def route(self):
         return self.sigpoint.current_route_by_port.get(self.port_idx)
     
+    @property
+    def MP(self):
+        if not self._MP:
+            self._MP = self.sigpoint.MP
+        return self._MP
+
+    @MP.setter
+    def MP(self, new_MP):
+        print('Warning:\n\tSetting MilePost manually for {}!\n\tChanging from old MP {} to new MP {}'\
+            .format(self, self._MP, new_MP))
+        self._MP = new_MP
+
     @property
     def aspect(self):
         self._aspect.route = self.route
@@ -291,6 +305,8 @@ class AutoPoint(Observable, Observer):
     def current_routes(self):
         self._current_routes = []
         for p,t in self.track_by_port.items():
+            # only AutoPoints can assign current routes like this because 
+            # AutoPoints have only 0,1 as their ports
             if t.routing:
                 if p == 0 and p == t.routing[1][1]:
                     self._current_routes = [(0,1)]
@@ -437,6 +453,7 @@ class ControlPoint(AutoPoint):
                         else (_out_bblk.R_point, _out_bblk.R_point_port)
             _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
             _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+
         elif not _in_bblk and _out_bblk:
             (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
                 (_out_bblk.L_point, _out_bblk.L_point_port) \
