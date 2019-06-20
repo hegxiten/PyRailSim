@@ -3,7 +3,7 @@ from observe import Observable, Observer
 import networkx as nx
 
 class Track(Observable):
-    def __init__(self, L_point, L_point_port, R_point, R_point_port, edge_key=0, allow_sp=30):    # 30 as mph
+    def __init__(self, system, L_point, L_point_port, R_point, R_point_port, edge_key=0, allow_sp=30):    # 30 as mph
         super().__init__()
         self._train = []
         self._routing = None
@@ -11,11 +11,15 @@ class Track(Observable):
         self.L_point, self.R_point = L_point, R_point
         self.L_point_port, self.R_point_port = L_point_port, R_point_port
         self.port_by_sigpoint = {L_point:L_point_port, R_point:R_point_port}   
-        self.__bigblock = None
+        
         self.edge_key = edge_key
-        self.allow_sp = allow_sp
+        self.allow_sp = allow_sp/3600
         self.add_observer(L_point)
         self.add_observer(R_point)
+
+        self.system = system
+        self.__bigblock = None
+        self.__curr_routing_path = None
 
     def __repr__(self):
         return 'Track MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1], self.edge_key)
@@ -45,7 +49,7 @@ class Track(Observable):
     def bigblock(self, bblk):
         assert isinstance(bblk,BigBlock)
         self.__bigblock = bblk
-
+    
     @property
     def routing(self):
         return self._routing
@@ -59,10 +63,17 @@ class Track(Observable):
             self._routing = new_routing
         else:
             self._routing = None
-            
+
+    @property
+    def curr_routing_path(self):
+        for rp in self.system.curr_routing_paths:
+            if self.routing in rp:
+                return rp
+        return None
+
 class BigBlock(Track):
-    def __init__(self, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=0, raw_graph=None, cp_graph=None):
-        super().__init__(L_cp, L_cp_port, R_cp, R_cp_port, edge_key)
+    def __init__(self, system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=0, raw_graph=None, cp_graph=None):
+        super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key)
         assert isinstance(raw_graph, nx.MultiGraph)
         assert isinstance(cp_graph, nx.MultiGraph)
         self.type = 'bigblock'
@@ -99,7 +110,7 @@ class BigBlock(Track):
                 t.routing = None
     
     @property
-    def routing_path(self):
+    def self_routing_path(self):
         if self.routing:
             (start_point, _) = self.routing[0]
             reverse = True if start_point in (self.tracks[-1].L_point, self.tracks[-1].R_point) else False

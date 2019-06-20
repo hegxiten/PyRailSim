@@ -32,7 +32,7 @@ class Train():
     def stopped(self):
         if self.out_of_sys:
             self._stopped = True
-        elif self.curr_speed == 0 and self.curr_sig.aspect.color == 'r':
+        elif self.curr_speed == 0 and not self.curr_sig.permit_track:
             self._stopped = True
         else:
             self._stopped = False
@@ -72,9 +72,19 @@ class Train():
     @property
     def curr_track(self):
         self._curr_track = self.system.get_track_by_point_port_pairs\
-            (self.curr_prev_sigpoint, self.curr_prev_sigport,self.curr_sigpoint, self.curr_sigport)
+            (self.curr_prev_sigpoint, self.curr_prev_sigport, self.curr_sigpoint, self.curr_sigport)
         return self._curr_track
     
+    @property
+    def curr_routing_path(self):
+        if self.curr_track:
+            return self.curr_track.curr_routing_path
+        else:
+            return None
+    @property
+    def curr_sig(self):
+        return self.curr_sigpoint.signal_by_port[self.curr_sigport]
+
     @property
     def curr_sigpoint(self):
         return self.curr_segment[1][0]
@@ -92,22 +102,32 @@ class Train():
         return self.curr_segment[0][1]
     
     @property
-    def curr_sig(self):
-        return self.curr_sigpoint.signal_by_port[self.curr_sigport]
-
-    @property
     def curr_acc(self):
+        print('Train calls for curr_acc')
         if not self.stopped:
-            if self.curr_target_speed > abs(self.curr_speed):
-                return self.max_acc \
-                    if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
-                    else -self.max_acc
-            elif self.curr_target_speed == abs(self.curr_speed):
-                return 0
-            else:
-                return -self.max_dcc \
-                    if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
-                    else self.max_dcc
+            if self.curr_prev_sigpoint:
+                if self.curr_target_spd_abs > abs(self.curr_speed):        
+                    return self.max_acc \
+                        if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
+                        else -self.max_acc
+                elif self.curr_target_spd_abs == abs(self.curr_speed):
+                    return 0
+                else:
+                    return -self.max_dcc \
+                        if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
+                        else self.max_dcc
+            elif not self.curr_prev_sigpoint:
+                if self.curr_target_spd_abs > abs(self.curr_speed):
+                    return self.max_acc \
+                        if self.curr_sig.MP == min(self.curr_sig.permit_track.MP) \
+                        else -self.max_acc
+                elif self.curr_target_spd_abs == abs(self.curr_speed):
+                    return 0
+                else:
+                    return -self.max_dcc \
+                        if self.curr_sig.MP == min(self.curr_sig.permit_track.MP) \
+                        else self.max_dcc
+
         else:   # either stopped or out of system
             return 0
                 # TODO: check if brake calculation is needed to be implemented here or self.curr_speed.
@@ -126,25 +146,31 @@ class Train():
         else: 
             self._curr_speed = new_speed
         # TODO: check if brake calculation is needed to be implemented here or self.curr_acc
-        if self.curr_brake_distance > self.curr_dis_to_curr_sig:
+        if self.curr_brake_distance_abs > self.curr_dis_to_curr_sig_abs:
             self._curr_speed = _old_speed
-        assert self.curr_brake_distance <= self.curr_dis_to_curr_sig
+        assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
 
     @property
-    def curr_target_speed(self):
-        _tgt_spd = self.curr_sig.aspect.target_speed
-        assert _tgt_spd >= 0
+    def curr_target_spd_abs(self):
+        print('Train calls for its target speed for {}'.format(self.curr_sigpoint))
+        _curr_track_allow_sp = getattr(self.curr_track, 'allow_sp',float('inf'))
+        _curr_sig_permit_track_allow_sp = getattr(self.curr_sig.permit_track, 'allow_sp', float('inf'))
+        _tgt_spd = min( self.curr_sig.aspect.target_speed, \
+                        _curr_track_allow_sp, \
+                        _curr_sig_permit_track_allow_sp)
+        assert _tgt_spd >= 0.0
         return _tgt_spd
 
     @property
-    def curr_brake_distance(self):
-        if abs(self.curr_target_speed) < abs(self.curr_speed):
-            return abs(self.curr_target_speed ** 2 - self.curr_speed ** 2) / self.curr_acc
+    def curr_brake_distance_abs(self):
+        print('Train calls for curr_brake_distance')
+        if abs(self.curr_target_spd_abs) < abs(self.curr_speed):
+            return abs(self.curr_target_spd_abs ** 2 - self.curr_speed ** 2) / self.curr_acc
         else:
             return 0.0
 
     @property
-    def curr_dis_to_curr_sig(self):
+    def curr_dis_to_curr_sig_abs(self):
         return abs(self.curr_sigpoint.MP - self.curr_MP)
 
     def __repr__(self):

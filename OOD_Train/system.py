@@ -71,42 +71,49 @@ class System():
         self.control_points = list(self.G_skeleton.nodes())
         self.tracks = [data['instance'] for (u,v,data) in list(self.G_origin.edges(data=True))]
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
-        self._curr_routing_paths = []
     
     @property
     def curr_routing_paths(self):
+        def shrinkable(to_remove,rplist):
+            for i in to_remove:
+                if i in rplist:
+                    rplist.remove(i)
+            rplist_copy = rplist
+            for rp in rplist_copy:
+                for _rp in rplist:
+                    if connectable(rp, _rp) or connectable(_rp, rp):
+                        return True
+            return False
         def connectable(rp1,rp2):
             if rp1 and rp2:
                 rp1_head, rp1_tail = rp1[0][0][0], rp1[-1][-1][0]
                 rp2_head, rp2_tail = rp2[0][0][0], rp2[-1][-1][0]
                 rp1_head_port, rp1_tail_port = rp1[0][0][1], rp1[-1][-1][1]
                 rp2_head_port, rp2_tail_port = rp2[0][0][1], rp2[-1][-1][1]
-                if rp1_tail == rp2_head:
-                    assert (rp1_tail_port, rp2_head_port) in rp1_tail.current_routes \
-                        and (rp1_tail_port, rp2_head_port) in rp2_head.current_routes
-                    return True
-                else:
+                if rp1_tail == None or rp2_head == None:
                     return False
-            else:
-                return False
+                elif rp1_tail == rp2_head:
+                    return True
+            return False
 
-        _routing_list = [i for i in [getattr(_bblk,'routing_path') for _bblk in sys.bigblocks] if i]
-        _all_curr_bblk_routing_paths = [i for i in [getattr(_bblk,'routing_path') for _bblk in sys.bigblocks] if i]
-        _visited = []
-        _final_routing_paths = []
-
-        while len(_visited) != len(_all_curr_bblk_routing_paths):
-            print(len(_all_curr_bblk_routing_paths), len(_all_curr_bblk_routing_paths))
+        _routing_list = [i for i in [getattr(_bblk,'self_routing_path') for _bblk in self.bigblocks] if i]
+        if self.control_points[0].current_routes:
+            for r in self.control_points[0].current_routes:
+                _routing_list.append([((None,None),(self.control_points[0],r[0]))])
+        if self.control_points[-1].current_routes:
+            for r in self.control_points[-1].current_routes:
+                _routing_list.append([((self.control_points[-1],r[1]), (None,None))])
+        _to_remove = []        
+        while shrinkable(_to_remove, _routing_list):
             for i in range(len(_routing_list)):
-                for _rp in _all_curr_bblk_routing_paths:
-                    if _rp not in _visited:
-                        if connectable(_routing_list[i], _rp):
-                            _routing_list[i].extend(_rp)
-                        elif connectable(_rp, _routing_list[i]):
-                            _rp.extend(_routing_list[i])
-                            _routing_list[i]=_rp
-                        _visited.append(_rp)
-
+                for j in range(len(_routing_list)):
+                    if connectable(_routing_list[i], _routing_list[j]):
+                        _routing_list[i].extend(_routing_list[j])
+                        _to_remove.append(_routing_list[j])
+                    elif connectable(_routing_list[j], _routing_list[i]):
+                        _routing_list[j].extend(_routing_list[i])
+                        _to_remove.append(_routing_list[i])
+        return _routing_list
 
 
     def graph_constructor(self):      
@@ -115,24 +122,24 @@ class System():
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        _node = {   0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \
-                    1:AutoPoint(1, MP=5.0), \
-                    2:AutoPoint(2, MP=10.0), \
-                    3:ControlPoint(idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=15.0), \
-                    4:ControlPoint(idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=20.0), \
-                    5:AutoPoint(5, MP=25.0), \
-                    6:ControlPoint(idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=30.0), \
-                    7:ControlPoint(idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=35.0), \
-                    8:AutoPoint(8, MP=40.0), \
-                    9:AutoPoint(9, MP=45.0), \
-                    10:ControlPoint(idx=10, ports=[0,1], MP=50.0)}       
+        _node = {   0:ControlPoint(self, idx=0, ports=[0,1], MP=0.0), \
+                    1:AutoPoint(self, 1, MP=5.0), \
+                    2:AutoPoint(self, 2, MP=10.0), \
+                    3:ControlPoint(self, idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=15.0), \
+                    4:ControlPoint(self, idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=20.0), \
+                    5:AutoPoint(self, 5, MP=25.0), \
+                    6:ControlPoint(self, idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=30.0), \
+                    7:ControlPoint(self, idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=35.0), \
+                    8:AutoPoint(self, 8, MP=40.0), \
+                    9:AutoPoint(self, 9, MP=45.0), \
+                    10:ControlPoint(self, idx=10, ports=[0,1], MP=50.0)}       
         nbunch = [_node[i] for i in range(len(_node))]
 
-        _track = [  Track(nbunch[0], 1, nbunch[1], 0), Track(nbunch[1], 1, nbunch[2], 0), Track(nbunch[2], 1, nbunch[3], 0),\
-                    Track(nbunch[3], 1, nbunch[4], 0), Track(nbunch[3], 3, nbunch[4], 2, edge_key=1),\
-                    Track(nbunch[4], 1, nbunch[5], 0), Track(nbunch[5], 1, nbunch[6], 0),\
-                    Track(nbunch[6], 1, nbunch[7], 0), Track(nbunch[6], 3, nbunch[7], 2, edge_key=1),\
-                    Track(nbunch[7], 1, nbunch[8], 0), Track(nbunch[8], 1, nbunch[9], 0), Track(nbunch[9], 1, nbunch[10], 0)]
+        _track = [  Track(self,nbunch[0], 1, nbunch[1], 0), Track(self,nbunch[1], 1, nbunch[2], 0), Track(self,nbunch[2], 1, nbunch[3], 0),\
+                    Track(self,nbunch[3], 1, nbunch[4], 0), Track(self,nbunch[3], 3, nbunch[4], 2, edge_key=1),\
+                    Track(self,nbunch[4], 1, nbunch[5], 0), Track(self,nbunch[5], 1, nbunch[6], 0),\
+                    Track(self,nbunch[6], 1, nbunch[7], 0), Track(self,nbunch[6], 3, nbunch[7], 2, edge_key=1),\
+                    Track(self,nbunch[7], 1, nbunch[8], 0), Track(self,nbunch[8], 1, nbunch[9], 0), Track(self,nbunch[9], 1, nbunch[10], 0)]
         ebunch = [_track[i] for i in range(len(_track))]
         
         # _node and _track will be parameters passed from outside in the future development
@@ -154,7 +161,7 @@ class System():
             for n in G.neighbors(i):
                 i.add_observer(n)
         return G
-
+    
     def graph_extractor(self, G):         
         '''
         Extract the skeletion MultiGraph with only ControlPoints and Bigblocks
@@ -189,7 +196,7 @@ class System():
             if i.type == 'at':
                 new_L_point, new_R_point = _get_new_edge(i)
                 assert len(F[new_L_point][i]) == len(F[i][new_R_point]) == 1
-                new_track =  Track( new_L_point, F[new_L_point][i][0]['instance'].L_point_port,\
+                new_track =  Track( self, new_L_point, F[new_L_point][i][0]['instance'].L_point_port,\
                                     new_R_point, F[i][new_R_point][0]['instance'].R_point_port,\
                                     edge_key=0)
 
@@ -201,8 +208,8 @@ class System():
         for (u, v, k) in F.edges(keys=True):
             blk_path = nx.shortest_path(G, u, v)
             big_block_edges = [(blk_path[i], blk_path[i+1]) for i in range(len(blk_path) - 1)]
-            big_block_instance = BigBlock(  u, F[u][v][k]['instance'].L_point_port,\
-                                            v, F[u][v][k]['instance'].R_point_port,\
+            big_block_instance = BigBlock(  self,   u, F[u][v][k]['instance'].L_point_port,\
+                                                    v, F[u][v][k]['instance'].R_point_port,\
                                             edge_key=k, \
                                             raw_graph=G, cp_graph=F)
             u.bigblock_by_port[F[u][v][k]['instance'].L_point_port] = v.bigblock_by_port[F[u][v][k]['instance'].R_point_port] = big_block_instance
@@ -236,13 +243,18 @@ class System():
         self.last_train_init_time = self.sys_time
         new_train.curr_track.train.append(new_train)
 
+    def clear_train(self, train=None):
+        if train:
+            self.trains.remove(train)
+        else:
+            self.trains = []
+
     def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
-        _t = None
         for t in self.tracks:
             if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
                 if p1_port in (t.L_point_port, t.R_point_port) and p2_port in (t.L_point_port, t.R_point_port):
-                    _t = t
-        return _t
+                    return t
+        return None
         
     def update_blk_right(self, i):
         '''

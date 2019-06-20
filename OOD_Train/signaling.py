@@ -83,10 +83,12 @@ class Aspect(object):
 class Signal(Observable, Observer):
     def __init__(self, port_idx, sigpoint, MP=None):
         super().__init__()
+        self.system = None
         self.sigpoint = sigpoint
         self._MP = MP
         self.port_idx = port_idx
         self._aspect = Aspect('r', route=self.route)
+    
 
     @property
     def route(self):
@@ -106,29 +108,30 @@ class Signal(Observable, Observer):
 
     @property
     def aspect(self):
+        # print('call aspect of {} route {}'.format(self.sigpoint,self.route))
         self._aspect.route = self.route
         if not self.route:
             self._aspect.color = 'r'
-            return self._aspect
-        elif self.route and not self.permit_track:
+        elif self.cleared_signal_to_exit_system:      # exiting the system
             self._aspect.color = 'g'
-            return self._aspect
-        elif self.permit_track.is_Occupied:
+        elif self.number_of_blocks_cleared_ahead == 0:
             self._aspect.color = 'r'
-            return self._aspect
-        # 这下面迭代的有点多。。。。计算巨慢
-        elif self.next_enroute_signal.aspect.color == 'r':
-            self._aspect.color = 'y'
-            return self._aspect
-        elif self.next_enroute_signal.aspect.color == 'y':
-            self._aspect.color = 'yy'
-            return self._aspect
-        elif self.next_enroute_signal.aspect.color == 'yy':
+        elif self.number_of_blocks_cleared_ahead == 1:
+            if self.next_enroute_signal.cleared_signal_to_exit_system:
+                self._aspect = 'g'
+            else:
+                self._aspect.color = 'y'
+        elif self.number_of_blocks_cleared_ahead == 2:
+            if self.next_enroute_signal.next_enroute_signal.cleared_signal_to_exit_system:
+                self._aspect = 'g'
+            else:
+                self._aspect.color = 'yy'
+        elif self.number_of_blocks_cleared_ahead >= 3:
             self._aspect.color = 'g'
-            return self._aspect
         else:
-            self._aspect.color = 'g'
-            return self._aspect
+            raise ValueError('signal aspect of {}, port: {} not defined ready'\
+                .format(self.sigpoint, self.port_idx))  
+        return self._aspect
         # else:
         #     _1st_next_signal = self.next_enroute_signal
         #     _2nd_next_signal = getattr(_1st_next_signal, 'next_enroute_signal')
@@ -148,8 +151,14 @@ class Signal(Observable, Observer):
         #             return self._aspect
     @property
     def permit_track(self):
-        assert self.route
-        return self.sigpoint.track_by_port.get(self.route[1])
+        if self.route:
+            return self.sigpoint.track_by_port.get(self.route[1])
+        else:
+            return None
+
+    @property
+    def governed_track(self):
+        return self.sigpoint.track_by_port.get(self.port_idx)
 
     @property
     def next_enroute_sigpoint(self):    # call a point instance from signal instance
@@ -160,6 +169,7 @@ class Signal(Observable, Observer):
                 return self.permit_track.L_point
         else:
             return None
+    
     @property
     def next_enroute_signal(self):
         if self.permit_track:
@@ -170,7 +180,6 @@ class Signal(Observable, Observer):
             return self.next_enroute_sigpoint.signal_by_port[port_of_next_enroute_signal]
         else:
             return None
-
 
     @property
     def next_enroute_sigpoint_port(self):
@@ -183,6 +192,45 @@ class Signal(Observable, Observer):
         else:
             return None
 
+    @property
+    def cleared_signal_to_exit_system(self):
+        return True if self.route and not self.permit_track else False
+
+    @property
+    def curr_routing_path(self):
+        if self.governed_track:
+            return self.governed_track.curr_routing_path
+        elif self.permit_track:
+            return self.permit_track.curr_routing_path
+        else:
+            return None
+
+    @property
+    def curr_enroute_tracks(self):
+        if self.curr_routing_path:
+            return [self.system.get_track_by_point_port_pairs(p1,p1port,p2,p2port) for ((p1,p1port),(p2,p2port)) in self.curr_routing_path]
+        else:
+            return None
+
+    @property
+    def number_of_blocks_cleared_ahead(self):
+        if self.curr_enroute_tracks:
+            if self.governed_track:
+                _trk_idx = self.curr_routing_path.index(self.governed_track.routing)
+            else:
+                _trk_idx = 0
+            _tracks_ahead = self.curr_enroute_tracks[_trk_idx+1:]
+            _number = 0
+            for i in range(len(_tracks_ahead)):
+                if _tracks_ahead[i]:
+                    if _tracks_ahead[i].is_Occupied:
+                        return _number
+                    else:
+                        _number += 1
+            return 0
+        else:
+            return 0
+        
 
     def clear(self, route):
         pass
@@ -267,8 +315,9 @@ class HomeSignal(Signal):
                 self.change_color_to('y', False)  
 
 class AutoPoint(Observable, Observer):
-    def __init__(self, idx, MP=None):
+    def __init__(self, system, idx, MP=None):
         super().__init__()
+        self.system = system
         self.MP = MP
         self.idx = idx
         self.type = 'at'
@@ -288,6 +337,7 @@ class AutoPoint(Observable, Observer):
         # add the ownership of signals
         for _, sig in self.signal_by_port.items():
             sig.sigpoint = self
+            sig.system = self.system
         
     def __repr__(self):
         return 'AutoPoint{}'.format(self.idx)
@@ -339,8 +389,8 @@ class AutoPoint(Observable, Observer):
         return _current_invalid_routes
 
 class ControlPoint(AutoPoint):
-    def __init__(self, idx, ports, MP=None, ban_ports_by_port=defaultdict(list), non_mutex_routes_by_route=defaultdict(list)):
-        super().__init__(idx, MP)
+    def __init__(self, system, idx, ports, MP=None, ban_ports_by_port=defaultdict(list), non_mutex_routes_by_route=defaultdict(list)):
+        super().__init__(system, idx, MP)
         self.type = 'cp'
         self.ports = ports
         self.ban_ports_by_port = ban_ports_by_port
@@ -367,6 +417,7 @@ class ControlPoint(AutoPoint):
 
         for _, sig in self.signal_by_port.items():     # add the ownership of signals
             sig.sigpoint = self
+            sig.system = self.system
     
     def __repr__(self):
         return 'ControlPoint{}'.format(self.idx)
@@ -430,7 +481,6 @@ class ControlPoint(AutoPoint):
             assert route in self._current_routes
             print('route {} of {} is closed'.format(route, self))
             self.current_routes.remove(route)
-            self.cancel_bigblock_routing_by_port(route[1])
         else:
             print('all routes fof {} are closed'.format(self))
             self.current_routes = []
