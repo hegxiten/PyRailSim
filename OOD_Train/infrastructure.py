@@ -3,7 +3,7 @@ from observe import Observable, Observer
 import networkx as nx
 
 class Track(Observable):
-    def __init__(self, system, L_point, L_point_port, R_point, R_point_port, edge_key=0, allow_sp=30):    # 30 as mph
+    def __init__(self, system, L_point, L_point_port, R_point, R_point_port, edge_key=0, allow_sp=65):    # speed as mph
         super().__init__()
         self._train = []
         self._routing = None
@@ -60,7 +60,11 @@ class Track(Observable):
             for (p, pport) in new_routing:
                 assert p in [self.L_point, self.R_point]
                 assert pport in [self.L_point_port, self.R_point_port]
+            if self.train:
+                for t in self.train:
+                    assert t.curr_routing_path_segment == new_routing
             self._routing = new_routing
+
         else:
             self._routing = None
 
@@ -102,6 +106,20 @@ class BigBlock(Track):
     def routing(self, new_routing):
         if isinstance(new_routing, tuple):
             assert len(new_routing) == 2
+            if self._routing != new_routing:
+                if self._routing:
+                    # only when no trains in the bigblock, the bigblock is allowed 
+                    # to change to a reversed routing
+                    assert not self.train
+                    _curr_shooting_cp = self._routing[1][0]
+                    _curr_shooting_port = self._routing[1][1]
+                    assert _curr_shooting_cp == new_routing[0][0]
+                    # if the bigblock is set with a reversed routing,
+                    # close any signal routes leading into its old routing
+                    # at the ControlPoint the old bigblock routing is shooting to.
+                    for r in _curr_shooting_cp.current_routes:
+                        if _curr_shooting_port == r[0]:
+                            _curr_shooting_cp.close_route(r)
             self._routing = new_routing
             self.set_routing_for_tracks()
         else: 
@@ -109,6 +127,12 @@ class BigBlock(Track):
             for t in self.tracks:
                 t.routing = None
     
+    @property
+    def curr_routing_path(self):
+        for i in range(len(self.tracks)-1):
+            assert self.tracks[i].curr_routing_path ==  self.tracks[i+1].curr_routing_path 
+        return self.tracks[0].curr_routing_path
+
     @property
     def self_routing_path(self):
         if self.routing:

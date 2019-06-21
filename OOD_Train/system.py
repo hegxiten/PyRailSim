@@ -37,7 +37,7 @@ class System():
         _blk_number = len(_blk_length_list)
 
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
-        self.trains, self.train_num = [], 0
+        self.trains = []
         self.tracks = kwargs.get('tracks')      # self.track list determines the current topology
         # list of big blocks
        
@@ -73,6 +73,10 @@ class System():
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
     
     @property
+    def train_num(self):
+        return len(self.trains)
+
+    @property
     def curr_routing_paths(self):
         def shrinkable(to_remove,rplist):
             for i in to_remove:
@@ -93,7 +97,9 @@ class System():
                 if rp1_tail == None or rp2_head == None:
                     return False
                 elif rp1_tail == rp2_head:
-                    return True
+                    assert rp1_tail.current_routes == rp2_head.current_routes
+                    if (rp1_tail_port, rp2_head_port) in rp1_tail.current_routes:
+                        return True
             return False
 
         _routing_list = [i for i in [getattr(_bblk,'self_routing_path') for _bblk in self.bigblocks] if i]

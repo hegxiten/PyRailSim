@@ -9,7 +9,8 @@ class Aspect(object):
     '''    
     def __init__(self, color, route=None):
         self.color = color
-    
+        self.route = route
+
     def __repr__(self):
         return 'Aspect: {}, \t route {}, target speed {} mph'.format(self.color, self.route, self.target_speed*3600)
 
@@ -118,12 +119,12 @@ class Signal(Observable, Observer):
             self._aspect.color = 'r'
         elif self.number_of_blocks_cleared_ahead == 1:
             if self.next_enroute_signal.cleared_signal_to_exit_system:
-                self._aspect = 'g'
+                self._aspect.color = 'g'
             else:
                 self._aspect.color = 'y'
         elif self.number_of_blocks_cleared_ahead == 2:
             if self.next_enroute_signal.next_enroute_signal.cleared_signal_to_exit_system:
-                self._aspect = 'g'
+                self._aspect.color = 'g'
             else:
                 self._aspect.color = 'yy'
         elif self.number_of_blocks_cleared_ahead >= 3:
@@ -214,22 +215,21 @@ class Signal(Observable, Observer):
 
     @property
     def number_of_blocks_cleared_ahead(self):
+        _number = 0
         if self.curr_enroute_tracks:
             if self.governed_track:
                 _trk_idx = self.curr_routing_path.index(self.governed_track.routing)
             else:
                 _trk_idx = 0
             _tracks_ahead = self.curr_enroute_tracks[_trk_idx+1:]
-            _number = 0
             for i in range(len(_tracks_ahead)):
                 if _tracks_ahead[i]:
                     if _tracks_ahead[i].is_Occupied:
                         return _number
-                    else:
+                    elif not _tracks_ahead[i].is_Occupied:
                         _number += 1
-            return 0
-        else:
-            return 0
+                        continue
+        return _number
         
 
     def clear(self, route):
@@ -456,25 +456,15 @@ class ControlPoint(AutoPoint):
                     for cr in conflict_routes:
                         self.close_route(cr)
                     print('conflicting routes {} are closed for {} to open'.format(conflict_routes, route))
-                elif route not in self.current_invalid_routes:
-                    # if conflicting with bigblock routing, don't open route
-                    if self.bigblock_by_port.get(route[1]) and self.bigblock_by_port[route[1]].routing:
-                        assert self == self.bigblock_by_port[route[1]].routing[0][0]
-                        if self.bigblock_by_port[route[1]].routing[1] == self \
-                            and self.bigblock_by_port[route[1]].routing[1][1] == route[1]:
-                            raise ValueError('Conflicting route with existing routing {}'.format(self.bigblock_by_port[route[1]]))
-                        else:
-                            print('route {} of {} is opened'.format(route, self))
-                            self.current_routes.append(route)
-                            self.set_bigblock_routing_by_controlpoint_route(route)    
-                    else:
-                        print('route {} of {} is opened'.format(route, self))
-                        self.current_routes.append(route)
-                        self.set_bigblock_routing_by_controlpoint_route(route)
-                        # ControlPoint port traffic routing: route[0] -> route[1]
-                        # BigBlock routing: 
-                        #   (somewhere, someport) -> (self, route[0]) and 
-                        #   (self, route[1]) to (somewhere, someport)
+                # if conflicting with bigblock routing, don't open route
+                self.current_routes.append(route)
+                self.set_bigblock_routing_by_controlpoint_route(route)  
+                print('route {} of {} is opened'.format(route, self))  
+                    # ControlPoint port traffic routing: route[0] -> route[1]
+                    # BigBlock routing: 
+                    #   (somewhere, someport) -> (self, route[0]) and 
+                    #   (self, route[1]) to (somewhere, someport)
+                    
                     
     def close_route(self, route=None):
         if route:
@@ -504,13 +494,13 @@ class ControlPoint(AutoPoint):
             _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
             _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
 
-        elif not _in_bblk and _out_bblk:
+        elif (not _in_bblk) and _out_bblk:
             (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
                 (_out_bblk.L_point, _out_bblk.L_point_port) \
                     if self == _out_bblk.R_point \
                         else (_out_bblk.R_point, _out_bblk.R_point_port)
             _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
-        elif _in_bblk and not _out_bblk:
+        elif _in_bblk and (not _out_bblk):
             (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
                 (_in_bblk.L_point, _in_bblk.L_point_port) \
                     if self == _in_bblk.R_point \
