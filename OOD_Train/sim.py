@@ -1,4 +1,4 @@
-from block import Block
+from infrastructure import Track, Block, BigBlock
 from system import System
 from train import Train
 import matplotlib.pyplot as plt
@@ -11,11 +11,11 @@ def string_diagram(sys, start_time, end_time):
     '''
     colors = ['red','green','blue','black','orange','cyan','magenta']
     color_num = len(colors)
-    x = []; y = []; 
-    for i in range(len(sys.trains)-1):
+    x, y = [], []
+    for i in range(len(sys.trains)):
         x.append([])
         y.append([])
-        for j in range(len(sys.trains[i].time_pos_list)-1):
+        for j in range(len(sys.trains[i].time_pos_list)):
             x[i].append(datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]))
             y[i].append(sys.trains[i].time_pos_list[j][1])
             # x[i].append(sys.trains[i].time_pos_list[j][0])
@@ -54,7 +54,7 @@ def string_diagram(sys, start_time, end_time):
     #     plt.axis([(datetime.fromtimestamp(start_time - 500)), \
     #         (datetime.fromtimestamp(end_time + 500)), -5 , 55])
          
-    #     for n in range(len(x)-1):
+    #     for n in range(len(x)):
     #         new_x_y = [[mdates.date2num(datetime.fromtimestamp(i)), j] for i, j in zip(x[n], y[n]) if i < start_time + start and i > start_time + start - 1 - step_size]
     #         new_x = []
     #         new_y = []
@@ -69,7 +69,7 @@ def string_diagram(sys, start_time, end_time):
     #         # print('Length of new_y: {}'.format(len(new_y)))
     #     plt.pause(0.00001)
     #===============================================================================
-    for n in range(len(x)-1):
+    for n in range(len(x)):
         #assert len(x[n]) == len(y[n]) == t_color[n]
         plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
     plt.gca().axhspan(15,20,color='yellow',alpha=0.5)
@@ -91,5 +91,3 @@ def main():
         i += 1
         sys.refresh()
     string_diagram(sys, sim_init_time, sim_term_time)
-
-main()
