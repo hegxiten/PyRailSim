@@ -6,13 +6,26 @@ from observe import Observable, Observer
 class Aspect(object):
     '''
     Aspect代表信号的“含义”,用于比较“大小”
-    '''    
+    '''
+    
+
     def __init__(self, color, route=None):
         self.color = color
         self.route = route
 
     def __repr__(self):
         return 'Aspect: {}, \t route {}, target speed {} mph'.format(self.color, self.route, self.target_speed*3600)
+    
+    @property
+    def target_speed(self):
+        if self.color == 'r':
+            return 0/3600
+        elif self.color == 'y':
+            return 20/3600
+        elif self.color == 'yy':
+            return 40/3600
+        elif self.color == 'g':
+            return 72/3600
 
     def __eq__(self,other):
         return self.color == other.color
@@ -70,16 +83,7 @@ class Aspect(object):
         else:
             return False
 
-    @property
-    def target_speed(self):
-        if self.color == 'r':
-            return 0/3600
-        elif self.color == 'y':
-            return 20/3600
-        elif self.color == 'yy':
-            return 40/3600
-        elif self.color == 'g':
-            return 72/3600
+    
 
 class Signal(Observable, Observer):
     def __init__(self, port_idx, sigpoint, MP=None):
