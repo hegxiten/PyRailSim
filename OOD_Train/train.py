@@ -5,10 +5,23 @@ from infrastructure import Track, Block, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 class Train():
+
+    @staticmethod
+    def abs_brake_distance(curr_spd, tgt_spd, brake_dcc):
+        # speed in miles/sec, dcc in miles/(second)^2
+        # return absolute miles
+        if brake_dcc == 0:
+            return 0
+        else:
+            return abs((tgt_spd) ** 2 - (curr_spd) ** 2)/(2*abs(brake_dcc)) \
+                if abs(tgt_spd) < abs(curr_spd)\
+                    else 0
+        
+
     def __init__(self, idx, rank, system, init_time, init_segment, max_sp, max_acc, max_dcc):        
         ((_curr_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_segment
         self._curr_routing_path_segment = init_segment
-        self._curr_MP = self.curr_sigpoint.MP
+        self._curr_MP = self.curr_sig.MP
         self.train_idx = idx
         self.rank = rank
         self.system = system
@@ -22,7 +35,11 @@ class Train():
         if self.curr_track:
             if self not in self.curr_track.train:
                 self.curr_track.train.append(self)
-        
+
+    def __repr__(self):
+        return 'train index {}, current segment/direction {}'\
+            .format(self.train_idx, self.curr_routing_path_segment)
+
     @property
     def terminated(self):
         return True if not self.curr_routing_path_segment[1][0] else False
@@ -78,13 +95,15 @@ class Train():
 
     @property
     def curr_MP(self):
+        if self.curr_track:
+            assert  min(self.curr_track.MP) <= self._curr_MP <= max(self.curr_track.MP)
         return self._curr_MP
 
     @curr_MP.setter
     def curr_MP(self, new_MP):
         if self.terminated:
             assert self.curr_prev_sigpoint
-            self._curr_MP = self.curr_prev_sigpoint.MP
+            self._curr_MP = self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP
         else:
             assert self.curr_sigpoint
             # calling the MP should consider switching lines with MP gaps
@@ -100,7 +119,7 @@ class Train():
                         _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[1]].MP
                         _curr_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[0]].MP
                         self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
-                        self._curr_MP = new_MP - _curr_sig_MP + _new_prev_sig_MP
+                        self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                 else:
                     # initiating, cross the entry control point
                     _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[1]].MP
@@ -141,10 +160,13 @@ class Train():
                         else -self.max_acc
                 elif self.curr_target_spd_abs == abs(self.curr_speed):
                     return 0
-                else:
-                    return -self.max_dcc \
-                        if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
-                        else self.max_dcc
+                elif self.curr_target_spd_abs < abs(self.curr_speed):
+                    if self.hold_speed_before_dcc:
+                        return 0
+                    else:
+                        return -self.max_dcc \
+                            if self.curr_sig.MP > self.curr_prev_sigpoint.signal_by_port[self.curr_prev_sigport].MP \
+                                else self.max_dcc
             elif not self.curr_prev_sigpoint:
                 if self.curr_target_spd_abs > abs(self.curr_speed):
                     return self.max_acc \
@@ -178,18 +200,24 @@ class Train():
 
     @property
     def curr_brake_distance_abs(self):  # in miles
-        if abs(self.curr_target_spd_abs) < abs(self.curr_speed):
-            return abs(((self.curr_target_spd_abs) ** 2 - (self.curr_speed) ** 2) /(2*self.curr_acc))
-        else:
-            return 0.0
-
+        return self.abs_brake_distance(self.curr_speed, self.curr_target_spd_abs, self.curr_acc)
+        
     @property
     def curr_dis_to_curr_sig_abs(self):
-        return abs(self.curr_sigpoint.MP - self.curr_MP)
+        return abs(self.curr_sig.MP - self.curr_MP)
 
-    def __repr__(self):
-        return 'train index {}, current segment/direction {}'\
-            .format(self.train_idx, self.curr_routing_path_segment)
+    @property
+    def hold_speed_before_dcc(self):
+        assert self.curr_target_spd_abs < abs(self.curr_speed)
+        assert self.curr_sig
+        
+        delta_s = self.curr_speed * self.system.refresh_time
+        if abs(self.curr_sig.MP - (self.curr_MP + delta_s)) > \
+            self.abs_brake_distance(self.curr_speed, self.curr_target_spd_abs, self.max_dcc) and\
+                abs(self.curr_sig.MP - self.curr_MP) > abs(delta_s):
+            return True
+        else:
+            return False
 
     def __lt__(self, othertrain):
         if self.curr_MP > othertrain.curr_MP:
@@ -221,10 +249,10 @@ class Train():
         initiate = False if self.curr_prev_sigpoint else True
         
         if self.curr_speed != 0:
-            timestamp = self.system.sys_time + abs(curr_MP - sigpoint.MP)/abs(self.curr_speed)
+            timestamp = self.system.sys_time + abs(curr_MP - self.curr_sig.MP)/abs(self.curr_speed)
         else:
             timestamp = self.system.sys_time
-        self.time_pos_list.append([timestamp, sigpoint.MP])
+        self.time_pos_list.append([timestamp, self.curr_sig.MP])
 
         if initiate:
             assert isinstance(sigpoint, ControlPoint)
@@ -257,7 +285,7 @@ class Train():
             delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
             self.curr_speed = self.curr_speed + self.curr_acc * self.system.refresh_time
             self.curr_MP += delta_s
-            self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_MP])
+        self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_MP])
             # # 下一个delta_s之后，要越界且还没有减速到target speed.
             # if self.curr_MP > self.curr_track.MP:
             #     set new curr_track
