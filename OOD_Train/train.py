@@ -17,8 +17,6 @@ class Train():
         self.max_acc = max_acc
         self.max_dcc = max_dcc
         self._curr_speed = 0
-        self._curr_track = self.system.get_track_by_point_port_pairs\
-            (init_segment[0][0], init_segment[0][1],init_segment[1][0], init_segment[1][1])
         self._stopped = True
         self.time_pos_list = []        
         if self.curr_track:
@@ -26,12 +24,12 @@ class Train():
                 self.curr_track.train.append(self)
         
     @property
-    def out_of_sys(self):
+    def terminated(self):
         return True if not self.curr_routing_path_segment[1][0] else False
 
     @property
     def stopped(self):
-        if self.out_of_sys:
+        if self.terminated:
             self._stopped = True
         elif self.curr_speed == 0 and not self.curr_sig.permit_track:
             self._stopped = True
@@ -40,78 +38,99 @@ class Train():
         return self._stopped
 
     @property
-    def curr_MP(self):
-        return self._curr_MP
-
-    @curr_MP.setter
-    def curr_MP(self, new_MP):
-        if self.curr_prev_sigpoint and self.curr_sigpoint:
-            _MP_pair = (self.curr_prev_sigpoint.MP, self.curr_sigpoint.MP)
-            if min(_MP_pair) < new_MP < max(_MP_pair): 
-                self._curr_MP = new_MP
-            else:
-                self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
-                self._curr_MP = new_MP
-        elif not self.curr_prev_sigpoint:   # special case: entering the system; initiating
-            assert self.curr_sigpoint       # train entering the system must have a signal to enter
-            self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
-            self._curr_MP = new_MP            
-        elif self.out_of_sys:               # special case: existing the system; 
-            assert self.curr_prev_sigpoint  # train already left the system is claimed to be at endpoint MP
-            self._curr_MP = self.curr_prev_sigpoint.MP
-        else: 
-            raise ValueError('Setting MP Failed: current MP: {}, new MP: {}, current track: {}, current aspect: {}, permit track: {}'\
-                .format(self._curr_MP, new_MP, self._curr_track, self.curr_sig.aspect, self.curr_sig.permit_track))
-        self.time_pos_list.append([self.system.sys_time + self.system.refresh_time, self._curr_MP])
-
-    @property
     def curr_routing_path_segment(self):
         return self._curr_routing_path_segment
 
-    @curr_routing_path_segment.setter
-    def curr_routing_path_segment(self,new_segment):
-        assert isinstance(new_segment, tuple) and len(new_segment) == 2
-        self._curr_routing_path_segment = new_segment
-
     @property
     def curr_track(self):
-        self._curr_track = self.system.get_track_by_point_port_pairs\
+        return self.system.get_track_by_point_port_pairs\
             (self.curr_prev_sigpoint, self.curr_prev_sigport, self.curr_sigpoint, self.curr_sigport)
-        return self._curr_track
-    
+
     @property
     def curr_bigblock_routing(self):
         return self.curr_track.bigblock.routing
 
     @property
     def curr_routing_path(self):
-        if self.curr_track:
-            return self.curr_track.curr_routing_path
-        else:
-            return None
-    @property
-    def curr_sig(self):
-        if not self.out_of_sys:
-            return self.curr_sigpoint.signal_by_port[self.curr_sigport]
-        else:
-            return None
+        return self.curr_track.curr_routing_path if self.curr_track else None
 
+    @curr_routing_path_segment.setter
+    def curr_routing_path_segment(self,new_segment):
+        assert isinstance(new_segment, tuple) and len(new_segment) == 2
+        self._curr_routing_path_segment = new_segment
+    
     @property
     def curr_sigpoint(self):
         return self.curr_routing_path_segment[1][0]
-    
     @property
     def curr_prev_sigpoint(self):
         return self.curr_routing_path_segment[0][0]    
-    
     @property
     def curr_sigport(self):
         return self.curr_routing_path_segment[1][1]
-
     @property
     def curr_prev_sigport(self):
         return self.curr_routing_path_segment[0][1]
     
+    @property
+    def curr_sig(self):
+        return self.curr_sigpoint.signal_by_port[self.curr_sigport] if not self.terminated else None
+
+    @property
+    def curr_MP(self):
+        return self._curr_MP
+
+    @curr_MP.setter
+    def curr_MP(self, new_MP):
+        if self.terminated:
+            assert self.curr_prev_sigpoint
+            self._curr_MP = self.curr_prev_sigpoint.MP
+        else:
+            assert self.curr_sigpoint
+            # calling the MP should consider switching lines with MP gaps
+            if self.curr_sigpoint:
+                if self.curr_track:     
+                    # not initiating
+                    if min(self.curr_track.MP) < new_MP < max(self.curr_track.MP):  
+                        # within a track
+                        self._curr_MP = new_MP
+                    else:   
+                        # entering a new track; crossing current signal point
+                        # new track may have a separate MP system
+                        _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[1]].MP
+                        _curr_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[0]].MP
+                        self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
+                        self._curr_MP = new_MP - _curr_sig_MP + _new_prev_sig_MP
+                else:
+                    # initiating, cross the entry control point
+                    _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[1]].MP
+                    _curr_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[0]].MP
+                    self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
+                    self._curr_MP = new_MP - _curr_sig_MP + _new_prev_sig_MP
+            else: 
+                raise ValueError('Setting Undefined MP: current MP: {}, new MP: {}, current track: {}, current aspect: {}, permit track: {}'\
+                    .format(self._curr_MP, new_MP, self.curr_track, self.curr_sig.aspect, self.curr_sig.permit_track))
+        self.time_pos_list.append([self.system.sys_time + self.system.refresh_time, self._curr_MP])
+
+    @property
+    def curr_speed(self):
+        return self._curr_speed
+
+    @curr_speed.setter
+    def curr_speed(self, new_speed):    # speed in unit of miles/second
+        _old_speed = self._curr_speed
+        if new_speed * _old_speed < 0:  
+            # decelerating into a stop (speed value crossing zero)
+            self._curr_speed = 0
+        elif (self.curr_target_spd_abs - abs(new_speed)) * (self.curr_target_spd_abs - abs(_old_speed)) < 0:
+            # decelerating or accelerating into current target speed (speed value crossing target speed absolute value)
+            self._curr_speed = self.curr_target_spd_abs if _old_speed >= 0 else -self.curr_target_spd_abs 
+        else:
+            # normal deceleration or acceleration
+            self._curr_speed = new_speed
+        # TODO: check if brake calculation is needed to be implemented here or self.curr_acc
+        assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
+
     @property
     def curr_acc(self):     # acc in unit of miles/(second)^2
         if not self.stopped:
@@ -141,24 +160,6 @@ class Train():
         else:   # either stopped or out of system
             return 0
                 # TODO: check if brake calculation is needed to be implemented here or self.curr_speed.
-
-    @property
-    def curr_speed(self):
-        if self.out_of_sys:
-            self._curr_speed = 0
-        return self._curr_speed
-
-    @curr_speed.setter
-    def curr_speed(self, new_speed):    # speed in unit of miles/second
-        _old_speed = self._curr_speed
-        if new_speed * _old_speed < 0:  
-            self._curr_speed = 0
-        elif (self.curr_target_spd_abs - abs(new_speed)) * (self.curr_target_spd_abs - abs(_old_speed)) < 0:
-            self._curr_speed = self.curr_target_spd_abs if _old_speed >= 0 else -self.curr_target_spd_abs 
-        else: 
-            self._curr_speed = new_speed
-        # TODO: check if brake calculation is needed to be implemented here or self.curr_acc
-        assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
 
     @property
     def curr_target_spd_abs(self): 
@@ -207,9 +208,10 @@ class Train():
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         # not yet implemented interlockings with geographical spans
+        
         assert self.curr_sig.route in sigpoint.current_routes
         assert self.curr_sig in [sig for p,sig in sigpoint.signal_by_port.items()]
-        assert min(curr_MP, new_MP) <= sigpoint.MP <= max(curr_MP, new_MP)
+        assert min(curr_MP, new_MP) <= self.curr_sig.MP <= max(curr_MP, new_MP)
         assert not self.stopped
         _route = getattr(self.curr_sig, 'route')
         _permit_track = getattr(self.curr_sig,'permit_track')
@@ -227,7 +229,7 @@ class Train():
         if initiate:
             assert isinstance(sigpoint, ControlPoint)
             assert len(self.curr_sig.permit_track.train) == 0
-            print('train {} moved into track {}'.format(self, _permit_track))
+            print('train {} initiated and moved into track {}'.format(self, _permit_track))
             self.curr_sig.permit_track.train.append(self)
             sigpoint.close_route(_route)
             self.curr_routing_path_segment = ((sigpoint, _route[1]), (_next_enroute_sigpoint, _next_enroute_sigpoint_port))
@@ -446,7 +448,7 @@ class Train():
         # Right now the self.curr_track == None
         # Do nothing. (no updates on (time,pos))
         # 看车是不是已经出了系统：
-        if self.is_out_of_sys():
+        if self.is_terminated():
             # print('1')
             pass
         # If the train is WITHIN the system;    如果车还在系统里，
@@ -531,7 +533,7 @@ class Train():
 
         # What else?     剩余情况待分析。
         
-    def is_out_of_sys(self):
+    def is_terminated(self):
         '''
         Determined the train should stop or not because of the next block has a train.
         @return True or False
