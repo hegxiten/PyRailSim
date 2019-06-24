@@ -208,7 +208,7 @@ class Block(Observable):
         pass
         return
         train.curr_blk = self.index
-        train.curr_track = idx
+        train.curr_track_head = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
@@ -216,7 +216,7 @@ class Block(Observable):
         return
         train = self.tracks[idx].train
         train.curr_blk = -1
-        train.curr_track = 0
+        train.curr_track_head = 0
         self.tracks[idx].leave()
 
 class OldTrack(object):
@@ -236,7 +236,7 @@ class OldTrack(object):
         pass
         return
         train.curr_blk = self.index
-        train.curr_track = idx
+        train.curr_track_head = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
@@ -244,7 +244,7 @@ class OldTrack(object):
         return
         train = self.tracks[idx].train
         train.curr_blk = -1
-        train.curr_track = 0
+        train.curr_track_head = 0
         self.tracks[idx].leave()
 
     def let_in(self, train):
