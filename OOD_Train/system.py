@@ -247,7 +247,7 @@ class System():
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time
-        new_train.curr_track.train.append(new_train)
+        new_train.curr_track_head.train.append(new_train)
 
     def clear_train(self, train=None):
         if train:
