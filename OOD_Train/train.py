@@ -432,7 +432,7 @@ class Train():
             delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
             self.curr_speed = self.curr_speed + self.curr_acc * self.system.refresh_time
             self.curr_MP += delta_s
-        self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_MP])
+        
             # # 下一个delta_s之后，要越界且还没有减速到target speed.
             # if self.curr_MP > self.curr_track.MP:
             #     set new curr_track
