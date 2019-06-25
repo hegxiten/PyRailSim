@@ -94,6 +94,19 @@ class Signal(Observable, Observer):
         self.port_idx = port_idx
         self._aspect = Aspect('r', route=self.route)
     
+    @property
+    def facing_direction_sign(self):
+        if self.governed_track:
+            if max(self.governed_track.MP) == self.MP:
+                return 1
+            elif min(self.governed_track.MP) == self.MP:
+                return -1
+            else:
+                raise ValueError('Undefined MP direction')
+        else:
+            return -self.sigpoint.signal_by_port[self.sigpoint.opposite_port(self.port_idx)].facing_direction_sign
+            
+
 
     @property
     def route(self):
@@ -204,8 +217,15 @@ class Signal(Observable, Observer):
     @property
     def curr_routing_path(self):
         if self.governed_track:
-            return self.governed_track.curr_routing_path
+            _track_rp = self.governed_track.curr_routing_path
+            if not _track_rp:
+                return None
+            elif self.governed_track.routing[1][0] == self.sigpoint:
+                return _track_rp
+            else:
+                return None
         elif self.permit_track:
+            assert self.permit_track.routing[0][0] == self.sigpoint
             return self.permit_track.curr_routing_path
         else:
             return None
@@ -213,7 +233,10 @@ class Signal(Observable, Observer):
     @property
     def curr_enroute_tracks(self):
         if self.curr_routing_path:
-            return [self.system.get_track_by_point_port_pairs(p1,p1port,p2,p2port) for ((p1,p1port),(p2,p2port)) in self.curr_routing_path]
+            _curr_enroute_tracks = []
+            for ((p1,p1port),(p2,p2port)) in self.curr_routing_path:
+                _curr_enroute_tracks.append(self.system.get_track_by_point_port_pairs(p1,p1port,p2,p2port))
+            return _curr_enroute_tracks
         else:
             return None
 
@@ -333,7 +356,8 @@ class AutoPoint(Observable, Observer):
         self._current_routes = []
         self.neighbor_nodes = []
         self.track_by_port = {}
-        
+        self._curr_train_with_route = {}
+
         # build up signals
         self.signal_by_port = {0:AutoSignal(0, self, MP=self.MP), 1:AutoSignal(1, self, MP=self.MP)}
         assert len(self.signal_by_port) == 2
@@ -346,6 +370,17 @@ class AutoPoint(Observable, Observer):
     def __repr__(self):
         return 'AutoPoint{}'.format(self.idx)
     
+    def opposite_port(self, port):
+        assert port in self.ports
+        assert len(self.ports) == 2
+        for p in self.ports:
+            if p != port:
+                return p
+    
+    @property
+    def curr_train_with_route(self):
+        return self._curr_train_with_route
+
     @property
     def mutex_routes_by_route(self):
         _mutex_routes_by_route = defaultdict(list)
