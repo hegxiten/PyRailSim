@@ -62,7 +62,10 @@ class Track(Observable):
                 assert pport in [self.L_point_port, self.R_point_port]
             if self.train:
                 for t in self.train:
-                    assert t.curr_routing_path_segment == new_routing
+                    assert self in t.curr_tracks
+                    for trk in t.curr_tracks:
+                        if trk == self:
+                            assert trk.routing == new_routing
             self._routing = new_routing
 
         else:
@@ -208,7 +211,7 @@ class Block(Observable):
         pass
         return
         train.curr_blk = self.index
-        train.curr_track_head = idx
+        train.curr_track = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
@@ -216,7 +219,7 @@ class Block(Observable):
         return
         train = self.tracks[idx].train
         train.curr_blk = -1
-        train.curr_track_head = 0
+        train.curr_track = 0
         self.tracks[idx].leave()
 
 class OldTrack(object):
@@ -236,7 +239,7 @@ class OldTrack(object):
         pass
         return
         train.curr_blk = self.index
-        train.curr_track_head = idx
+        train.curr_track = idx
         self.tracks[idx].enter(train)
     
     def free_track(self, idx):
@@ -244,7 +247,7 @@ class OldTrack(object):
         return
         train = self.tracks[idx].train
         train.curr_blk = -1
-        train.curr_track_head = 0
+        train.curr_track = 0
         self.tracks[idx].leave()
 
     def let_in(self, train):

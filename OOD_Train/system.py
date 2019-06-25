@@ -105,10 +105,17 @@ class System():
         _routing_list = [i for i in [getattr(_bblk,'self_routing_path') for _bblk in self.bigblocks] if i]
         if self.control_points[0].current_routes:
             for r in self.control_points[0].current_routes:
-                _routing_list.append([((None,None),(self.control_points[0],r[0]))])
+                if self.control_points[0].track_by_port.get(r[0]):
+                    _routing_list.append([((self.control_points[0],r[1]),(None,None))])
+                if self.control_points[0].track_by_port.get(r[1]):
+                    _routing_list.append([((None,None),(self.control_points[0],r[0]))])
         if self.control_points[-1].current_routes:
             for r in self.control_points[-1].current_routes:
-                _routing_list.append([((self.control_points[-1],r[1]), (None,None))])
+                if self.control_points[-1].track_by_port.get(r[0]):
+                    _routing_list.append([((self.control_points[-1],r[1]),(None,None))])
+                if self.control_points[-1].track_by_port.get(r[1]):
+                    _routing_list.append([((None,None),(self.control_points[-1],r[0]))])
+        
         _to_remove = []        
         while shrinkable(_to_remove, _routing_list):
             for i in range(len(_routing_list)):
@@ -247,7 +254,7 @@ class System():
         self.trains.append(new_train)
         self.train_num += 1
         self.last_train_init_time = self.sys_time
-        new_train.curr_track_head.train.append(new_train)
+        new_train.curr_track.train.append(new_train)
 
     def clear_train(self, train=None):
         if train:
