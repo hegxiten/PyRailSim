@@ -1,14 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from collections import defaultdict
 from itertools import combinations, permutations
 from observe import Observable, Observer
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class Aspect(object):
     '''
-    Aspect代表信号的“含义”,用于比较“大小”
+    Aspect shows the meaning of the signals. 
+    Could be compared with other aspects with more/less favorable comparison.
     '''
-    
-
     def __init__(self, color, route=None):
         self.color = color
         self.route = route
@@ -83,8 +85,6 @@ class Aspect(object):
         else:
             return False
 
-    
-
 class Signal(Observable, Observer):
     def __init__(self, port_idx, sigpoint, MP=None):
         super().__init__()
@@ -106,8 +106,6 @@ class Signal(Observable, Observer):
         else:
             return -self.sigpoint.signal_by_port[self.sigpoint.opposite_port(self.port_idx)].facing_direction_sign
             
-
-
     @property
     def route(self):
         return self.sigpoint.current_route_by_port.get(self.port_idx)
@@ -150,23 +148,7 @@ class Signal(Observable, Observer):
             raise ValueError('signal aspect of {}, port: {} not defined ready'\
                 .format(self.sigpoint, self.port_idx))  
         return self._aspect
-        # else:
-        #     _1st_next_signal = self.next_enroute_signal
-        #     _2nd_next_signal = getattr(_1st_next_signal, 'next_enroute_signal')
-        #     _3rd_next_signal = getattr(_2nd_next_signal, 'next_enroute_signal')
-        #     if _3rd_next_signal:
-        #         if _1st_next_signal.aspect.color == 'r':
-        #             self._aspect.color = 'y'
-        #             return self._aspect
-        #         elif _1st_next_signal.aspect.color == 'y':
-        #             self._aspect.color = 'yy'
-        #             return self._aspect
-        #         elif _1st_next_signal.aspect.color == 'yy':
-        #             self._aspect.color = 'g'
-        #             return self._aspect
-        #         else:
-        #             self._aspect.color = 'g'
-        #             return self._aspect
+        
     @property
     def permit_track(self):
         if self.route:
@@ -258,30 +240,7 @@ class Signal(Observable, Observer):
                         continue
         return _number
         
-
-    def clear(self, route):
-        pass
-
-    def close(self, route):
-        pass
-
-    def change_color_to(self, color, isNotified=True):
-        pass
-        return
-        new_aspect = Aspect(color)
-        print("\t {} signal changed from {} to {}".format(self.port_idx, self.aspect.color, color))
-        self.aspect = new_aspect
-        if isNotified:
-            self.listener_updates(obj=self.aspect)
-
-class AutoSignal(Signal):
-    def __init__(self, port_idx, sigpoint, MP=None):
-        super().__init__(port_idx, sigpoint, MP)
-        self.type = 'abs'
-    
-    def __repr__(self):
-        return 'AutoSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
-
+    #-------------------------#
     def clear(self, port):
         pass
 
@@ -309,6 +268,23 @@ class AutoSignal(Signal):
             elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
                 self.change_color_to('y', True)                            # observer:            -> g
 
+    def change_color_to(self, color, isNotified=True):
+        pass
+        return
+        new_aspect = Aspect(color)
+        print("\t {} signal changed from {} to {}".format(self.port_idx, self.aspect.color, color))
+        self.aspect = new_aspect
+        if isNotified:
+            self.listener_updates(obj=self.aspect)
+
+class AutoSignal(Signal):
+    def __init__(self, port_idx, sigpoint, MP=None):
+        super().__init__(port_idx, sigpoint, MP)
+        self.type = 'abs'
+    
+    def __repr__(self):
+        return 'AutoSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
+
 class HomeSignal(Signal):
     def __init__(self, port_idx, sigpoint, MP=None):
         super().__init__(port_idx, sigpoint, MP)
@@ -318,65 +294,62 @@ class HomeSignal(Signal):
     def __repr__(self):
         return 'HomeSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
     
-    def update(self, observable, update_message):
-        pass
-        return
-        if observable.type == 'block':
-            if update_message:      # block 有车
-                self.change_color_to('r', False)
-        # 情况4
-        elif observable.type == 'home' and self.hs_type == 'A'\
-            and observable.port_idx != self.port_idx:
-            if update_message.color != 'r':                          # 反向主体信号非红                 
-                self.change_color_to('r', True)
-        elif observable.type == 'home' and self.hs_type == 'B'\
-            and observable.port_idx != self.port_idx:
-            if update_message.color != 'r':                          # 反向主体信号非红                 
-                self.change_color_to('r', False)
-        elif observable.type == 'abs': # and 同时还放车进入下一个abs:
-            if update_message.color == 'yy':                         # observable:        g -> yy
-                self.change_color_to('g', False)                            # observer:            -> g
-            elif update_message.color == 'y':                        # observable:     g/yy -> y
-                self.change_color_to('yy', False)                           # observer:            -> yy
-            elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
-                self.change_color_to('y', False)  
 
-class AutoPoint(Observable, Observer):
+    # #--------------------------------#
+    # def update(self, observable, update_message):
+    #     pass
+    #     return
+    #     if observable.type == 'block':
+    #         if update_message:      # block 有车
+    #             self.change_color_to('r', False)
+    #     # 情况4
+    #     elif observable.type == 'home' and self.hs_type == 'A'\
+    #         and observable.port_idx != self.port_idx:
+    #         if update_message.color != 'r':                          # 反向主体信号非红                 
+    #             self.change_color_to('r', True)
+    #     elif observable.type == 'home' and self.hs_type == 'B'\
+    #         and observable.port_idx != self.port_idx:
+    #         if update_message.color != 'r':                          # 反向主体信号非红                 
+    #             self.change_color_to('r', False)
+    #     elif observable.type == 'abs': # and 同时还放车进入下一个abs:
+    #         if update_message.color == 'yy':                         # observable:        g -> yy
+    #             self.change_color_to('g', False)                            # observer:            -> g
+    #         elif update_message.color == 'y':                        # observable:     g/yy -> y
+    #             self.change_color_to('yy', False)                           # observer:            -> yy
+    #         elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
+    #             self.change_color_to('y', False)  
+
+class InterlockingPoint(Observable, Observer):
+    """
+    Abstract Class
+    """
     def __init__(self, system, idx, MP=None):
         super().__init__()
         self.system = system
         self.MP = MP
         self.idx = idx
-        self.type = 'at'
-        self.ports = [0,1]
-        self.available_ports_by_port = {0:[1], 1:[0]}          # define legal routes
-        self.non_mutex_routes_by_route = {}
-        self.ban_ports_by_port = {}
-        self.all_valid_routes = [(0,1),(1,0)]
+        self.ports = []
+        self.available_ports_by_port = defaultdict(list)
+        self.all_valid_routes = []
+        self.non_mutex_routes_by_route=defaultdict(list)
+        self.ban_ports_by_port=defaultdict(list)
+        
         self._current_routes = []
         self.neighbor_nodes = []
         self.track_by_port = {}
         self._curr_train_with_route = {}
 
-        # build up signals
-        self.signal_by_port = {0:AutoSignal(0, self, MP=self.MP), 1:AutoSignal(1, self, MP=self.MP)}
-        assert len(self.signal_by_port) == 2
-        
-        # add the ownership of signals
-        for _, sig in self.signal_by_port.items():
-            sig.sigpoint = self
-            sig.system = self.system
-        
-    def __repr__(self):
-        return 'AutoPoint{}'.format(self.idx)
+    @abstractproperty
+    def current_routes(self):
+        pass
     
-    def opposite_port(self, port):
-        assert port in self.ports
-        assert len(self.ports) == 2
-        for p in self.ports:
-            if p != port:
-                return p
-    
+    @property
+    def current_route_by_port(self):
+        _current_route_by_port = {}
+        for r in self.current_routes:
+            _current_route_by_port[r[0]] = r
+        return _current_route_by_port
+
     @property
     def curr_train_with_route(self):
         return self._curr_train_with_route
@@ -390,26 +363,6 @@ class AutoPoint(Observable, Observer):
                     _mutex_routes_by_route[r].append(vr)
         return _mutex_routes_by_route    
     
-    @property
-    def current_routes(self):
-        self._current_routes = []
-        for p,t in self.track_by_port.items():
-            # only AutoPoints can assign current routes like this because 
-            # AutoPoints have only 0,1 as their ports
-            if t.routing:
-                if p == 0 and p == t.routing[1][1]:
-                    self._current_routes = [(0,1)]
-                elif p == 0 and p == t.routing[0][1]:
-                    self._current_routes = [(1,0)]
-        return self._current_routes
-
-    @property
-    def current_route_by_port(self):
-        _current_route_by_port = {}
-        for r in self.current_routes:
-            _current_route_by_port[r[0]] = r
-        return _current_route_by_port
-
     @property
     def current_invalid_routes(self):
         _current_invalid_routes = []
@@ -427,7 +380,49 @@ class AutoPoint(Observable, Observer):
                     _current_invalid_routes.append(vr)
         return _current_invalid_routes
 
-class ControlPoint(AutoPoint):
+class AutoPoint(InterlockingPoint):
+    def __init__(self, system, idx, MP=None):
+        super().__init__(system, idx, MP)
+        self.type = 'at'
+        self.ports = [0,1]
+        self.available_ports_by_port = {0:[1], 1:[0]}          # define legal routes
+        self.non_mutex_routes_by_route = {}
+        self.ban_ports_by_port = {}
+        self.all_valid_routes = [(0,1),(1,0)]
+        
+        
+        # build up signals
+        self.signal_by_port = { 0:AutoSignal(0, self, MP=self.MP), \
+                                1:AutoSignal(1, self, MP=self.MP)}
+        # register the AutoPoint's ownership over the signals
+        for _, sig in self.signal_by_port.items():
+            sig.sigpoint = self
+            sig.system = self.system
+        
+    def __repr__(self):
+        return 'AutoPoint{}'.format(self.idx)
+    
+    @property
+    def current_routes(self):
+        self._current_routes = []
+        for p,t in self.track_by_port.items():
+            # only AutoPoints can assign current routes like this because 
+            # AutoPoints have only 0,1 as their ports
+            if t.routing:
+                if p == 0 and p == t.routing[1][1]:
+                    self._current_routes = [(0,1)]
+                elif p == 0 and p == t.routing[0][1]:
+                    self._current_routes = [(1,0)]
+        return self._current_routes
+
+    def opposite_port(self, port):
+        assert port in self.ports
+        assert len(self.ports) == 2
+        for p in self.ports:
+            if p != port:
+                return p
+
+class ControlPoint(InterlockingPoint):
     def __init__(self, system, idx, ports, MP=None, ban_ports_by_port=defaultdict(list), non_mutex_routes_by_route=defaultdict(list)):
         super().__init__(system, idx, MP)
         self.type = 'cp'
@@ -504,7 +499,6 @@ class ControlPoint(AutoPoint):
                     #   (somewhere, someport) -> (self, route[0]) and 
                     #   (self, route[1]) to (somewhere, someport)
                     
-                    
     def close_route(self, route=None):
         if route:
             assert route in self._current_routes
@@ -546,12 +540,18 @@ class ControlPoint(AutoPoint):
                         else (_in_bblk.R_point, _in_bblk.R_point_port)
             _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
 
-
     def cancel_bigblock_routing_by_port(self, port):
         assert port in self.ports
         _port, _bblk = port, self.bigblock_by_port.get(port)
         if _bblk:
             _bblk.routing = None
+
+    def opposite_port(self, port):
+        assert port in self.ports
+        assert len(self.ports) == 2
+        for p in self.ports:
+            if p != port:
+                return p
 
     def update_signal(self, all_routes):
         pass

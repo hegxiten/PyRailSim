@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import os
 import sys
 sys.path.append('D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
@@ -6,7 +8,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import random
 from train import Train
-from infrastructure import Track, Block, BigBlock
+from infrastructure import Track, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 import networkx as nx
 
@@ -33,20 +35,11 @@ class System():
     """
     def __init__(self, init_time, *args, **kwargs):
         super().__init__()
-        _blk_length_list = [5] * 10     if not kwargs.get('blk_length_list') else kwargs.get('blk_length_list')
-        _blk_number = len(_blk_length_list)
 
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains = []
-        self.tracks = kwargs.get('tracks')      # self.track list determines the current topology
-        # list of big blocks
-       
-        # list of control points
-        # self.blocks = [Block(i, _blk_length_list[i], max_sp=0.01, track_number=kwargs.get('tracks')[i]) for i in range(_blk_number)]
-        # self.register(self.blocks)
-        # register method links the observation relationships
-        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
+        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
         self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
         self.last_train_init_time = self.sys_time
         self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
@@ -55,23 +48,21 @@ class System():
         self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')
         self.G_origin = self.graph_constructor()
         self.G_skeleton = self.graph_extractor(self.G_origin)
-        #------------deprecated------------#
-        #self.block_intervals = []
-        ## interval is the two-element array containing mile posts of boundaries, generated below in the loops
-        #for i in range(_blk_number):
-        #    if i == 0:
-        #        self.block_intervals.append([0, _blk_length_list[0]])
-        #    else:
-        #        left = self.block_intervals[i - 1][1]
-        #        right = left + _blk_length_list[i]
-        #        self.block_intervals.append([left, right]) 
-        #------------deprecated------------#
 
         self.signal_points = list(self.G_origin.nodes())
+        # list of all SignalPoints, including AutoPoints and ControlPoints
         self.control_points = list(self.G_skeleton.nodes())
+        # list of all ControlPoints. Its indices are not the same as self.signal_points.
         self.tracks = [data['instance'] for (u,v,data) in list(self.G_origin.edges(data=True))]
+        # list of all Tracks. 
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
+        # list of all BigBlocks.
     
+
+        #------------deprecated------------#
+        # self.register(self.blocks)
+        # register method links the observation relationships
+        #------------deprecated------------#
     @property
     def train_num(self):
         return len(self.trains)
@@ -128,33 +119,59 @@ class System():
                         _to_remove.append(_routing_list[i])
         return _routing_list
 
+    def generate_train(self, init_segment, port):
+        '''Generate train only. Not containing train generation logic (when and where to generate a train)
+        '''
+        assert len(init_segment) == 2 and isinstance(init_segment, tuple)
+        new_train = Train(idx=self.train_num, 
+                          rank=self.train_num, 
+                          system=self, 
+                          init_time=self.sys_time, 
+                          init_segment=init_segment, 
+                          max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                          max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                          max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
+        self.trains.append(new_train)
+        self.train_num += 1
+        self.last_train_init_time = self.sys_time
+        new_train.curr_track.train.append(new_train)
 
-    def graph_constructor(self):      
+    def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
+        for t in self.tracks:
+            if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
+                if p1_port in (t.L_point_port, t.R_point_port) and p2_port in (t.L_point_port, t.R_point_port):
+                    return t
+        return None
+
+    def graph_constructor(self, node={}, track={}):      
         '''Initialize the MultiGraph object with railroad components 
         (CP, AT as nodes, Tracks as edges)'''
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        _node = {   0:ControlPoint(self, idx=0, ports=[0,1], MP=0.0), \
-                    1:AutoPoint(self, 1, MP=5.0), \
-                    2:AutoPoint(self, 2, MP=10.0), \
-                    3:ControlPoint(self, idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=15.0), \
-                    4:ControlPoint(self, idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=20.0), \
-                    5:AutoPoint(self, 5, MP=25.0), \
-                    6:ControlPoint(self, idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=30.0), \
-                    7:ControlPoint(self, idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=35.0), \
-                    8:AutoPoint(self, 8, MP=40.0), \
-                    9:AutoPoint(self, 9, MP=45.0), \
-                    10:ControlPoint(self, idx=10, ports=[0,1], MP=50.0)}       
-        nbunch = [_node[i] for i in range(len(_node))]
+        TEST_NODE = {   0:ControlPoint(self, idx=0, ports=[0,1], MP=0.0), \
+                        1:AutoPoint(self, 1, MP=5.0), \
+                        2:AutoPoint(self, 2, MP=10.0), \
+                        3:ControlPoint(self, idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=15.0), \
+                        4:ControlPoint(self, idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=20.0), \
+                        5:AutoPoint(self, 5, MP=25.0), \
+                        6:ControlPoint(self, idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}, MP=30.0), \
+                        7:ControlPoint(self, idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}, MP=35.0), \
+                        8:AutoPoint(self, 8, MP=40.0), \
+                        9:AutoPoint(self, 9, MP=45.0), \
+                        10:ControlPoint(self, idx=10, ports=[0,1], MP=50.0)}       
 
-        _track = [  Track(self,nbunch[0], 1, nbunch[1], 0), Track(self,nbunch[1], 1, nbunch[2], 0), Track(self,nbunch[2], 1, nbunch[3], 0),\
-                    Track(self,nbunch[3], 1, nbunch[4], 0), Track(self,nbunch[3], 3, nbunch[4], 2, edge_key=1),\
-                    Track(self,nbunch[4], 1, nbunch[5], 0), Track(self,nbunch[5], 1, nbunch[6], 0),\
-                    Track(self,nbunch[6], 1, nbunch[7], 0), Track(self,nbunch[6], 3, nbunch[7], 2, edge_key=1),\
-                    Track(self,nbunch[7], 1, nbunch[8], 0), Track(self,nbunch[8], 1, nbunch[9], 0), Track(self,nbunch[9], 1, nbunch[10], 0)]
-        ebunch = [_track[i] for i in range(len(_track))]
+        TEST_TRACK = [  Track(self,TEST_NODE[0], 1, TEST_NODE[1], 0), Track(self,TEST_NODE[1], 1, TEST_NODE[2], 0), Track(self,TEST_NODE[2], 1, TEST_NODE[3], 0),\
+                        Track(self,TEST_NODE[3], 1, TEST_NODE[4], 0), Track(self,TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1),\
+                        Track(self,TEST_NODE[4], 1, TEST_NODE[5], 0), Track(self,TEST_NODE[5], 1, TEST_NODE[6], 0),\
+                        Track(self,TEST_NODE[6], 1, TEST_NODE[7], 0), Track(self,TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1),\
+                        Track(self,TEST_NODE[7], 1, TEST_NODE[8], 0), Track(self,TEST_NODE[8], 1, TEST_NODE[9], 0), Track(self,TEST_NODE[9], 1, TEST_NODE[10], 0)]
         
+        _node = TEST_NODE if not node else node
+        nbunch = [_node[i] for i in range(len(_node))]
+        _track = TEST_TRACK if not track else track
+        ebunch = [_track[i] for i in range(len(_track))]
+
         # _node and _track will be parameters passed from outside in the future development
         G = nx.MultiGraph()
         for n in nbunch:
@@ -188,7 +205,6 @@ class System():
         F = G.copy()        
         # F is a shallow copy of G: attrbutes of G/F components 
         # are pointing at the same memory.
-        
         def _get_new_edge(node, length=False):
             at_neighbor = [j for j in F.neighbors(i)]
             assert len(at_neighbor) == len(F.edges(i)) == 2
@@ -238,37 +254,35 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
-    def generate_train(self, init_segment, port):
-        '''
-        generate train only. Not containing train generation logic (when and where to generate a train)
-        '''
-        assert len(init_segment) == 2 and isinstance(init_segment, tuple)
-        new_train = Train(idx=self.train_num, 
-                          rank=self.train_num, 
-                          system=self, 
-                          init_time=self.sys_time, 
-                          init_segment=init_segment, 
-                          max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
-                          max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
-                          max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
-        self.trains.append(new_train)
-        self.train_num += 1
-        self.last_train_init_time = self.sys_time
-        new_train.curr_track.train.append(new_train)
+    
+    
+    def refresh(self):
+        self.update_track_signal_color()    # 每个刷新都通过本方法监控让车逻辑（CP变更逻辑）
+        headway = self.headway#np.random.normal(exp_buffer, var_buffer)
+        # If the time slot between now and the time of last train generation
+        # is bigger than headway, it will generate a new train at start point.
+        
+        if self.train_num == 0:             # 第一辆车进入系统，TODO: 判断是否还需要段代码
+            track_idx = self.blocks[0].find_available_track()
+            self.generate_train(track_idx)
+            
+        if self.sys_time - self.last_train_init_time >= headway and self.blocks[0].is_Occupied():
+            track_idx = self.blocks[0].find_available_track()
+            self.generate_train(track_idx)  # 生成列车的逻辑在这里，双向跑不通的原因就是列车源源不断的进入系统，系统没有保护逻辑
 
+        for t in self.trains:
+            t.update_acc()                  # 每列列车在这里进行时序状态的更新
+        self.trains.sort()                  # 更新完每列列车后进行排序，为调度逻辑做准备
+        for i, tr in enumerate(self.trains):
+            tr.rank = i
+        self.sys_time += self.refresh_time
+    
     def clear_train(self, train=None):
         if train:
             self.trains.remove(train)
         else:
             self.trains = []
 
-    def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
-        for t in self.tracks:
-            if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
-                if p1_port in (t.L_point_port, t.R_point_port) and p2_port in (t.L_point_port, t.R_point_port):
-                    return t
-        return None
-        
     def update_blk_right(self, i):
         '''
         logics of overpassing, manipulating controlpoints
@@ -330,27 +344,6 @@ class System():
                         print(j)
                     track.right_signal.update_signal('r')
     
-    def refresh(self):
-        self.update_track_signal_color()    # 每个刷新都通过本方法监控让车逻辑（CP变更逻辑）
-        headway = self.headway#np.random.normal(exp_buffer, var_buffer)
-        # If the time slot between now and the time of last train generation
-        # is bigger than headway, it will generate a new train at start point.
-        
-        if self.train_num == 0:             # 第一辆车进入系统，TODO: 判断是否还需要段代码
-            track_idx = self.blocks[0].find_available_track()
-            self.generate_train(track_idx)
-            
-        if self.sys_time - self.last_train_init_time >= headway and self.blocks[0].is_Occupied():
-            track_idx = self.blocks[0].find_available_track()
-            self.generate_train(track_idx)  # 生成列车的逻辑在这里，双向跑不通的原因就是列车源源不断的进入系统，系统没有保护逻辑
-
-        for t in self.trains:
-            t.update_acc()                  # 每列列车在这里进行时序状态的更新
-        self.trains.sort()                  # 更新完每列列车后进行排序，为调度逻辑做准备
-        for i, tr in enumerate(self.trains):
-            tr.rank = i
-        self.sys_time += self.refresh_time
-
     def update_track_signal_color(self):
         '''
         TODO: confirm if no longer needed or not
@@ -477,48 +470,6 @@ if __name__ =='__main__':
     sys = System(sim_init_time, sp_container, acc_container, dcc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                  headway=headway, 
-                 tracks=[1,1,1,4,1,1,3,1,1,1], 
-                 dos_pos=-1)
-
-    left_light = []
-    right_light = []
-    for blk in sys.blocks:
-        if blk.track_number > 1:
-            mul_tk_lgt = []
-            for i in range(blk.track_number):
-                mul_tk_lgt.append(blk.tracks[i].left_signal.aspect.color)
-            left_light.append(mul_tk_lgt)
-        else:
-            left_light.append(blk.tracks[0].left_signal.aspect.color)
-
-    for blk in sys.blocks:
-        if blk.track_number > 1:
-            mul_tk_lgt = []
-            for i in range(blk.track_number):
-                mul_tk_lgt.append(blk.tracks[i].right_signal.aspect.color)
-            right_light.append(mul_tk_lgt)
-        else:
-            right_light.append(blk.tracks[0].right_signal.aspect.color)
-    
-    # for i in range(len(left_light)):
-    #     if len(left_light[i]) == 1:
-    #         print("[" + left_light[i] + "," + right_light[i] + "]", end=" ")
-    #     else:
-    #         print("{", end="")
-    #         for j in range(len(left_light[i])):
-    #             print("[" + left_light[i][j] + "," + right_light[i][j] + "]", end="")
-    #         print("}", end=" ")
-    # print("")
-    for i in range(len(right_light)):
-        if len(right_light[i]) == 1:
-            print("[" + right_light[i] + "]", end=" ")
-        else:
-            print("{", end="")
-            for j in range(len(right_light[i])):
-                print("[" + right_light[i][j] + "]", end="")
-            print("}", end=" ")
-    print("")
-    
-    # print("left light color:  {}".format(left_light))
-    # print("right light color: {}".format(right_light))
+                 dos_pos=-1,
+                 refresh_time = 20)
     
