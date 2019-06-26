@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 from observe import Observable, Observer
 import networkx as nx
@@ -149,6 +151,13 @@ class BigBlock(Track):
             return None
     
     def set_routing_for_tracks(self):
+        '''
+        If a BigBlock instance has routing property, this method sets the 
+        routing property of its tracks using the same routing information.
+        If this method is called, the routing is ensured consistant among
+        inside tracks and their common BigBlock instance.
+        @return: None
+        '''
         (start_point, start_port) = self.routing[0]
         reverse = True if start_point in (self.tracks[-1].L_point, self.tracks[-1].R_point) else False
         if not reverse:
@@ -168,80 +177,15 @@ class BigBlock(Track):
                 start_point, start_port = next_point, self.tracks[i-1].port_by_sigpoint[next_point]
             self.tracks[0].routing = ((start_point, start_port), self.routing[1])
 
-class Block(Observable):
-    #old Block
-    def __init__(self, index, length, max_sp=0.02, track_number=1):
-        self.index = index
-        self.length = length
-        self.max_sp = max_sp
-        # There is track_number tracks in this block.
-        self.track_number = track_number
-        self.tracks = []
-        if self.track_number > 1:
-            for i in range(self.track_number):
-                self.tracks.append(Track(self.length, self.max_sp, 'home'))
-        else:
-            self.tracks.append(Track(self.length, self.max_sp, 'abs'))
 
-    def has_train(self):
-        pass
-        return
-        for tr in self.tracks:
-            if tr.is_Occupied:
-                return True
-        return False
-
-    def is_Occupied(self):
-        pass
-        return
-        for tk in self.tracks:
-            if not tk.is_Occupied:
-                return True
-        return False
-
+    #-----------------------------#
     def find_available_track(self):
         pass
         return
-        assert self.is_Occupied()
         for idx, tk in enumerate(self.tracks):
             if not tk.is_Occupied:
                 return idx
-
-    def occupied_track(self, idx, train):
-        pass
-        return
-        train.curr_blk = self.index
-        train.curr_track = idx
-        self.tracks[idx].enter(train)
-    
-    def free_track(self, idx):
-        pass
-        return
-        train = self.tracks[idx].train
-        train.curr_blk = -1
-        train.curr_track = 0
-        self.tracks[idx].leave()
-
-class OldTrack(object):
-    
-    def has_train(self):
-        return True if len(self.train) != 0 else False
-
-    def find_available_track(self):
-        pass
-        return
-        assert self.is_Occupied()
-        for idx, tk in enumerate(self.tracks):
-            if not tk.is_Occupied:
-                return idx
-
-    def occupied_track(self, idx, train):
-        pass
-        return
-        train.curr_blk = self.index
-        train.curr_track = idx
-        self.tracks[idx].enter(train)
-    
+                
     def free_track(self, idx):
         pass
         return

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from infrastructure import Track, Block, BigBlock
 from system import System
 from train import Train
