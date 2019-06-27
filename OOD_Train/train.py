@@ -403,12 +403,12 @@ class Train():
         terminate = False if _next_enroute_sigpoint else True
         initiate = False if self.curr_prev_sigpoint else True
         
-        if self.curr_speed != 0:
-            timestamp = self.system.sys_time + abs(curr_MP - self.curr_sig.MP)/abs(self.curr_speed)
-        else:
-            timestamp = self.system.sys_time
-        # record the time when the train crosses an interlocking point for God's sake
-        self.time_pos_list.append([timestamp, self.curr_sig.MP])
+        # if self.curr_speed != 0:
+        #     timestamp = self.system.sys_time + abs(curr_MP - self.curr_sig.MP)/abs(self.curr_speed)
+        # else:
+        #     timestamp = self.system.sys_time
+        # # record the time when the train crosses an interlocking point for God's sake
+        # self.time_pos_list.append([timestamp, self.curr_sig.MP])
         
         if initiate:
             assert isinstance(sigpoint, ControlPoint)
@@ -455,11 +455,12 @@ class Train():
         assert min(rear_curr_MP, new_rear_MP) <= self.rear_curr_sig.MP <= max(rear_curr_MP, new_rear_MP)
         assert not self.stopped
 
-        if self.curr_speed != 0:
-            timestamp = self.system.sys_time + abs(rear_curr_MP - self.rear_curr_sig.MP)/abs(self.curr_speed)
-        else:
-            timestamp = self.system.sys_time
-        self.rear_time_pos_list.append([timestamp, self.rear_curr_sig.MP])    
+        # if self.curr_speed != 0:
+        #     timestamp = self.system.sys_time + abs(rear_curr_MP - self.rear_curr_sig.MP)/abs(self.curr_speed)
+        # else:
+        #     timestamp = self.system.sys_time
+        # self.rear_time_pos_list.append([timestamp, self.rear_curr_sig.MP])    
+        
         del sigpoint.curr_train_with_route[self]
         if self.rear_curr_track:
             self.rear_curr_track.train.remove(self)

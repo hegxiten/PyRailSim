@@ -182,16 +182,15 @@ def speed_curve(sys, train):
     plt.legend()
     plt.xlabel('Mile Post/miles')
     plt.ylabel('MPH')
-    plt.scatter(mp, spd, color=colors[1])  # train speed
-    plt.scatter(mp, spdlmt, color=colors[0])  # train speed lmt
-    plt.scatter(mp, tgt_spd, color=colors[2])  # train tgt speed
+    plt.plot(mp, spd, color=colors[1])  # train speed
+    plt.plot(mp, spdlmt, color=colors[0])  # train speed lmt
+    plt.plot(mp, tgt_spd, color=colors[2])  # train tgt speed
     
     plt.figure(figsize=(18, 16), dpi= 80, facecolor='w', edgecolor='k')
     plt.rcParams['figure.dpi'] = 200
     import pylab; pylab.rcParams['figure.figsize'] = (15.0, 8.0)
     plt.show()
     #plt.ioff()
-
 
 def process_data(sys):
     x = []; y = []; 
@@ -321,7 +320,7 @@ if __name__ == '__main__':
                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
                 dos_pos=-1,
                 headway=headway, 
-                refresh_time=1)
+                refresh_time=10)
 
     # K166 = Train(idx=sys.train_num, 
     #                   rank=sys.train_num, 
@@ -338,8 +337,8 @@ if __name__ == '__main__':
                     init_time=sys.sys_time, 
                     init_segment=((None, None),(sys.signal_points[10],1)),
                     max_sp=sys.sp_container[sys.train_num % len(sys.sp_container)], 
-                    max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)], 
-                    max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
+                    max_acc=0.5*sys.acc_container[sys.train_num % len(sys.acc_container)], 
+                    max_dcc=0.5*sys.dcc_container[sys.train_num % len(sys.dcc_container)],
                     length=1)
 
     T165 = Train(idx=sys.train_num, 
@@ -348,11 +347,14 @@ if __name__ == '__main__':
                     init_time=sys.sys_time, 
                     init_segment=((None, None),(sys.signal_points[0],0)),
                     max_sp=T166.max_speed*1.6, 
-                    max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)], 
-                    max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
+                    max_acc=0.5*sys.acc_container[sys.train_num % len(sys.acc_container)], 
+                    max_dcc=0.5*sys.dcc_container[sys.train_num % len(sys.dcc_container)],
                     length=1)
 
     sys.signal_points[10].open_route((1,0))
+    sys.signal_points[7].open_route((1,0))
+    sys.signal_points[0].open_route((0,1))
+    sys.signal_points[3].open_route((0,1))
     for n in range(3600):
         T166.update_acc()
         T165.update_acc()
