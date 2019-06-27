@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import sys
+sys.path.append('D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
+
 from infrastructure import Track, BigBlock
 from system import System
 from train import Train
@@ -349,11 +353,9 @@ if __name__ == '__main__':
                     length=1)
 
     sys.signal_points[10].open_route((1,0))
-
-    for n in range(3000):
+    for n in range(3600):
         T166.update_acc()
         T165.update_acc()
         sys.sys_time+=sys.refresh_time
-    # except:
-    #     speed_curve(sys, T166)
+    speed_curve(sys, T166)
     

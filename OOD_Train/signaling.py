@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import sys
+sys.path.append('D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
+
 from collections import defaultdict
 from itertools import combinations, permutations
 from observe import Observable, Observer

@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import sys
+sys.path.append('D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
+
 import random
 import numpy as np
 from datetime import datetime, timedelta
@@ -341,6 +345,8 @@ class Train():
 
     @curr_speed.setter
     def curr_speed(self, new_speed):    # speed in unit of miles/second
+        assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
+        assert self._curr_speed + self.curr_acc * self.system.refresh_time == new_speed
         _old_speed = self._curr_speed
         if new_speed * _old_speed >=0:
             if abs(new_speed) > abs(_old_speed):
@@ -359,11 +365,14 @@ class Train():
                     self._curr_speed = new_speed
             else:
                 self._curr_speed = new_speed
-        else:
+        elif new_speed * _old_speed < 0:
             # decelerating into a stop (speed value crossing zero)
             self._curr_speed = 0
+        else:
+            raise ValueError('Undefined speed value {} to set for old speed {}'.format(new_speed, _old_speed))
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
         # TODO: check if brake calculation is needed to be implemented here or self.curr_acc
+    
     @property
     def curr_acc(self):     # acc in unit of miles/(second)^2
         _direction_sign = self.sign_MP(self.curr_routing_path_segment)
@@ -379,21 +388,20 @@ class Train():
                         return 0
                     else:
                         return self.max_dcc * (-1) * _direction_sign
-            else:
+            elif abs(self.curr_speed) < self.curr_spd_lmt_abs:
                 if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:
                     return self.max_acc * _direction_sign
-                elif abs(self.curr_speed) < self.curr_target_spd_abs < self.curr_spd_lmt_abs:
+                # (tgt speed < curr spd lmt ) and (curr spd < curr spd lmt)
+                elif self.curr_target_spd_abs > abs(self.curr_speed):
                     return self.max_acc * _direction_sign
-                
-                # elif self.curr_target_spd_abs <= abs(self.curr_speed) < self.curr_spd_lmt_abs:
-                #     if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
-                #         return self.max_acc * _direction_sign
-                #     elif self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
-                #         return 0
-                #     else:
-                #         return self.max_dcc * (-1) * _direction_sign
-                    
-                # TODO: check if brake calculation is needed to be implemented here or self.curr_speed.
+                # (tgt speed < curr spd lmt ) and (curr spd < curr spd lmt)
+                elif self.curr_target_spd_abs <= abs(self.curr_speed):
+                    if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                        return self.max_acc * _direction_sign
+                    elif self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                        return 0
+                    else:
+                        return self.max_dcc * (-1) * _direction_sign
 
     @property
     def curr_target_spd_abs(self): 
@@ -435,11 +443,11 @@ class Train():
             
     def hold_speed_before_dcc(self, MP, tgt_MP, spd, tgt_spd):
         delta_s = spd * self.system.refresh_time
-        if abs(tgt_MP - (MP + delta_s)) > \
+        if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
+            return False
+        elif abs(tgt_MP - (MP + delta_s)) > \
             self.abs_brake_distance(spd, tgt_spd, self.max_dcc) and abs(tgt_MP - MP) > abs(delta_s):
-                if abs(tgt_MP - (MP + delta_s*2)) > self.abs_brake_distance(spd, tgt_spd, self.max_dcc) and\
-                    abs(tgt_MP - MP) > 2 * abs(delta_s):
-                    return True
+                return True
         return False
     
     def acc_before_dcc(self, MP, tgt_MP, spd, tgt_spd):
@@ -448,12 +456,11 @@ class Train():
             _direction_sign = self.sign_MP(self.curr_routing_path_segment)
             delta_s = spd * self.system.refresh_time + 0.5 * (_direction_sign*self.max_acc) * self.system.refresh_time**2
             delta_spd = (_direction_sign * self.max_acc) * self.system.refresh_time
-            delta_s_extra = (spd+delta_spd) * self.system.refresh_time + + 0.5 * (_direction_sign*self.max_acc) * self.system.refresh_time**2
-            if abs(tgt_MP - (MP + delta_s)) > self.abs_brake_distance(spd + delta_spd, tgt_spd, self.max_dcc) \
+            if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
+                return False
+            elif abs(tgt_MP - (MP + delta_s)) > self.abs_brake_distance(spd + delta_spd, tgt_spd, self.max_dcc) \
                 and abs(tgt_MP - MP) > abs(delta_s):
-                    if abs(tgt_MP - (MP + delta_s_extra)) > self.abs_brake_distance(spd + 2*delta_spd, tgt_spd, self.max_dcc) \
-                        and abs(tgt_MP - MP) > abs(delta_s_extra):
-                        return True
+                    return True
         return False
     
     def __lt__(self, othertrain):
