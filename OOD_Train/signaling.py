@@ -11,10 +11,10 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class Aspect(object):
-    '''
+    """
     Aspect shows the meaning of the signals. 
     Could be compared with other aspects with more/less favorable comparison.
-    '''
+    """
     def __init__(self, color, route=None):
         self.color = color
         self.route = route

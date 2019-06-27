@@ -16,22 +16,18 @@ class System():
     """
     Parameters
     ----------
-    :_blk_length_list: list (**kw)
-        A list of block lengths for each block.
-    :tracks: list (**kw)
-        A list of total number of tracks per block.
-    :dos_period: list or tuple (**kw)
-        2-element list or tuple showing the starting and finishing time of DoS attacks.
-    :headway: (**kw)
+    :headway: (**kw), seconds
         Traffic headway in seconds for unidirectional trains. 500 by default.
     :dos_pos: int (**kw)
         Index of block to be attacked by DoS. -1 by default (no DoS).
-    :refresh_time: int (**kw)
+    :refresh_time: int (**kw), seconds
         Seconds between two consecutive traverse calculations of the simulation.
-    :sp_containter: list (**kw)
+    :sp_containter: list (**kw), mph
         A list of randomized speed values for trains to initialize by. Uniform range.
-    :add_container: list (**kw)
+    :acc_container: list (**kw), miles/(sec)^2
         A list of randomized acceleration values for trains to initialize by. Uniform range.
+    :dcc_container: list (**kw), miles/(sec)^2
+        A list of randomized deceleration values for trains to brake by. Uniform range.
     """
     def __init__(self, init_time, *args, **kwargs):
         super().__init__()
