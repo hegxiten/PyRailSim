@@ -15,6 +15,7 @@ class Aspect(object):
     Aspect shows the meaning of the signals. 
     Could be compared with other aspects with more/less favorable comparison.
     """
+    COLOR_SPD_DICT = {'r':0.0, 'y':20/3600, 'yy':40/3600, 'g':72/3600}
     def __init__(self, color, route=None):
         self.color = color
         self.route = route
@@ -24,15 +25,8 @@ class Aspect(object):
     
     @property
     def target_speed(self):
-        if self.color == 'r':
-            return 0/3600
-        elif self.color == 'y':
-            return 20/3600
-        elif self.color == 'yy':
-            return 40/3600
-        elif self.color == 'g':
-            return 72/3600
-
+        return self.COLOR_SPD_DICT[self.color] if self.color else 0
+        
     def __eq__(self,other):
         return self.color == other.color
 
@@ -569,4 +563,5 @@ class ControlPoint(InterlockingPoint):
             self.signal_by_port[p1].clear()
 
 if __name__ == '__main__':
-    pass
+    a=Aspect('r')
+    print(Aspect.COLOR_SPD_DICT)

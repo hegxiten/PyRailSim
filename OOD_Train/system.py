@@ -9,7 +9,7 @@ import numpy as np
 import random
 from train import Train
 from infrastructure import Track, BigBlock
-from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
+from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
 import networkx as nx
 
 class System():
@@ -34,14 +34,7 @@ class System():
 
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
         self.trains = []
-        self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
-        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
-        self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
-        self.last_train_init_time = self.sys_time
-        self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
-        self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
-        self.dcc_container = args[2]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
-        self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')
+
         self.G_origin = self.graph_constructor()
         self.G_skeleton = self.graph_extractor(self.G_origin)
 
@@ -53,12 +46,35 @@ class System():
         # list of all Tracks. 
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
         # list of all BigBlocks.
-    
+
+        self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
+        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
+        self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
+        self.last_train_init_time = self.sys_time
+        self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
+        self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
+        self.dcc_container = args[2]    if args else [random.uniform(self.min_dcc_rate*1.15, self.min_dcc_rate*1.25) for i in range(20)]
+        self.dcc_container = [i if i >= self.min_dcc_rate else self.min_dcc_rate for i in self.dcc_container]
+        self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')    
 
         #------------deprecated------------#
         # self.register(self.blocks)
         # register method links the observation relationships
         #------------deprecated------------#
+    
+    @property
+    def min_dcc_rate(self):    
+        '''Absolute value, minimum brake acceleration of all trains required by the 
+        system setup. If a train's maximum braking deceleration is smaller than this 
+        value, it may violate some signal/speed limit at extreme scenarios. 
+        If violated, the program will throw Assertion Errors at braking distance check.
+        '''
+        _signal_speeds = sorted([spd for _, spd in Aspect.COLOR_SPD_DICT.items()])
+        _speed_diff_pairs = [(_signal_speeds[i],_signal_speeds[i+1]) for i in range(len(_signal_speeds)-1)]
+        _max_diff_square_of_spd = max([abs(i[0]**2-i[1]**2) for i in _speed_diff_pairs])
+        _min_track_length = min([t.length for t in self.tracks])
+        return _max_diff_square_of_spd / (2*_min_track_length)
+    
     @property
     def train_num(self):
         return len(self.trains)

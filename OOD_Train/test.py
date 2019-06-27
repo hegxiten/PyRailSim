@@ -306,9 +306,6 @@ def main():
     print("Minimum Train Acc = {} mph/min".format(min(acc_container)*3600*60))
     print("Maximum Train Acc = {} mph/min".format(max(acc_container)*3600*60))
 
-    
-    string_diagram(sys, sys_dos, sim_init_time, sim_term_time)
-
 if __name__ == '__main__':
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
@@ -337,8 +334,8 @@ if __name__ == '__main__':
                     init_time=sys.sys_time, 
                     init_segment=((None, None),(sys.signal_points[10],1)),
                     max_sp=sys.sp_container[sys.train_num % len(sys.sp_container)], 
-                    max_acc=0.5*sys.acc_container[sys.train_num % len(sys.acc_container)], 
-                    max_dcc=0.5*sys.dcc_container[sys.train_num % len(sys.dcc_container)],
+                    max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)], 
+                    max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
                     length=1)
 
     T165 = Train(idx=sys.train_num, 
@@ -347,17 +344,18 @@ if __name__ == '__main__':
                     init_time=sys.sys_time, 
                     init_segment=((None, None),(sys.signal_points[0],0)),
                     max_sp=T166.max_speed*1.6, 
-                    max_acc=0.5*sys.acc_container[sys.train_num % len(sys.acc_container)], 
-                    max_dcc=0.5*sys.dcc_container[sys.train_num % len(sys.dcc_container)],
+                    max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)], 
+                    max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
                     length=1)
 
     sys.signal_points[10].open_route((1,0))
     sys.signal_points[7].open_route((1,0))
-    sys.signal_points[0].open_route((0,1))
-    sys.signal_points[3].open_route((0,1))
-    for n in range(3600):
+    sys.signal_points[6].open_route((1,0))
+    sys.signal_points[4].open_route((1,0))
+
+    for n in range(360):
         T166.update_acc()
         T165.update_acc()
         sys.sys_time+=sys.refresh_time
-    speed_curve(sys, T166)
+    string_diagram(sys, sim_init_time, sim_term_time)
     
