@@ -43,17 +43,17 @@ class Train():
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
-        elif not rp_seg[0][0]:
+        elif not rp_seg[0][0]:      # initiating
             if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return 1
             elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
-        elif not rp_seg[1][0]:
-            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+        elif not rp_seg[1][0]:      # terminating
+            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return 1
-            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
@@ -74,6 +74,7 @@ class Train():
         self.max_dcc = max_dcc
 
         self._curr_speed = 0
+        self._curr_acc = 0
         # initial speed limit, considering both cases: 
         # with current track and without current tracks 
         # default 20 mph even with both ends restricting. Non-zero value
@@ -319,32 +320,43 @@ class Train():
     @property
     def curr_acc(self):     # acceleration in miles/(second)^2, with (+/-)
         _direction_sign = self.sign_MP(self.curr_routing_path_segment)
+        _delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self._curr_acc * self.system.refresh_time ** 2
+        _tgt_MP = self.curr_sig.MP if self.curr_sig else _direction_sign * float('inf')
         if self.stopped:    # either stopped or out of system
-            return 0
+            self._curr_acc = 0
         else:
             assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
             if abs(self.curr_speed) == self.curr_spd_lmt_abs:
                 if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:
-                    return 0
+                    self._curr_acc = 0
                 else:
                     if self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
-                        return 0
+                        self._curr_acc = 0
                     else:
-                        return self.max_dcc * (-1) * _direction_sign
+                        self._curr_acc = self.max_dcc * (-1) * _direction_sign
             elif abs(self.curr_speed) < self.curr_spd_lmt_abs:
-                if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:
-                    return self.max_acc * _direction_sign
-                # (tgt speed < curr spd lmt ) and (curr spd < curr spd lmt) == True already satiesfied
-                elif self.curr_target_spd_abs > abs(self.curr_speed):
-                    return self.max_acc * _direction_sign
-                # (tgt speed < curr spd lmt ) and (curr spd < curr spd lmt) == True already satiesfied
-                elif self.curr_target_spd_abs <= abs(self.curr_speed):
-                    if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
-                        return self.max_acc * _direction_sign
-                    elif self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
-                        return 0
-                    else:
-                        return self.max_dcc * (-1) * _direction_sign
+                if (_tgt_MP - self.curr_MP) * (_tgt_MP - (self.curr_MP + _delta_s)) >= 0:
+                    if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:
+                        self._curr_acc = self.max_acc * _direction_sign
+                    # (tgt speed < curr spd lmt ) and (curr spd < curr spd lmt) == True already satiesfied
+                    elif self.curr_target_spd_abs > abs(self.curr_speed):
+                        self._curr_acc = self.max_acc * _direction_sign
+                    # (tgt speed < curr spd lmt ) and (curr spd < curr spd lmt) == True already satiesfied
+                    elif self.curr_target_spd_abs <= abs(self.curr_speed):
+                        if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                            self._curr_acc = self.max_acc * _direction_sign
+                        elif self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                            self._curr_acc = 0
+                        else:
+                            self._curr_acc = self.max_dcc * (-1) * _direction_sign
+                else:
+                    if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:
+                        self._curr_acc = self.max_acc * _direction_sign
+                    elif self.curr_target_spd_abs > abs(self.curr_speed):
+                        self._curr_acc = self.max_acc * _direction_sign
+                    elif self.curr_target_spd_abs <= abs(self.curr_speed):
+                        self._curr_acc = self.max_dcc * (-1) * _direction_sign
+        return self._curr_acc
 
     @property
     def curr_target_spd_abs(self):      # in miles/sec, + only
@@ -513,15 +525,20 @@ class Train():
                     return True
         return False
     
+    def request_route(self, sigpoint):
+        pass
+
     def update_acc(self):
         if not self.stopped:
-            delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
             self.curr_speed = self.curr_speed + self.curr_acc * self.system.refresh_time
+            delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
             self.curr_MP += delta_s
-        else:
+        elif not self.terminated:
             self.time_pos_list.append([self.system.sys_time, self.curr_MP])
             self.rear_time_pos_list.append([self.system.sys_time, self.rear_curr_MP])
-        self.pos_spd_list.append([self.curr_MP, self._curr_speed, self.curr_spd_lmt_abs, self.curr_target_spd_abs])
+            self.pos_spd_list.append([self.curr_MP, self._curr_speed, self.curr_spd_lmt_abs, self.curr_target_spd_abs])
+        else:
+            pass
 
     def __lt__(self, othertrain):
         if self.curr_MP > othertrain.curr_MP:

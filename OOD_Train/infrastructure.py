@@ -68,10 +68,9 @@ class Track(Observable):
                 assert pport in [self.L_point_port, self.R_point_port]
             if self.train:
                 for t in self.train:
-                    assert self in t.curr_tracks
                     for trk in t.curr_tracks:
                         if trk == self:
-                            assert trk.routing == new_routing
+                            assert t.curr_routing_path_segment == new_routing
             self._routing = new_routing
 
         else:
