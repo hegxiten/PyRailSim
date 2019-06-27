@@ -291,7 +291,6 @@ class Train():
     @curr_speed.setter
     def curr_speed(self, new_speed):
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
-        assert self._curr_speed + self.curr_acc * self.system.refresh_time == new_speed
         _old_speed = self._curr_speed
         if new_speed * _old_speed >=0:
             if abs(new_speed) > abs(_old_speed):
@@ -533,10 +532,10 @@ class Train():
             self.curr_speed = self.curr_speed + self.curr_acc * self.system.refresh_time
             delta_s = self.curr_speed * self.system.refresh_time + 0.5 * self.curr_acc * self.system.refresh_time ** 2
             self.curr_MP += delta_s
+            self.pos_spd_list.append([self.curr_MP, self._curr_speed, self.curr_spd_lmt_abs, self.curr_target_spd_abs])
         elif not self.terminated:
             self.time_pos_list.append([self.system.sys_time, self.curr_MP])
             self.rear_time_pos_list.append([self.system.sys_time, self.rear_curr_MP])
-            self.pos_spd_list.append([self.curr_MP, self._curr_speed, self.curr_spd_lmt_abs, self.curr_target_spd_abs])
         else:
             pass
 
