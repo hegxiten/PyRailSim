@@ -131,23 +131,6 @@ class System():
                         _to_remove.append(_routing_list[i])
         return _routing_list
 
-    def generate_train(self, init_segment, port):
-        '''Generate train only. Not containing train generation logic (when and where to generate a train)
-        '''
-        assert len(init_segment) == 2 and isinstance(init_segment, tuple)
-        new_train = Train(idx=self.train_num, 
-                          rank=self.train_num, 
-                          system=self, 
-                          init_time=self.sys_time, 
-                          init_segment=init_segment, 
-                          max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
-                          max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
-                          max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
-        self.trains.append(new_train)
-        self.train_num += 1
-        self.last_train_init_time = self.sys_time
-        new_train.curr_track.train.append(new_train)
-
     def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
         for t in self.tracks:
             if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
@@ -266,7 +249,29 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
-    
+    def generate_train(self, init_point, init_port, dest_point, dest_port):
+        '''Generate train only. 
+        '''
+        assert len(init_segment) == 2 and isinstance(init_segment, tuple)
+        new_train = Train(idx=self.train_num, 
+                          rank=self.train_num, 
+                          system=self, 
+                          init_time=self.sys_time, 
+                          init_segment=init_segment, 
+                          max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                          max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                          max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
+        self.trains.append(new_train)
+        self.train_num += 1
+        self.last_train_init_time = self.sys_time
+        new_train.curr_track.train.append(new_train)
+
+    def update_routing(self):
+        if not self.curr_sig:
+            pass
+        elif not self.curr_sig.route:
+            if self.curr_sig.sigpoint.capacity_ok(direction, next_sigpoint, ):
+                signal.
     
     def refresh(self):
         self.update_track_signal_color()    # 每个刷新都通过本方法监控让车逻辑（CP变更逻辑）
@@ -288,7 +293,15 @@ class System():
         for i, tr in enumerate(self.trains):
             tr.rank = i
         self.sys_time += self.refresh_time
-    
+
+    def generable(init_point, init_port, dest_point, dest_port):
+        _parallel_tracks = 
+        _outbound_trains =  
+        _inbound_train = 
+        return True if min(len(_outbound_trains), len(_inbound_train)) <= len(_parallel_tracks)\
+            else False
+
+
     def clear_train(self, train=None):
         if train:
             self.trains.remove(train)

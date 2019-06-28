@@ -186,7 +186,33 @@ class Train():
     @property
     def rear_curr_prev_sigport(self):
         return self.curr_occuping_routing_path[-1][0][1]
+    
+    @property
+    def curr_control_point(self):
+        if self.curr_track:
+            if self.sign_MP < 0:
+                return self.curr_track.bigblock.L_point 
+            if self.sign_MP > 0:
+                return self.curr_track.bigblock.R_point
+        else:
+            return self.curr_sigpoint
 
+    @property
+    def curr_control_pointport(self):
+        if self.curr_track:
+            if self.sign_MP < 0:
+                return self.curr_track.bigblock.L_point_port 
+            if self.sign_MP > 0:
+                return self.curr_track.bigblock.R_point_port
+        else:
+            return self.curr_sigport
+
+    @property
+    def curr_home_sig(self):
+        return self.curr_control_point.signal_by_port[self.curr_control_pointport]\
+            if self.curr_control_point
+            else None
+            
     @property
     def curr_sig(self):
         return self.curr_sigpoint.signal_by_port[self.curr_sigport] \
@@ -197,7 +223,7 @@ class Train():
         return self.rear_curr_sigpoint.signal_by_port[self.rear_curr_sigport] \
             if self.rear_curr_sigpoint \
             else None
-    
+
     @property
     def curr_MP(self):                  # in miles, coordinate
         if self.curr_track:
@@ -523,9 +549,6 @@ class Train():
                 and abs(tgt_MP - MP) > abs(delta_s):
                     return True
         return False
-    
-    def request_route(self, sigpoint):
-        pass
 
     def update_acc(self):
         if not self.stopped:
