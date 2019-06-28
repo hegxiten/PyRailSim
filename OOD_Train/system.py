@@ -252,55 +252,79 @@ class System():
     def generate_train(self, init_point, init_port, dest_point, dest_port):
         '''Generate train only. 
         '''
-        assert len(init_segment) == 2 and isinstance(init_segment, tuple)
-        new_train = Train(idx=self.train_num, 
-                          rank=self.train_num, 
-                          system=self, 
-                          init_time=self.sys_time, 
-                          init_segment=init_segment, 
-                          max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
-                          max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
-                          max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
-        self.trains.append(new_train)
-        self.train_num += 1
-        self.last_train_init_time = self.sys_time
-        new_train.curr_track.train.append(new_train)
+        if self.generable(init_point, dest_point):
+            new_train = Train(idx=self.train_num, 
+                            rank=self.train_num, 
+                            system=self, 
+                            init_time=self.sys_time, 
+                            init_segment=init_segment, 
+                            max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                            max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                            max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
+            self.trains.append(new_train)
+            self.train_num += 1
+            self.last_train_init_time = self.sys_time
+            new_train.curr_track.train.append(new_train)
 
     def update_routing(self):
-        if not self.curr_sig:
-            pass
-        elif not self.curr_sig.route:
-            if self.curr_sig.sigpoint.capacity_ok(direction, next_sigpoint, ):
-                signal.
+        for trn in self.trains:
+            if not trn.curr_sig:
+                pass
+            elif not trn.curr_sig.route:
+                if self.generable(trn.curr_sigpoint, trn.curr_sigport, trn.intended_sigpoint, trn.intended_sigport):
+                    trn.curr_sigpoint.open_route((curr_sigport,trn.intended_sigport))
     
     def refresh(self):
-        self.update_track_signal_color()    # 每个刷新都通过本方法监控让车逻辑（CP变更逻辑）
-        headway = self.headway#np.random.normal(exp_buffer, var_buffer)
-        # If the time slot between now and the time of last train generation
-        # is bigger than headway, it will generate a new train at start point.
-        
-        if self.train_num == 0:             # 第一辆车进入系统，TODO: 判断是否还需要段代码
-            track_idx = self.blocks[0].find_available_track()
-            self.generate_train(track_idx)
-            
-        if self.sys_time - self.last_train_init_time >= headway and self.blocks[0].is_Occupied():
-            track_idx = self.blocks[0].find_available_track()
-            self.generate_train(track_idx)  # 生成列车的逻辑在这里，双向跑不通的原因就是列车源源不断的进入系统，系统没有保护逻辑
-
+        self.generate_train()
+        self.trains.sort()
+        self.update_routing()
         for t in self.trains:
-            t.update_acc()                  # 每列列车在这里进行时序状态的更新
+            t.update_acc()
         self.trains.sort()                  # 更新完每列列车后进行排序，为调度逻辑做准备
         for i, tr in enumerate(self.trains):
             tr.rank = i
         self.sys_time += self.refresh_time
 
     def generable(init_point, init_port, dest_point, dest_port):
-        _parallel_tracks = 
-        _outbound_trains =  
-        _inbound_train = 
-        return True if min(len(_outbound_trains), len(_inbound_train)) <= len(_parallel_tracks)\
+        _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
+        _outbound_trains = self.get_trains_between_points(from_point=init_point, to_point=dest_point, directed=True)
+        _inbound_trains = self.get_trains_between_points(from_point=dest_point, to_point=init_point, directed=True)
+        return True if min(len(_outbound_trains), len(_inbound_trains)) <= len(_parallel_tracks)\
             else False
 
+    def num_parallel_tracks(self, init_point, dest_point):
+        _mainline_section = nx.shortest_path(self.G_origin, init_point, dest_point)
+        _start_point = _mainline_section.pop(0)
+        count = 0
+        _traversed = []
+        while _mainline_section:
+            for t in _traversed:
+                if t in _mainline_section:
+                    _mainline_section.remove(t)
+            for p in _mainline_section:
+                if len(list(nx.all_simple_paths(self.G_origin, _start_point, p))) == 1:
+                    _traversed.append(p)
+                    continue
+                else:
+                    count += len(list(nx.all_simple_paths(self.G_origin, _start_point, p))) -1
+                    _traversed.append(p)
+                    _start_point = p
+                    break
+        return count
+
+    def get_trains_between_points(self, from_point, to_point, directed=False):
+        all_paths = list(nx.all_simple_paths(self.G_origin, from_point, to_point))
+        _trains = []
+        for p in all_paths:
+            for i in range(len(p)-1):
+                for k in list(self.G_origin[p[i]][p[i+1]]):
+                    for t in self.G_origin[p[i]][p[i+1]][k]['instance'].train:
+                        if t not in _trains:
+                            _trains.append((t, t.curr_routing_path_segment, (p[i], p[i+1], k)))
+        if not directed:
+            return [i[0] for i in _trains]
+        else:
+            return [i[0] for i in _trains if (i[1][0][0], i[1][1][0]) == i[2]]
 
     def clear_train(self, train=None):
         if train:

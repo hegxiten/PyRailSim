@@ -190,9 +190,9 @@ class Train():
     @property
     def curr_control_point(self):
         if self.curr_track:
-            if self.sign_MP < 0:
+            if self.sign_MP(self.curr_routing_path_segment) < 0:
                 return self.curr_track.bigblock.L_point 
-            if self.sign_MP > 0:
+            if self.sign_MP(self.curr_routing_path_segment) > 0:
                 return self.curr_track.bigblock.R_point
         else:
             return self.curr_sigpoint
@@ -200,9 +200,9 @@ class Train():
     @property
     def curr_control_pointport(self):
         if self.curr_track:
-            if self.sign_MP < 0:
+            if self.sign_MP(self.curr_routing_path_segment) < 0:
                 return self.curr_track.bigblock.L_point_port 
-            if self.sign_MP > 0:
+            if self.sign_MP(self.curr_routing_path_segment) > 0:
                 return self.curr_track.bigblock.R_point_port
         else:
             return self.curr_sigport
