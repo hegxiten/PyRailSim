@@ -113,7 +113,7 @@ class Train():
         '''
         if self.terminated:
             self._stopped = True
-        elif self.curr_speed == 0 and not self.curr_sig.permit_track:
+        elif self.curr_speed == 0 and self.curr_target_spd_abs == 0:
             self._stopped = True
         else:
             self._stopped = False
