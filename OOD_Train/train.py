@@ -186,33 +186,19 @@ class Train():
     @property
     def rear_curr_prev_sigport(self):
         return self.curr_occuping_routing_path[-1][0][1]
-    
     @property
     def curr_control_point(self):
-        if self.curr_track:
-            if self.sign_MP(self.curr_routing_path_segment) < 0:
-                return self.curr_track.bigblock.L_point 
-            if self.sign_MP(self.curr_routing_path_segment) > 0:
-                return self.curr_track.bigblock.R_point
-        else:
-            return self.curr_sigpoint
-
+        return self.curr_track.bigblock.shooting_point(sign_MP=self.sign_MP(self.curr_routing_path_segment))\
+            if self.curr_track else self.curr_sigpoint
     @property
     def curr_control_pointport(self):
-        if self.curr_track:
-            if self.sign_MP(self.curr_routing_path_segment) < 0:
-                return self.curr_track.bigblock.L_point_port 
-            if self.sign_MP(self.curr_routing_path_segment) > 0:
-                return self.curr_track.bigblock.R_point_port
-        else:
-            return self.curr_sigport
-
+        return self.curr_track.bigblock.shooting_port(sign_MP=self.sign_MP(self.curr_routing_path_segment))\
+            if self.curr_track else self.curr_sigport
     @property
     def curr_home_sig(self):
         return self.curr_control_point.signal_by_port[self.curr_control_pointport]\
-            if self.curr_control_point
+            if self.curr_control_point\
             else None
-            
     @property
     def curr_sig(self):
         return self.curr_sigpoint.signal_by_port[self.curr_sigport] \
@@ -229,7 +215,6 @@ class Train():
         if self.curr_track:
             assert  min(self.curr_track.MP) <= self._curr_MP <= max(self.curr_track.MP)
         return self._curr_MP
-
     @curr_MP.setter
     def curr_MP(self, new_MP):
         _delta_s = new_MP - self._curr_MP
@@ -269,7 +254,6 @@ class Train():
         if self.rear_curr_track:
             assert  min(self.rear_curr_track.MP) <= self._rear_curr_MP <= max(self.rear_curr_track.MP)
         return self._rear_curr_MP
-    
     @rear_curr_MP.setter
     def rear_curr_MP(self, new_rear_MP):
         if not self.length:
@@ -313,7 +297,6 @@ class Train():
     @property
     def curr_speed(self):               # in miles/sec, with (+/-)
         return self._curr_speed
-
     @curr_speed.setter
     def curr_speed(self, new_speed):
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
@@ -402,8 +385,7 @@ class Train():
     @property
     def curr_spd_lmt_abs(self):         # in miles/sec, + only
         assert self._curr_spd_lmt_abs > 0   # Non-zero value
-        return self._curr_spd_lmt_abs
-    
+        return self._curr_spd_lmt_abs    
     @curr_spd_lmt_abs.setter
     def curr_spd_lmt_abs(self, spd_lmt):    
         if self.curr_track:

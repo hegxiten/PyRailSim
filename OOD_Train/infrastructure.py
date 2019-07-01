@@ -83,6 +83,28 @@ class Track(Observable):
                 return rp
         return None
 
+    def shooting_point(self, point=None, port=None, sign_MP=None):
+        if point: 
+            assert point in (self.L_point, self.R_point)
+            return self.L_point if point == self.R_point else self.R_point
+        if port:
+            assert port in (self.L_point_port, self.R_point_port)
+            return self.L_point if port == self.R_point_port else self.R_point
+        if sign_MP:
+            assert sign_MP in (-1, +1)
+            return self.L_point if sign_MP == -1 else self.R_point
+    
+    def shooting_port(self, point=None, port=None, sign_MP=None):
+        if point: 
+            assert point in (self.L_point, self.R_point)
+            return self.L_point_port if point == self.R_point else self.R_point_port
+        if port:
+            assert port in (self.L_point_port, self.R_point_port)
+            return self.L_point_port if port == self.R_point_port else self.R_point_port
+        if sign_MP:
+            assert sign_MP in (-1, +1)
+            return self.L_point_port if sign_MP == -1 else self.R_point_port
+
 class BigBlock(Track):
     def __init__(self, system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=0, raw_graph=None, cp_graph=None):
         super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key)

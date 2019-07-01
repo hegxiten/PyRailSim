@@ -252,7 +252,10 @@ class System():
     def generate_train(self, init_point, init_port, dest_point, dest_port):
         '''Generate train only. 
         '''
-        if self.generable(init_point, dest_point):
+        if self.generable(init_point, init_port, dest_point, dest_port):
+            init_segment = ((None,None), (init_point, init_port)) \
+                if not init_point.track_by_port[init_port]\
+                    else init_point.track_by_port[init_port].get_routing_by_point_port(end=(init_point, init_port))
             new_train = Train(idx=self.train_num, 
                             rank=self.train_num, 
                             system=self, 
@@ -285,11 +288,15 @@ class System():
             tr.rank = i
         self.sys_time += self.refresh_time
 
-    def generable(init_point, init_port, dest_point, dest_port):
+    def generable(self, init_point, init_port, dest_point, dset_port):
+        '''Generate a train from init_point to dest_point.
+        The train enters the system BEFORE crossing the init_point; 
+        The train leaves the system AFTER crossing the dest_point.
+        '''
         _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
         _outbound_trains = self.get_trains_between_points(from_point=init_point, to_point=dest_point, directed=True)
         _inbound_trains = self.get_trains_between_points(from_point=dest_point, to_point=init_point, directed=True)
-        return True if min(len(_outbound_trains), len(_inbound_trains)) <= len(_parallel_tracks)\
+        return True if min(len(_outbound_trains), len(_inbound_trains)) <= _parallel_tracks\
             else False
 
     def num_parallel_tracks(self, init_point, dest_point):

@@ -160,35 +160,19 @@ class Signal(Observable, Observer):
 
     @property
     def next_enroute_sigpoint(self):    # call a point instance from signal instance
-        if self.permit_track:
-            if self.sigpoint == self.permit_track.L_point:
-                return self.permit_track.R_point
-            elif self.sigpoint == self.permit_track.R_point:
-                return self.permit_track.L_point
-        else:
-            return None
+        return self.permit_track.shooting_point(self.sigpoint) if self.permit_track\
+        else None
     
     @property
     def next_enroute_signal(self):
-        if self.permit_track:
-            if self.sigpoint == self.permit_track.L_point:
-                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
-            elif self.sigpoint == self.permit_track.R_point:
-                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
-            return self.next_enroute_sigpoint.signal_by_port[port_of_next_enroute_signal]
-        else:
-            return None
+        return self.next_enroute_sigpoint.signal_by_port\
+                [self.next_enroute_sigpoint_port] \
+        if self.permit_track else None
 
     @property
     def next_enroute_sigpoint_port(self):
-        if self.permit_track:
-            if self.sigpoint == self.permit_track.L_point:
-                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.R_point]
-            elif self.sigpoint == self.permit_track.R_point:
-                port_of_next_enroute_signal = self.permit_track.port_by_sigpoint[self.permit_track.L_point]
-            return port_of_next_enroute_signal
-        else:
-            return None
+        return self.permit_track.shooting_port(point=self.sigpoint) if self.permit_track\
+        else None
 
     @property
     def cleared_signal_to_exit_system(self):
@@ -319,7 +303,7 @@ class HomeSignal(Signal):
 
 class InterlockingPoint(Observable, Observer):
     """
-    Abstract Class
+    Abstract Class, a.k.a SignalPoint/Sigpoint
     """
     def __init__(self, system, idx, MP=None):
         super().__init__()
@@ -414,6 +398,9 @@ class AutoPoint(InterlockingPoint):
         return self._current_routes
 
     def opposite_port(self, port):
+        '''Return the signal port on the other side of the given port of an AutoSignal.
+        Method restricted to AutoSignal instances. 
+        '''
         assert port in self.ports
         assert len(self.ports) == 2
         for p in self.ports:
@@ -514,29 +501,13 @@ class ControlPoint(InterlockingPoint):
         _in_port, _in_bblk = x, self.bigblock_by_port.get(x)
         _out_port, _out_bblk = y, self.bigblock_by_port.get(y)
         if _in_bblk and _out_bblk:
-            (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
-                (_in_bblk.L_point, _in_bblk.L_point_port) \
-                    if self == _in_bblk.R_point \
-                        else (_in_bblk.R_point, _in_bblk.R_point_port)
-            (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
-                (_out_bblk.L_point, _out_bblk.L_point_port) \
-                    if self == _out_bblk.R_point \
-                        else (_out_bblk.R_point, _out_bblk.R_point_port)
-            _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
-            _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+            _in_bblk.routing = ((_in_bblk.shooting_point(point=self), _in_bblk.shooting_port(point=self)), (self,x))
+            _out_bblk.routing = ((self,y), (_out_bblk.shooting_point(point=self), _out_bblk.shooting_port(point=self)))
 
         elif (not _in_bblk) and _out_bblk:
-            (_out_bblk_neighbor_point, _out_bblk_neighbor_port) = \
-                (_out_bblk.L_point, _out_bblk.L_point_port) \
-                    if self == _out_bblk.R_point \
-                        else (_out_bblk.R_point, _out_bblk.R_point_port)
-            _out_bblk.routing = ((self,y), (_out_bblk_neighbor_point, _out_bblk_neighbor_port))
+            _out_bblk.routing = ((self,y), (_out_bblk.shooting_point(point=self), _out_bblk.shooting_port(point=self)))
         elif _in_bblk and (not _out_bblk):
-            (_in_bblk_neighbor_point, _in_bblk_neighbor_port) = \
-                (_in_bblk.L_point, _in_bblk.L_point_port) \
-                    if self == _in_bblk.R_point \
-                        else (_in_bblk.R_point, _in_bblk.R_point_port)
-            _in_bblk.routing = ((_in_bblk_neighbor_point, _in_bblk_neighbor_port), (self,x))
+            _in_bblk.routing = ((_in_bblk.shooting_point(point=self), _in_bblk.shooting_port(point=self)), (self,x))
 
     def cancel_bigblock_routing_by_port(self, port):
         assert port in self.ports
