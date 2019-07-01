@@ -58,7 +58,7 @@ class Train():
             else:
                 raise ValueError('Undefined MP direction')
 
-    def __init__(self, idx, rank, system, init_time, init_segment, max_sp, max_acc, max_dcc, **kwargs):        
+    def __init__(self, system, init_time, init_segment, max_sp, max_acc, max_dcc, **kwargs):        
         ((_curr_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_segment
         self.system = system
         self.length = 0         if not kwargs.get('length') else kwargs.get('length')
@@ -66,8 +66,8 @@ class Train():
         self._curr_occuping_routing_path = [self._curr_routing_path_segment]
         self._curr_MP = self.curr_sig.MP
         self._rear_curr_MP = self.curr_MP - self.length * self.sign_MP(self.curr_routing_path_segment)
-        self.train_idx = idx
-        self.rank = rank
+        self.train_idx = len(self.system.trains)
+        self.rank = self.train_idx
         self.system.trains.append(self)
         self.max_speed = max_sp
         self.max_acc = max_acc
@@ -88,6 +88,8 @@ class Train():
         
         if self.curr_track:
             if self not in self.curr_track.train:
+                if self.curr_track.train:
+                    print('\t Train initialization Warning: adding new train to a track already occupied!')
                 self.curr_track.train.append(self)
 
     def __repr__(self):

@@ -9,6 +9,34 @@ from observe import Observable, Observer
 import networkx as nx
 
 class Track(Observable):
+    @staticmethod
+    def sign_routing(rp_seg):
+        '''Return the sign (+/-) of traffic when input with a legal routing path segment 
+        of a track or bigblock (describing its current traffic direction)'''
+        if not rp_seg:              # no routing information (dormant track/bigblock)
+            return 0
+        elif rp_seg[0][0] and rp_seg[1][0]:
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
+                return 1
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
+                return -1
+            else:
+                raise ValueError('Undefined MP direction')
+        elif not rp_seg[0][0]:      # initiating
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+                return 1
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+                return -1
+            else:
+                raise ValueError('Undefined MP direction')
+        elif not rp_seg[1][0]:      # terminating
+            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+                return 1
+            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+                return -1
+            else:
+                raise ValueError('Undefined MP direction')
+
     def __init__(self, system, L_point, L_point_port, R_point, R_point_port, edge_key=0, allow_sp=65):    # speed as mph
         super().__init__()
         self._train = []
@@ -50,7 +78,6 @@ class Track(Observable):
     @property
     def bigblock(self):
         return self.__bigblock
-
     @bigblock.setter
     def bigblock(self, bblk):
         assert isinstance(bblk,BigBlock)
@@ -58,10 +85,13 @@ class Track(Observable):
     
     @property
     def routing(self):
+        assert self.sign_routing(self._routing) == self.bigblock.sign_routing(self.bigblock.routing)
         return self._routing
-
     @routing.setter
     def routing(self, new_routing):
+        '''NOT RECOMMENDED: setting a routing property directly from a track when normal dispatching. 
+        It is always recommended to set routing property from its bigblock instance.
+        '''
         if new_routing:
             for (p, pport) in new_routing:
                 assert p in [self.L_point, self.R_point]
@@ -72,7 +102,6 @@ class Track(Observable):
                         if trk == self:
                             assert t.curr_routing_path_segment == new_routing
             self._routing = new_routing
-
         else:
             self._routing = None
 

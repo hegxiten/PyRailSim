@@ -33,7 +33,7 @@ class System():
         super().__init__()
 
         self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
-        self.trains = []
+        self._trains = []
 
         self.G_origin = self.graph_constructor()
         self.G_skeleton = self.graph_extractor(self.G_origin)
@@ -75,6 +75,10 @@ class System():
         _min_track_length = min([t.length for t in self.tracks])
         return _max_diff_square_of_spd / (2*_min_track_length)
     
+    @property
+    def trains(self):
+        return self._trains
+
     @property
     def train_num(self):
         return len(self.trains)
@@ -252,30 +256,54 @@ class System():
     def generate_train(self, init_point, init_port, dest_point, dest_port):
         '''Generate train only. 
         '''
-        if self.generable(init_point, init_port, dest_point, dest_port):
+        if self.capacity_generable(init_point, init_port, dest_point, dest_port):
             init_segment = ((None,None), (init_point, init_port)) \
-                if not init_point.track_by_port[init_port]\
-                    else init_point.track_by_port[init_port].get_routing_by_point_port(end=(init_point, init_port))
-            new_train = Train(idx=self.train_num, 
-                            rank=self.train_num, 
-                            system=self, 
-                            init_time=self.sys_time, 
-                            init_segment=init_segment, 
-                            max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
-                            max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
-                            max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
-            self.trains.append(new_train)
-            self.train_num += 1
-            self.last_train_init_time = self.sys_time
-            new_train.curr_track.train.append(new_train)
+                if not init_point.track_by_port.get(init_port)\
+                    else (( init_point.track_by_port[init_port].shooting_point(point=init_point),\
+                            init_point.track_by_port[init_port].shooting_port(point=init_point)), \
+                            (init_point, init_port))
+            init_track = self.get_track_by_point_port_pairs(init_segment[0][0],init_segment[0][1],init_segment[1][0],init_segment[1][1])
+            if not init_track:
+                new_train = Train(system=self, 
+                                init_time=self.sys_time, 
+                                init_segment=init_segment, 
+                                max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                                max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                                max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
+                return
+            elif init_track.is_Occupied:
+                print('\tWarning: cannot generate train: track is occupied. Hold new train for track availablity.')
+                return
+            elif not init_track.routing:
+                new_train = Train(system=self, 
+                                init_time=self.sys_time, 
+                                init_segment=init_segment, 
+                                max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                                max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                                max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
+                return
+            elif Train.sign_MP(init_segment) == init_track.sign_routing(init_track.routing):
+                new_train = Train(system=self, 
+                                init_time=self.sys_time, 
+                                init_segment=init_segment, 
+                                max_sp=self.sp_container[self.train_num % len(self.sp_container)], 
+                                max_acc=self.acc_container[self.train_num % len(self.acc_container)], 
+                                max_dcc=self.dcc_container[self.train_num % len(self.dcc_container)])
+                return
+            else:
+                print('\tWarning: cannot generate train: confliting routing. Hold new train for routing availablity.')
+                return
+        else:
+            print('\tWarning: cannot generate train: Capacity Maxed-out. Hold new train for capacity.')
+            return
 
     def update_routing(self):
         for trn in self.trains:
             if not trn.curr_sig:
                 pass
             elif not trn.curr_sig.route:
-                if self.generable(trn.curr_sigpoint, trn.curr_sigport, trn.intended_sigpoint, trn.intended_sigport):
-                    trn.curr_sigpoint.open_route((curr_sigport,trn.intended_sigport))
+                if self.capacity_generable(trn.curr_sigpoint, trn.curr_sigport, trn.intended_sigpoint, trn.intended_sigport):
+                    trn.curr_sigpoint.open_route((trn.curr_sigport, trn.intended_sigport))
     
     def refresh(self):
         self.generate_train()
@@ -288,7 +316,7 @@ class System():
             tr.rank = i
         self.sys_time += self.refresh_time
 
-    def generable(self, init_point, init_port, dest_point, dset_port):
+    def capacity_generable(self, init_point, init_port, dest_point, dest_port):
         '''Generate a train from init_point to dest_point.
         The train enters the system BEFORE crossing the init_point; 
         The train leaves the system AFTER crossing the dest_point.
