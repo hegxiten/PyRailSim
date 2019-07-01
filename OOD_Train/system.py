@@ -348,6 +348,9 @@ class System():
         return count
 
     def get_trains_between_points(self, from_point, to_point, directed=False):
+        '''Bugs here!
+        '''
+
         all_paths = list(nx.all_simple_paths(self.G_origin, from_point, to_point))
         _trains = []
         for p in all_paths:
