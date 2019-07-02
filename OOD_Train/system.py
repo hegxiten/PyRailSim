@@ -348,21 +348,28 @@ class System():
         return count
 
     def get_trains_between_points(self, from_point, to_point, directed=False):
-        '''Bugs here!
+        '''Given a pair of O-D nodes in the system, return all the trains running in-between 
+        this pair of O-D nodes.
+        Option: filter trains running at the same/opposite direction.
         '''
-
         all_paths = list(nx.all_simple_paths(self.G_origin, from_point, to_point))
-        _trains = []
+        _trains_undirected = []
+        _trains_diretced = []
         for p in all_paths:
             for i in range(len(p)-1):
                 for k in list(self.G_origin[p[i]][p[i+1]]):
                     for t in self.G_origin[p[i]][p[i+1]][k]['instance'].train:
-                        if t not in _trains:
-                            _trains.append((t, t.curr_routing_path_segment, (p[i], p[i+1], k)))
+                        if t.curr_routing_path_segment[0][0] in (p[i],p[i+1]) and\
+                            t.curr_routing_path_segment[1][0] in (p[i],p[i+1]):
+                            if (t, t.curr_routing_path_segment) not in _trains_undirected:
+                                _trains_undirected.append((t, t.curr_routing_path_segment))
+                            if (t.curr_routing_path_segment[0][0], t.curr_routing_path_segment[1][0]) == (p[i],p[i+1]):
+                                if (t, t.curr_routing_path_segment) not in _trains_diretced:
+                                    _trains_diretced.append((t, t.curr_routing_path_segment))
         if not directed:
-            return [i[0] for i in _trains]
+            return _trains_undirected
         else:
-            return [i[0] for i in _trains if (i[1][0][0], i[1][1][0]) == i[2]]
+            return _trains_diretced
 
     def clear_train(self, train=None):
         if train:
