@@ -62,7 +62,13 @@ class Train():
         ((_curr_prev_sigpoint,_prev_sigport),(_curr_sigpoint, _prev_sigport)) = init_segment
         self.system = system
         self.length = 0         if not kwargs.get('length') else kwargs.get('length')
-        self._curr_routing_path_segment = init_segment
+        
+        self.init_segment = init_segment
+        self.shooting_point_port = (self.system.signal_points[0],0) if self.sign_MP(self.init_segment) == -1 else (self.system.signal_points[-1],1)
+        self.reverse_shooting_point_port = (self.system.signal_points[0],0) if self.sign_MP(self.init_segment) == 1 else (self.system.signal_points[-1],1)
+        self.dest_segment = (self.shooting_point_port,(None,None)) if not kwargs.get('dest_segment') else kwargs.get('dest_segment')
+        
+        self._curr_routing_path_segment = self.init_segment
         self._curr_occuping_routing_path = [self._curr_routing_path_segment]
         self._curr_MP = self.curr_sig.MP
         self._rear_curr_MP = self.curr_MP - self.length * self.sign_MP(self.curr_routing_path_segment)
@@ -93,7 +99,7 @@ class Train():
                 self.curr_track.train.append(self)
 
     def __repr__(self):
-        return 'train index {}, current occupying sections: {}, head MP: {}, rear MP {}'\
+        return 'train index {}, current occupation: {}, head MP: {}, rear MP {}'\
             .format(self.train_idx, self.curr_occuping_routing_path, \
                 str("%.2f" % round(self.curr_MP,2)).rjust(5,' '), str("%.2f" % round(self.rear_curr_MP,2)).rjust(5,' '))
     
@@ -400,11 +406,39 @@ class Train():
     @property
     def curr_brake_distance_abs(self):  # in miles, + only
         return self.abs_brake_distance(self.curr_speed, self.curr_target_spd_abs, self.max_dcc)
-        
     @property
     def curr_dis_to_curr_sig_abs(self): # in miles, + only
         return abs(self.curr_sig.MP - self.curr_MP) if self.curr_sig else float('inf')
+
+    @property
+    def trains_ahead_same_dir(self):
+        _trains_same_dir_ahead = self.system.get_trains_between_points(self.curr_sigpoint, self.shooting_point_port[0], obv=True)
+        return _trains_same_dir_ahead
+    @property
+    def trains_behind_same_dir(self):
+        _trains_same_dir_behind = self.system.get_trains_between_points(self.rear_curr_prev_sigpoint, self.reverse_shooting_point_port[0], rev=True)
+        return _trains_same_dir_behind
+    @property
+    def trains_ahead_oppo_dir(self):
+        _trains_oppo_dir_ahead = self.system.get_trains_between_points(self.curr_sigpoint, self.shooting_point_port[0], rev=True)
+        return _trains_oppo_dir_ahead
+    @property
+    def trains_behind_oppo_dir(self):
+        _trains_oppo_dir_behind = self.system.get_trains_between_points(self.rear_curr_prev_sigpoint, self.reverse_shooting_point_port[0], obv=True)
+        return _trains_oppo_dir_behind
     
+    @property
+    def pending_route(self):
+        if not self.curr_sigpoint:
+            return False
+        elif self.curr_sigpoint == self.curr_control_point:
+            if not self.curr_sig.route:
+                return True
+        elif not self.system.get_trains_between_points(self.curr_sigpoint, self.curr_control_point, obv=True):
+            if not self.curr_control_point.signal_by_port[self.curr_control_pointport].route:
+                return True
+        return False
+
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         '''
         Method to update attributes and properties when the train's head
@@ -545,6 +579,24 @@ class Train():
             self.rear_time_pos_list.append([self.system.sys_time, self.rear_curr_MP])
         else:
             pass
+
+    def request_routing(self):
+        if self.pending_route:
+            _enterable=True
+            for n in self.system.control_points:
+                if (n.MP - self.curr_control_point.MP) * self.sign_MP(self.curr_routing_path_segment) > 0:
+                    if not self.system.capacity_enterable(self.curr_control_point, n):
+                        _enterable=False
+            if _enterable:
+                _pending_route_to_open = self.curr_control_point.find_route_for_port(self.curr_control_pointport)
+                if _pending_route_to_open:
+                    _locked_routes_due_to_train = []
+                    for _, r in self.curr_control_point.curr_train_with_route.items():
+                        _locked_routes_due_to_train.append(r)
+                        _locked_routes_due_to_train.extend(self.curr_control_point.mutex_routes_by_route.get(r))
+                    if _pending_route_to_open not in _locked_routes_due_to_train:
+                        print(self, 'requesting', _pending_route_to_open, 'at', self.curr_control_point)
+                        self.curr_control_point.open_route(_pending_route_to_open)
 
     def __lt__(self, othertrain):
         if self.curr_MP > othertrain.curr_MP:

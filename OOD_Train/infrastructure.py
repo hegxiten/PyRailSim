@@ -96,11 +96,6 @@ class Track(Observable):
             for (p, pport) in new_routing:
                 assert p in [self.L_point, self.R_point]
                 assert pport in [self.L_point_port, self.R_point_port]
-            if self.train:
-                for t in self.train:
-                    for trk in t.curr_tracks:
-                        if trk == self:
-                            assert t.curr_routing_path_segment == new_routing
             self._routing = new_routing
         else:
             self._routing = None
@@ -113,24 +108,24 @@ class Track(Observable):
         return None
 
     def shooting_point(self, point=None, port=None, sign_MP=None):
-        if point: 
+        if point is not None: 
             assert point in (self.L_point, self.R_point)
             return self.L_point if point == self.R_point else self.R_point
-        if port:
+        if port is not None:
             assert port in (self.L_point_port, self.R_point_port)
             return self.L_point if port == self.R_point_port else self.R_point
-        if sign_MP:
+        if sign_MP is not None:
             assert sign_MP in (-1, +1)
             return self.L_point if sign_MP == -1 else self.R_point
     
     def shooting_port(self, point=None, port=None, sign_MP=None):
-        if point: 
+        if point is not None: 
             assert point in (self.L_point, self.R_point)
             return self.L_point_port if point == self.R_point else self.R_point_port
-        if port:
+        if port is not None:
             assert port in (self.L_point_port, self.R_point_port)
             return self.L_point_port if port == self.R_point_port else self.R_point_port
-        if sign_MP:
+        if sign_MP is not None:
             assert sign_MP in (-1, +1)
             return self.L_point_port if sign_MP == -1 else self.R_point_port
 

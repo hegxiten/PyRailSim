@@ -10,6 +10,7 @@ import random
 from train import Train
 from infrastructure import Track, BigBlock
 from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
+import copy
 import networkx as nx
 
 class System():
@@ -256,7 +257,7 @@ class System():
     def generate_train(self, init_point, init_port, dest_point, dest_port):
         '''Generate train only. 
         '''
-        if self.capacity_generable(init_point, init_port, dest_point, dest_port):
+        if self.capacity_enterable(init_point, dest_point):
             init_segment = ((None,None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port)\
                     else (( init_point.track_by_port[init_port].shooting_point(point=init_point),\
@@ -302,7 +303,7 @@ class System():
             if not trn.curr_sig:
                 pass
             elif not trn.curr_sig.route:
-                if self.capacity_generable(trn.curr_sigpoint, trn.curr_sigport, trn.intended_sigpoint, trn.intended_sigport):
+                if self.capacity_enterable(trn.curr_sigpoint, trn.intended_sigpoint):
                     trn.curr_sigpoint.open_route((trn.curr_sigport, trn.intended_sigport))
     
     def refresh(self):
@@ -316,15 +317,16 @@ class System():
             tr.rank = i
         self.sys_time += self.refresh_time
 
-    def capacity_generable(self, init_point, init_port, dest_point, dest_port):
-        '''Generate a train from init_point to dest_point.
+    def capacity_enterable(self, init_point, dest_point):
+        '''Determines if a train could be generated from init_point to dest_point.
         The train enters the system BEFORE crossing the init_point; 
         The train leaves the system AFTER crossing the dest_point.
         '''
         _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
-        _outbound_trains = self.get_trains_between_points(from_point=init_point, to_point=dest_point, directed=True)
-        _inbound_trains = self.get_trains_between_points(from_point=dest_point, to_point=init_point, directed=True)
-        return True if min(len(_outbound_trains), len(_inbound_trains)) <= _parallel_tracks\
+        _outbound_trains = self.get_trains_between_points(from_point=init_point, to_point=dest_point, obv=True)
+        _inbound_trains = self.get_trains_between_points(from_point=dest_point, to_point=init_point, obv=True)
+        _occupied_parallel_tracks = self.num_occupied_parallel_tracks(init_point, dest_point)
+        return True if min(len(_outbound_trains), len(_inbound_trains)) <= _parallel_tracks - _occupied_parallel_tracks\
             else False
 
     def num_parallel_tracks(self, init_point, dest_point):
@@ -347,29 +349,51 @@ class System():
                     break
         return count
 
-    def get_trains_between_points(self, from_point, to_point, directed=False):
+    def num_occupied_parallel_tracks(self, init_point, dest_point):
+        '''
+        要分情况讨论的。
+        '''
+        _all_trains = self.get_trains_between_points(from_point=init_point, to_point=dest_point, obv=True, rev=True)
+        test_G = self.G_origin.copy()
+        count = 0
+        for t in _all_trains:
+            test_G.remove_edge(t.curr_routing_path_segment[0][0], t.curr_routing_path_segment[1][0])
+            if nx.has_path(test_G, init_point, dest_point) and Train.sign_MP(t.curr_routing_path_segment) * (dest_point.MP-init_point.MP) >0:
+                count += 1
+        return count
+
+
+    def get_trains_between_points(self, from_point, to_point, obv=False, rev=False):
         '''Given a pair of O-D nodes in the system, return all the trains running in-between 
         this pair of O-D nodes.
-        Option: filter trains running at the same/opposite direction.
+        Option: filter trains running at the obversed/reversed direction of the from-to path
         '''
         all_paths = list(nx.all_simple_paths(self.G_origin, from_point, to_point))
-        _trains_undirected = []
-        _trains_diretced = []
+        _trains_all = []
+        _trains_obv_dir = []
+        _trains_rev_dir = []
         for p in all_paths:
             for i in range(len(p)-1):
                 for k in list(self.G_origin[p[i]][p[i+1]]):
                     for t in self.G_origin[p[i]][p[i+1]][k]['instance'].train:
                         if t.curr_routing_path_segment[0][0] in (p[i],p[i+1]) and\
                             t.curr_routing_path_segment[1][0] in (p[i],p[i+1]):
-                            if (t, t.curr_routing_path_segment) not in _trains_undirected:
-                                _trains_undirected.append((t, t.curr_routing_path_segment))
+                            if t not in _trains_all:
+                                _trains_all.append(t)
                             if (t.curr_routing_path_segment[0][0], t.curr_routing_path_segment[1][0]) == (p[i],p[i+1]):
-                                if (t, t.curr_routing_path_segment) not in _trains_diretced:
-                                    _trains_diretced.append((t, t.curr_routing_path_segment))
-        if not directed:
-            return _trains_undirected
+                                if t not in _trains_obv_dir:
+                                    _trains_obv_dir.append(t)
+                            if (t.curr_routing_path_segment[0][0], t.curr_routing_path_segment[1][0]) == (p[i+1], p[i]):
+                                if t not in _trains_rev_dir:
+                                    _trains_rev_dir.append(t)
+        if obv == True and rev == True:
+            return _trains_all
+        elif obv == True:
+            return _trains_obv_dir
+        elif rev == True:
+            return _trains_rev_dir
         else:
-            return _trains_diretced
+            return []
 
     def clear_train(self, train=None):
         if train:

@@ -339,10 +339,13 @@ class InterlockingPoint(Observable, Observer):
     @property
     def mutex_routes_by_route(self):
         _mutex_routes_by_route = defaultdict(list)
+        for vr in self.all_valid_routes:
+            _all_valid_routes = [r for r in self.all_valid_routes]
+            _all_valid_routes.remove(vr)
+            _mutex_routes_by_route[vr].extend(_all_valid_routes)
         for r, nmrl in self.non_mutex_routes_by_route.items():
-            for vr in self.all_valid_routes:
-                if vr not in nmrl:
-                    _mutex_routes_by_route[r].append(vr)
+            if nmrl in _mutex_routes_by_route[r]:
+                _mutex_routes_by_route[r].remove(nmrl)
         return _mutex_routes_by_route    
     
     @property
@@ -360,6 +363,12 @@ class InterlockingPoint(Observable, Observer):
             for vr in self.all_valid_routes:
                 if vr not in self.non_mutex_routes_by_route[r] and vr not in _current_invalid_routes:
                     _current_invalid_routes.append(vr)
+        for _, r in self.curr_train_with_route.items():
+            if r not in _current_invalid_routes:
+                _current_invalid_routes.append(r)
+            for mr in self.mutex_routes_by_route[r]:
+                if mr not in _current_invalid_routes:
+                    _current_invalid_routes.append(mr)
         return _current_invalid_routes
 
 class AutoPoint(InterlockingPoint):
@@ -494,6 +503,27 @@ class ControlPoint(InterlockingPoint):
             self.current_routes = []
             for p in self.ports:
                 self.cancel_bigblock_routing_by_port(p)
+
+    def find_route_for_port(self, port):
+        _candidate_ports = [i for i in self.available_ports_by_port[port]]
+        for p in self.available_ports_by_port[port]:
+            _candi_bblk = self.bigblock_by_port.get(p)
+            _candi_track = self.track_by_port.get(p)
+            if not _candi_bblk or not _candi_track:
+                continue
+            elif _candi_track.is_Occupied:
+                _candidate_ports.remove(p)
+                continue
+            elif not _candi_bblk.routing:
+                continue
+            elif _candi_bblk.routing != ((self, p),(_candi_bblk.shooting_point(point=self),_candi_bblk.shooting_port(port=p))):
+                if _candi_bblk.train:
+                    _candidate_ports.remove(p)
+                    continue
+        if not _candidate_ports:
+            return None
+        else:
+            return (port, _candidate_ports[0])
 
     def set_bigblock_routing_by_controlpoint_route(self, route):
         assert route
