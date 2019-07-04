@@ -24,16 +24,17 @@ class System():
     :refresh_time: int (**kw), seconds
         Seconds between two consecutive traverse calculations of the simulation.
     :sp_containter: list (**kw), mph
-        A list of randomized speed values for trains to initialize by. Uniform range.
+        A list of randomized speed values for trains to initialize by. 
     :acc_container: list (**kw), miles/(sec)^2
-        A list of randomized acceleration values for trains to initialize by. Uniform range.
+        A list of randomized acceleration values for trains to initialize by. 
     :dcc_container: list (**kw), miles/(sec)^2
-        A list of randomized deceleration values for trains to brake by. Uniform range.
+        A list of randomized deceleration values for trains to brake by. 
     """
     def __init__(self, init_time, *args, **kwargs):
         super().__init__()
 
-        self.sys_time = init_time.timestamp()   # CPU format time in seconds, transferable between numerical value and M/D/Y-H/M/S string values 
+        self.sys_time = init_time.timestamp()   
+        # CPU format time in sec, transferable to numerical value or str values 
         self._trains = []
 
         self.G_origin = self.graph_constructor()
@@ -42,20 +43,24 @@ class System():
         self.signal_points = list(self.G_origin.nodes())
         # list of all SignalPoints, including AutoPoints and ControlPoints
         self.control_points = list(self.G_skeleton.nodes())
-        # list of all ControlPoints. Its indices are not the same as self.signal_points.
+        # list of all ControlPoints. Its indices are different from signal_points.
         self.tracks = [data['instance'] for (u,v,data) in list(self.G_origin.edges(data=True))]
         # list of all Tracks. 
         self.bigblocks = [data['instance'] for (u,v,data) in list(self.G_skeleton.edges(data=True))]
         # list of all BigBlocks.
-
+        _min_spd, _max_spd, _min_acc, _max_acc = 0.01, 0.02, 2.78e-05*0.85, 2.78e-05*1.15
         self.headway = 500  if not kwargs.get('headway') else kwargs.get('headway')
-        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if type(t) == str]
+        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() \
+            for t in kwargs.get('dos_period') if type(t) == str]
         self.dos_pos = -1   if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
         self.last_train_init_time = self.sys_time
-        self.sp_container = args[0]     if args else [random.uniform(0.01, 0.02) for i in range(20)]
-        self.acc_container = args[1]    if args else [random.uniform(2.78e-05*0.85, 2.78e-05*1.15) for i in range(20)]
-        self.dcc_container = args[2]    if args else [random.uniform(self.min_dcc_rate*1.15, self.min_dcc_rate*1.25) for i in range(20)]
-        self.dcc_container = [i if i >= self.min_dcc_rate else self.min_dcc_rate for i in self.dcc_container]
+        self.sp_container = args[0]\
+            if args else [random.uniform(_min_spd, _max_spd) for i in range(20)]
+        self.acc_container = args[1]\
+            if args else [random.uniform(_min_acc, _max_acc) for i in range(20)]
+        self.dcc_container = args[2]\
+            if args else [random.uniform(self.sys_min_dcc*1.15, self.sys_min_dcc*1.25) for i in range(20)]
+        self.dcc_container = [i if i >= self.sys_min_dcc else self.sys_min_dcc for i in self.dcc_container]
         self.refresh_time = 1           if not kwargs.get('refresh_time') else kwargs.get('refresh_time')    
 
         #------------deprecated------------#
@@ -64,12 +69,13 @@ class System():
         #------------deprecated------------#
     
     @property
-    def min_dcc_rate(self):    
-        '''Absolute value, minimum brake acceleration of all trains required by the 
-        system setup. If a train's maximum braking deceleration is smaller than this 
-        value, it may violate some signal/speed limit at extreme scenarios. 
-        If violated, the program will throw Assertion Errors at braking distance check.
+    def sys_min_dcc(self):    
         '''
+            Absolute value, minimum brake acceleration of all trains required by
+            the system setup. If train's maximum braking deceleration is smaller
+            than this value, it may violate some signal/speed limits at extreme 
+            scenarios. When violated, the program will throw AssertionErrors at 
+            braking distance/speed limit check.'''
         _signal_speeds = sorted([spd for _, spd in Aspect.COLOR_SPD_DICT.items()])
         _speed_diff_pairs = [(_signal_speeds[i],_signal_speeds[i+1]) for i in range(len(_signal_speeds)-1)]
         _max_diff_square_of_spd = max([abs(i[0]**2-i[1]**2) for i in _speed_diff_pairs])
@@ -161,11 +167,13 @@ class System():
                         9:AutoPoint(self, 9, MP=45.0), \
                         10:ControlPoint(self, idx=10, ports=[0,1], MP=50.0)}       
 
-        TEST_TRACK = [  Track(self,TEST_NODE[0], 1, TEST_NODE[1], 0), Track(self,TEST_NODE[1], 1, TEST_NODE[2], 0), Track(self,TEST_NODE[2], 1, TEST_NODE[3], 0),\
+        TEST_TRACK = [  Track(self,TEST_NODE[0], 1, TEST_NODE[1], 0), Track(self,TEST_NODE[1], 1, TEST_NODE[2], 0), \
+                                                                        Track(self,TEST_NODE[2], 1, TEST_NODE[3], 0),\
                         Track(self,TEST_NODE[3], 1, TEST_NODE[4], 0), Track(self,TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1),\
                         Track(self,TEST_NODE[4], 1, TEST_NODE[5], 0), Track(self,TEST_NODE[5], 1, TEST_NODE[6], 0),\
                         Track(self,TEST_NODE[6], 1, TEST_NODE[7], 0), Track(self,TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1),\
-                        Track(self,TEST_NODE[7], 1, TEST_NODE[8], 0), Track(self,TEST_NODE[8], 1, TEST_NODE[9], 0), Track(self,TEST_NODE[9], 1, TEST_NODE[10], 0)]
+                        Track(self,TEST_NODE[7], 1, TEST_NODE[8], 0), Track(self,TEST_NODE[8], 1, TEST_NODE[9], 0), \
+                                                                        Track(self,TEST_NODE[9], 1, TEST_NODE[10], 0)]
         
         _node = TEST_NODE if not node else node
         nbunch = [_node[i] for i in range(len(_node))]
@@ -197,10 +205,10 @@ class System():
         Extract the skeletion MultiGraph with only ControlPoints and Bigblocks
         ----------
         Parameter:
-            G: networkx MultiGraph instance of the raw network with only Track as edges.
+            G: MultiGraph instance of the raw network with Track as edges.
         ----------
         Return:
-            F: networkx MultiGraph instance with only BigBlock as edges.
+            F: MultiGraph instance with BigBlock as edges.
         '''
         F = G.copy()        
         # F is a shallow copy of G: attrbutes of G/F components 
@@ -241,7 +249,8 @@ class System():
                                                     v, F[u][v][k]['instance'].R_point_port,\
                                             edge_key=k, \
                                             raw_graph=G, cp_graph=F)
-            u.bigblock_by_port[F[u][v][k]['instance'].L_point_port] = v.bigblock_by_port[F[u][v][k]['instance'].R_point_port] = big_block_instance
+            u.bigblock_by_port[F[u][v][k]['instance'].L_point_port] = big_block_instance
+            v.bigblock_by_port[F[u][v][k]['instance'].R_point_port] = big_block_instance
 
             for (n, m) in big_block_edges:
                 if G[n][m][k]['instance'] not in big_block_instance.tracks:
@@ -263,7 +272,8 @@ class System():
                     else (( init_point.track_by_port[init_port].shooting_point(point=init_point),\
                             init_point.track_by_port[init_port].shooting_port(point=init_point)), \
                             (init_point, init_port))
-            init_track = self.get_track_by_point_port_pairs(init_segment[0][0],init_segment[0][1],init_segment[1][0],init_segment[1][1])
+            init_track = self.get_track_by_point_port_pairs\
+                (init_segment[0][0],init_segment[0][1],init_segment[1][0],init_segment[1][1])
             if not init_track:
                 new_train = Train(system=self, 
                                 init_time=self.sys_time, 
@@ -318,16 +328,16 @@ class System():
         self.sys_time += self.refresh_time
 
     def capacity_enterable(self, init_point, dest_point):
-        '''Determines if a train could be generated from init_point to dest_point.
-        The train enters the system BEFORE crossing the init_point; 
-        The train leaves the system AFTER crossing the dest_point.
         '''
+            Determines if a train could cross init_point towards dest_point.'''
         _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
-        _outbound_trains = self.get_trains_between_points(from_point=init_point, to_point=dest_point, obv=True)
-        _inbound_trains = self.get_trains_between_points(from_point=dest_point, to_point=init_point, obv=True)
+        _outbound_trains = self.get_trains_between_points\
+            (from_point=init_point, to_point=dest_point, obv=True)
+        _inbound_trains = self.get_trains_between_points\
+            (from_point=dest_point, to_point=init_point, obv=True)
         _occupied_parallel_tracks = self.num_occupied_parallel_tracks(init_point, dest_point)
-        return True if min(len(_outbound_trains), len(_inbound_trains)) <= _parallel_tracks - _occupied_parallel_tracks\
-            else False
+        return True if min(len(_outbound_trains), len(_inbound_trains))\
+             <= _parallel_tracks - _occupied_parallel_tracks else False
 
     def num_parallel_tracks(self, init_point, dest_point):
         _mainline_section = nx.shortest_path(self.G_origin, init_point, dest_point)
@@ -358,16 +368,18 @@ class System():
         count = 0
         for t in _all_trains:
             test_G.remove_edge(t.curr_routing_path_segment[0][0], t.curr_routing_path_segment[1][0])
-            if nx.has_path(test_G, init_point, dest_point) and Train.sign_MP(t.curr_routing_path_segment) * (dest_point.MP-init_point.MP) >0:
+            if nx.has_path(test_G, init_point, dest_point) and \
+                Train.sign_MP(t.curr_routing_path_segment) * (dest_point.MP-init_point.MP) >0:
                 count += 1
         return count
 
 
     def get_trains_between_points(self, from_point, to_point, obv=False, rev=False):
-        '''Given a pair of O-D nodes in the system, return all the trains running in-between 
-        this pair of O-D nodes.
-        Option: filter trains running at the obversed/reversed direction of the from-to path
         '''
+            Given a pair of O-D in the system, return all trains running between 
+            this pair of O-D nodes.
+            @option: filter trains running at the obversed/reversed direction 
+            compared with the from-to path.'''
         all_paths = list(nx.all_simple_paths(self.G_origin, from_point, to_point))
         _trains_all = []
         _trains_obv_dir = []

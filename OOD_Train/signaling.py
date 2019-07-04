@@ -102,7 +102,8 @@ class Signal(Observable, Observer):
             else:
                 raise ValueError('Undefined MP direction')
         else:
-            return -self.sigpoint.signal_by_port[self.sigpoint.opposite_port(self.port_idx)].facing_direction_sign
+            return -self.sigpoint.signal_by_port\
+                [self.sigpoint.opposite_port(self.port_idx)].facing_direction_sign
             
     @property
     def route(self):
