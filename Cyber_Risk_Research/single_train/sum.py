@@ -598,7 +598,7 @@ class single_train:
         duration = self.stop_t_ticks - self.strt_t_ticks
         env.run(until=duration)
 
-    def string_diagram(self):
+    def run_with_string_diagram(self):
         '''
         To draw the string diagram based on the schedule dictionary for all the trains. 
         '''
@@ -647,7 +647,7 @@ if __name__ == '__main__':
     print a.blk_interval
     print a.blk_interval[18]
     print '2018-01-01 09:00:00', '2018-01-01 09:30:00'
-    a.string_diagram()
+    a.run_with_string_diagram()
     
 
 class multi_dirc:
@@ -731,7 +731,7 @@ class multi_dirc:
             self.number += 1
             yield env.timeout(headway * 60)
 
-    def string_diagram(self):
+    def run_with_string_diagram(self):
         return self.all_schedule_A
 
 

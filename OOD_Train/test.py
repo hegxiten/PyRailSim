@@ -16,7 +16,7 @@ import time
 from signaling import Signal
 import random
 
-def string_diagram(sys, sys_dos, start_time, end_time):
+def run_with_string_diagram(sys, sys_dos, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''
     colors = ['red','green','blue','black','orange','cyan','magenta']
@@ -89,7 +89,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import numpy as np
-def string_diagram(sys, start_time, end_time):
+def run_with_string_diagram(sys, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''
     colors = ['red','green','blue','black','orange','cyan','magenta']
@@ -357,5 +357,5 @@ if __name__ == '__main__':
         T166.update_acc()
         T165.update_acc()
         sys.sys_time+=sys.refresh_time
-    string_diagram(sys, sim_init_time, sim_term_time)
+    run_with_string_diagram(sys, sim_init_time, sim_term_time)
     
