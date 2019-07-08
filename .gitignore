@@ -12,6 +12,9 @@
 # vscode configs
 .vscode/
 
+# pytest cache files
+.pytest_cache/
+
 *.pyc
 *.pdf
 *.DS_Store
