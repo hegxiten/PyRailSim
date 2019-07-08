@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-sys.path.append('D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
+sys.path.append(
+    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
+)
 
 import networkx as nx
 from observe import Observable, Observer
@@ -14,7 +16,7 @@ class Track(Observable):
     def sign_routing(rp_seg):
         '''Return the sign (+/-) of traffic when input with a legal routing path segment
         of a track or bigblock (describing its current traffic direction)'''
-        if not rp_seg:              # no routing information (dormant track/bigblock)
+        if not rp_seg:  # no routing information (dormant track/bigblock)
             return 0
         elif rp_seg[0][0] and rp_seg[1][0]:
             if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > \
@@ -25,7 +27,7 @@ class Track(Observable):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
-        elif not rp_seg[0][0]:      # initiating
+        elif not rp_seg[0][0]:  # initiating
             if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
                     min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return 1
@@ -34,7 +36,7 @@ class Track(Observable):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
-        elif not rp_seg[1][0]:      # terminating
+        elif not rp_seg[1][0]:  # terminating
             if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
                     max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return 1
@@ -44,7 +46,14 @@ class Track(Observable):
             else:
                 raise ValueError('Undefined MP direction')
 
-    def __init__(self, system, L_point, L_point_port, R_point, R_point_port, edge_key=0, allow_sp=65):    # speed as mph
+    def __init__(self,
+                 system,
+                 L_point,
+                 L_point_port,
+                 R_point,
+                 R_point_port,
+                 edge_key=0,
+                 allow_sp=65):  # speed as mph
         super().__init__()
         self._train = []
         self._routing = None
@@ -54,7 +63,7 @@ class Track(Observable):
         self.port_by_sigpoint = {L_point: L_point_port, R_point: R_point_port}
 
         self.edge_key = edge_key
-        self.allow_sp = allow_sp/3600
+        self.allow_sp = allow_sp / 3600
         self.add_observer(L_point)
         self.add_observer(R_point)
 
@@ -63,7 +72,8 @@ class Track(Observable):
         self.__curr_routing_path = None
 
     def __repr__(self):
-        return 'Track MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1], self.edge_key)
+        return 'Track MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1],
+                                                       self.edge_key)
 
     @property
     def MP(self):
@@ -72,7 +82,7 @@ class Track(Observable):
 
     @property
     def length(self):
-        return abs(self.MP[1]-self.MP[0])
+        return abs(self.MP[1] - self.MP[0])
 
     @property
     def train(self):
@@ -141,7 +151,15 @@ class Track(Observable):
 
 
 class BigBlock(Track):
-    def __init__(self, system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=0, raw_graph=None, cp_graph=None):
+    def __init__(self,
+                 system,
+                 L_cp,
+                 L_cp_port,
+                 R_cp,
+                 R_cp_port,
+                 edge_key=0,
+                 raw_graph=None,
+                 cp_graph=None):
         super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key)
         assert isinstance(raw_graph, nx.MultiGraph)
         assert isinstance(cp_graph, nx.MultiGraph)
@@ -152,7 +170,8 @@ class BigBlock(Track):
         self.add_observer(R_cp)
 
     def __repr__(self):
-        return 'BigBlock MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1], self.edge_key)
+        return 'BigBlock MP: {} to MP: {} idx: {}'.format(
+            self.MP[0], self.MP[1], self.edge_key)
 
     @property
     def train(self):
@@ -194,9 +213,9 @@ class BigBlock(Track):
 
     @property
     def curr_routing_path(self):
-        for i in range(len(self.tracks)-1):
-            assert self.tracks[i].curr_routing_path == self.tracks[i +
-                                                                   1].curr_routing_path
+        for i in range(len(self.tracks) - 1):
+            assert self.tracks[i].curr_routing_path == self.tracks[
+                i + 1].curr_routing_path
         return self.tracks[0].curr_routing_path
 
     @property
@@ -206,9 +225,15 @@ class BigBlock(Track):
             reverse = True if start_point in (
                 self.tracks[-1].L_point, self.tracks[-1].R_point) else False
             if not reverse:
-                return [getattr(self.tracks[i], 'routing') for i in range(len(self.tracks))]
+                return [
+                    getattr(self.tracks[i], 'routing')
+                    for i in range(len(self.tracks))
+                ]
             else:
-                return [getattr(self.tracks[i], 'routing') for i in range(len(self.tracks)-1, -1, -1)]
+                return [
+                    getattr(self.tracks[i], 'routing')
+                    for i in range(len(self.tracks) - 1, -1, -1)
+                ]
         else:
             return None
 
@@ -220,30 +245,30 @@ class BigBlock(Track):
             tracks inside and their shared BigBlock.
             @return: None'''
         (start_point, start_port) = self.routing[0]
-        reverse = True if start_point in (
-            self.tracks[-1].L_point, self.tracks[-1].R_point) else False
+        reverse = True if start_point in (self.tracks[-1].L_point,
+                                          self.tracks[-1].R_point) else False
         if not reverse:
-            for i in range(len(self.tracks)-1):
+            for i in range(len(self.tracks) - 1):
                 (next_point, next_port) = (self.tracks[i].L_point, self.tracks[i].L_point_port) \
                     if start_point == self.tracks[i].R_point \
                     else (self.tracks[i].R_point, self.tracks[i].R_point_port)
-                self.tracks[i].routing = (
-                    (start_point, start_port), (next_point, next_port))
-                start_point, start_port = next_point, self.tracks[i +
-                                                                  1].port_by_sigpoint[next_point]
-            self.tracks[-1].routing = ((start_point,
-                                        start_port), self.routing[1])
+                self.tracks[i].routing = ((start_point, start_port),
+                                          (next_point, next_port))
+                start_point, start_port = next_point, self.tracks[
+                    i + 1].port_by_sigpoint[next_point]
+            self.tracks[-1].routing = ((start_point, start_port),
+                                       self.routing[1])
         else:
-            for i in range(len(self.tracks)-1, 0, -1):
+            for i in range(len(self.tracks) - 1, 0, -1):
                 (next_point, next_port) = (self.tracks[i].L_point, self.tracks[i].L_point_port) \
                     if start_point == self.tracks[i].R_point \
                     else (self.tracks[i].R_point, self.tracks[i].R_point_port)
-                self.tracks[i].routing = (
-                    (start_point, start_port), (next_point, next_port))
-                start_point, start_port = next_point, self.tracks[i -
-                                                                  1].port_by_sigpoint[next_point]
-            self.tracks[0].routing = (
-                (start_point, start_port), self.routing[1])
+                self.tracks[i].routing = ((start_point, start_port),
+                                          (next_point, next_port))
+                start_point, start_port = next_point, self.tracks[
+                    i - 1].port_by_sigpoint[next_point]
+            self.tracks[0].routing = ((start_point, start_port),
+                                      self.routing[1])
 
     #-----------------------------#
 

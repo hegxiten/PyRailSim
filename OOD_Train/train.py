@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import random
+import numpy as np
+from datetime import datetime, timedelta
+from infrastructure import Track, BigBlock
+from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 import os
 import sys
 sys.path.append(
     'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
-
-from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
-from infrastructure import Track, BigBlock
-from datetime import datetime, timedelta
-import numpy as np
-import random
 
 
 class Train():
@@ -20,8 +19,9 @@ class Train():
             System the train is operating at. Must be registered when initialize.
         :length: (**kw), miles
             Train length that can occupy multiple tracks. 0 by default.
-        :init_segment: 2-element-tuple: ((Point, Port),(Point, Port))
+        :init_segment: 2-element-tuple: ((Point, Port), (Point, Port))
             Describes the initial direction and section of track of the train."""
+
     @staticmethod
     def abs_brake_distance(curr_spd, tgt_spd, brake_dcc):
         '''
@@ -45,13 +45,15 @@ class Train():
             @return:
                 The sign (+1/-1) of train's direction (speed).'''
         if rp_seg[0][0] and rp_seg[1][0]:
-            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > rp_seg[0][
+                    0].signal_by_port[rp_seg[0][1]].MP:
                 return 1
-            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < rp_seg[0][
+                    0].signal_by_port[rp_seg[0][1]].MP:
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
-        elif not rp_seg[0][0]:      # initiating
+        elif not rp_seg[0][0]:  # initiating
             if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
                     min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return 1
@@ -60,7 +62,7 @@ class Train():
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
-        elif not rp_seg[1][0]:      # terminating
+        elif not rp_seg[1][0]:  # terminating
             if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
                     max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return 1
@@ -70,9 +72,10 @@ class Train():
             else:
                 raise ValueError('Undefined MP direction')
 
-    def __init__(self, system, init_time, init_segment, max_sp, max_acc, max_dcc, **kwargs):
-        ((_curr_prev_sigpoint, _prev_sigport),
-         (_curr_sigpoint, _prev_sigport)) = init_segment
+    def __init__(self, system, init_time, init_segment, max_sp, max_acc,
+                 max_dcc, **kwargs):
+        ((_curr_prev_sigpoint, _prev_sigport), (_curr_sigpoint,
+                                                _prev_sigport)) = init_segment
         self.system = system
         self.length = 0 \
             if not kwargs.get('length') else kwargs.get('length')
@@ -117,7 +120,8 @@ class Train():
             if self not in self.curr_track.train:
                 if self.curr_track.train:
                     print(
-                        '\t Train initialization Warning: adding new train to a track already occupied!')
+                        '\t Train initialization Warning: adding new train to a track already occupied!'
+                    )
                 self.curr_track.train.append(self)
 
     def __repr__(self):
@@ -169,15 +173,17 @@ class Train():
     def curr_track(self):
         '''
             The current Track instance the head of the train is moving upon'''
-        return self.system.get_track_by_point_port_pairs(self.curr_prev_sigpoint, self.curr_prev_sigport,
-                                                         self.curr_sigpoint, self.curr_sigport)
+        return self.system.get_track_by_point_port_pairs(
+            self.curr_prev_sigpoint, self.curr_prev_sigport,
+            self.curr_sigpoint, self.curr_sigport)
 
     @property
     def rear_curr_track(self):
         '''
             The current Track instance the rear of the train is moving upon'''
-        return self.system.get_track_by_point_port_pairs(self.rear_curr_prev_sigpoint, self.rear_curr_prev_sigport,
-                                                         self.rear_curr_sigpoint, self.rear_curr_sigport)
+        return self.system.get_track_by_point_port_pairs(
+            self.rear_curr_prev_sigpoint, self.rear_curr_prev_sigport,
+            self.rear_curr_sigpoint, self.rear_curr_sigport)
 
     @property
     def curr_occuping_routing_path(self):
@@ -340,16 +346,20 @@ class Train():
                 else:
                     # 1.1.2 train head entering a new track (crossing current SignalPoint)
                     # Note: new track may have a separate MP system (switching corridors)
-                    _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[1]].MP
-                    _curr_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[0]].MP
-                    self.cross_sigpoint(self.curr_sigpoint,
-                                        self._curr_MP, new_MP)
+                    _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[
+                        self.curr_sig.route[1]].MP
+                    _curr_sig_MP = self.curr_sigpoint.signal_by_port[
+                        self.curr_sig.route[0]].MP
+                    self.cross_sigpoint(self.curr_sigpoint, self._curr_MP,
+                                        new_MP)
                     self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                     # if entering a separate MP Track, interpolate distance at MP changing point
             else:
                 # 1.2 the train head is initiating, crossing the entry SignalPoint (ControlPoint)
-                _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[1]].MP
-                _curr_sig_MP = self.curr_sigpoint.signal_by_port[self.curr_sig.route[0]].MP
+                _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[
+                    self.curr_sig.route[1]].MP
+                _curr_sig_MP = self.curr_sigpoint.signal_by_port[
+                    self.curr_sig.route[0]].MP
                 self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
                 self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                 # if entering a separate MP Track, interpolate distance at MP changing point
@@ -385,7 +395,8 @@ class Train():
                 # 2.1 the train rear is not out of the system (rear has a current SignalPoint)
                 if self.rear_curr_track:
                     # 2.1.1 not initiating
-                    if min(self.rear_curr_track.MP) < new_rear_MP < max(self.rear_curr_track.MP):
+                    if min(self.rear_curr_track.MP) < new_rear_MP < max(
+                            self.rear_curr_track.MP):
                         # 2.1.1.1 train rear is confined in the same track after the update
                         self._rear_curr_MP = self._rear_curr_MP + _delta_s
                     else:
@@ -397,16 +408,19 @@ class Train():
                              self.curr_occuping_routing_path[-2][0][1])
                         _new_rear_prev_sig_MP = self.rear_curr_sigpoint.signal_by_port[
                             _rear_route[1]].MP
-                        _rear_curr_sig_MP = self.rear_curr_sigpoint.signal_by_port[_rear_route[0]].MP
-                        self.rear_cross_sigpoint(
-                            self.rear_curr_sigpoint, self._rear_curr_MP, new_rear_MP)
+                        _rear_curr_sig_MP = self.rear_curr_sigpoint.signal_by_port[
+                            _rear_route[0]].MP
+                        self.rear_cross_sigpoint(self.rear_curr_sigpoint,
+                                                 self._rear_curr_MP,
+                                                 new_rear_MP)
                         self._rear_curr_MP = _new_rear_prev_sig_MP + \
                             (new_rear_MP - _rear_curr_sig_MP)
                         # if entering a separate MP Track, interpolate distance at MP changing point
                 else:
                     # 2.2 initiating, train rear is going to cross the entry ControlPoint
                     assert len(self.curr_occuping_routing_path) >= 2
-                    if (new_rear_MP - self.rear_curr_sig.MP) * (self._rear_curr_MP - self.rear_curr_sig.MP) < 0:
+                    if (new_rear_MP - self.rear_curr_sig.MP) * (
+                            self._rear_curr_MP - self.rear_curr_sig.MP) < 0:
                         # 2.2.1 rear entering the new track (crossing entry CP)
                         # Note: the train rear is sure to acquire a new MP system
                         _rear_route = \
@@ -414,9 +428,11 @@ class Train():
                              self.curr_occuping_routing_path[-2][0][1])
                         _new_rear_prev_sig_MP = self.rear_curr_sigpoint.signal_by_port[
                             _rear_route[1]].MP
-                        _rear_curr_sig_MP = self.rear_curr_sigpoint.signal_by_port[_rear_route[0]].MP
-                        self.rear_cross_sigpoint(
-                            self.rear_curr_sigpoint, self._rear_curr_MP, new_rear_MP)
+                        _rear_curr_sig_MP = self.rear_curr_sigpoint.signal_by_port[
+                            _rear_route[0]].MP
+                        self.rear_cross_sigpoint(self.rear_curr_sigpoint,
+                                                 self._rear_curr_MP,
+                                                 new_rear_MP)
                         self._rear_curr_MP = _new_rear_prev_sig_MP + \
                             (new_rear_MP - _rear_curr_sig_MP)
                         # interpolate distance at the MP changing point
@@ -424,13 +440,15 @@ class Train():
                         # 2.2.2 not crossing the entry ControlPoint; train rear not in the system yet
                         self._rear_curr_MP += _delta_s
             else:
-                raise ValueError('Setting Undefined rear MP: rear MP: {}, new rear MP: {}, rear track: {}'
-                                 .format(self._rear_curr_MP, new_rear_MP, self.rear_curr_track))
+                raise ValueError(
+                    'Setting Undefined rear MP: rear MP: {}, new rear MP: {}, rear track: {}'
+                    .format(self._rear_curr_MP, new_rear_MP,
+                            self.rear_curr_track))
         self.rear_time_pos_list.append(
             [self.system.sys_time, self.rear_curr_MP])
 
     @property
-    def curr_speed(self):   # in miles/sec, with (+/-)
+    def curr_speed(self):  # in miles/sec, with (+/-)
         '''
             The current speed of the train. Consistant for the whole length.'''
         return self._curr_speed
@@ -461,32 +479,35 @@ class Train():
         # store the old speed value internally for logical processing
         # the intended new_speed to set is based on speed delta acquired by its curr_acc
         if new_speed * _old_speed >= 0:  # 1
-            if abs(new_speed) > abs(_old_speed):    # 1.1
-                if (self.curr_spd_lmt_abs - abs(new_speed)) * (self.curr_spd_lmt_abs - abs(_old_speed)) < 0:
+            if abs(new_speed) > abs(_old_speed):  # 1.1
+                if (self.curr_spd_lmt_abs - abs(new_speed)) * (
+                        self.curr_spd_lmt_abs - abs(_old_speed)) < 0:
                     # 1.1.1
                     self._curr_speed = self.curr_spd_lmt_abs if _old_speed >= 0 else -self.curr_spd_lmt_abs
-                else:   # 1.1.2
+                else:  # 1.1.2
                     self._curr_speed = new_speed
             elif abs(new_speed) < abs(_old_speed):  # 1.2
-                if (self.curr_target_spd_abs - abs(new_speed)) * (self.curr_target_spd_abs - abs(_old_speed)) < 0:
+                if (self.curr_target_spd_abs - abs(new_speed)) * (
+                        self.curr_target_spd_abs - abs(_old_speed)) < 0:
                     # 1.2.1
                     self._curr_speed = self.curr_target_spd_abs if _old_speed >= 0 else - \
                         self.curr_target_spd_abs
-                else:   # 1.2.2
+                else:  # 1.2.2
                     self._curr_speed = new_speed
-            else:   # 1.3
+            else:  # 1.3
                 self._curr_speed = new_speed
-        elif new_speed * _old_speed < 0:    # 2
+        elif new_speed * _old_speed < 0:  # 2
             self._curr_speed = 0
         else:
-            raise ValueError('Undefined speed value {} to set for old speed {}'.format(
-                new_speed, _old_speed))
+            raise ValueError(
+                'Undefined speed value {} to set for old speed {}'.format(
+                    new_speed, _old_speed))
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction (after newly set speed value) to find bugs
 
     @property
-    def curr_acc(self):     # acceleration in miles/(second)^2, with (+/-)
+    def curr_acc(self):  # acceleration in miles/(second)^2, with (+/-)
         '''
             The current acceleration value of the train, assumed consistant acceleration for its whole length.
             The acceleration value is fully determined by its current status with different conditions:
@@ -498,7 +519,7 @@ class Train():
                         the train shall neither accelerate nor decelerate.
                     2.1.2: if the train's current target speed is not higher than its current speed limit,
                         at every refreshing cycle, the train needs to determine if it needs to brake or not.
-                        2.1.2.1: if it is ok to maintain current speed for the next refreshing cycle without 
+                        2.1.2.1: if it is ok to maintain current speed for the next refreshing cycle without
                             any violations, maintain its speed.
                         2.1.2.2: if it is not ok to maintain current speed for the next refreshing cycle period,
                             (some violations may happen if speed maintained), start to brake at its maximum effort
@@ -530,36 +551,44 @@ class Train():
         _tgt_MP = self.curr_sig.MP if self.curr_sig else _direction_sign * \
             float('inf')
         # MilePost of its current signal. If no current signal, set the milepost as infinite.
-        if self.stopped:    # 1
+        if self.stopped:  # 1
             self._curr_acc = 0
-        else:   # 2
-            if abs(self.curr_speed) == self.curr_spd_lmt_abs:   # 2.1
-                if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:   # 2.1.1
+        else:  # 2
+            if abs(self.curr_speed) == self.curr_spd_lmt_abs:  # 2.1
+                if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:  # 2.1.1
                     self._curr_acc = 0
-                else:   # 2.1.2
-                    if self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                else:  # 2.1.2
+                    if self.hold_speed_before_dcc(self.curr_MP,
+                                                  self.curr_sig.MP,
+                                                  self.curr_speed,
+                                                  self.curr_target_spd_abs):
                         self._curr_acc = 0  # 2.1.2.1
                     else:
                         self._curr_acc = self.max_dcc * \
                             (-1) * _direction_sign  # 2.1.2.2
             elif abs(self.curr_speed) < self.curr_spd_lmt_abs:  # 2.2
-                if (_tgt_MP - self.curr_MP) * (_tgt_MP - (self.curr_MP + _delta_s)) >= 0:   # 2.2.1
-                    if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:   # 2.2.1.1
+                if (_tgt_MP - self.curr_MP) * (
+                        _tgt_MP - (self.curr_MP + _delta_s)) >= 0:  # 2.2.1
+                    if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:  # 2.2.1.1
                         self._curr_acc = self.max_acc * _direction_sign
                     # 2.2.1.2
                     elif self.curr_target_spd_abs > abs(self.curr_speed):
                         self._curr_acc = self.max_acc * _direction_sign
                     # 2.2.1.3
                     elif self.curr_target_spd_abs <= abs(self.curr_speed):
-                        if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                        if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP,
+                                               self.curr_speed,
+                                               self.curr_target_spd_abs):
                             self._curr_acc = self.max_acc * _direction_sign  # 2.2.1.3.1
-                        elif self.hold_speed_before_dcc(self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs):
+                        elif self.hold_speed_before_dcc(
+                                self.curr_MP, self.curr_sig.MP,
+                                self.curr_speed, self.curr_target_spd_abs):
                             self._curr_acc = 0  # 2.2.1.3.2
-                        else:   # 2.2.1.3.3
+                        else:  # 2.2.1.3.3
                             self._curr_acc = self.max_dcc * \
                                 (-1) * _direction_sign
-                else:   # 2.2.2
-                    if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:   # 2.2.2.1
+                else:  # 2.2.2
+                    if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:  # 2.2.2.1
                         self._curr_acc = self.max_acc * _direction_sign
                     # 2.2.2.2
                     elif self.curr_target_spd_abs > abs(self.curr_speed):
@@ -578,23 +607,22 @@ class Train():
             The current target speed of the train in aboslute value. 
             Corresponding to its current siganling speed and track allowable speeds.'''
         _curr_sig_trgt_speed_abs = float('inf')
-        _curr_track_allow_sp_abs = getattr(
-            self.curr_track, 'allow_sp', float('inf'))
+        _curr_track_allow_sp_abs = getattr(self.curr_track, 'allow_sp',
+                                           float('inf'))
         _curr_sig_permit_track_allow_sp = float('inf')
         # if exit the system, target speed is infinite (not defined).
-        if self.curr_sig:                       # waiting to initiate
+        if self.curr_sig:  # waiting to initiate
             _curr_sig_trgt_speed_abs = self.curr_sig.aspect.target_speed
-            if self.curr_sig.permit_track:      # initiating
+            if self.curr_sig.permit_track:  # initiating
                 _curr_sig_permit_track_allow_sp = self.curr_sig.permit_track.allow_sp
-        _tgt_spd = min(_curr_sig_trgt_speed_abs,
-                       _curr_track_allow_sp_abs,
+        _tgt_spd = min(_curr_sig_trgt_speed_abs, _curr_track_allow_sp_abs,
                        _curr_sig_permit_track_allow_sp)
         # both current track allowable speed and permit track allowable speed are considered.
         assert _tgt_spd >= 0.0
         return _tgt_spd
 
     @property
-    def curr_spd_lmt_abs(self):         # in miles/sec, + only
+    def curr_spd_lmt_abs(self):  # in miles/sec, + only
         '''
             The current speed limit in absolute value of the train.'''
         return self._curr_spd_lmt_abs
@@ -616,42 +644,52 @@ class Train():
         '''
             The current braking distance in absolute value of the train if 
             engaging maximum brake effort.'''
-        return self.abs_brake_distance(self.curr_speed, self.curr_target_spd_abs, self.max_dcc)
+        return self.abs_brake_distance(self.curr_speed,
+                                       self.curr_target_spd_abs, self.max_dcc)
 
     @property
     def curr_dis_to_curr_sig_abs(self):  # in miles, + only
         '''
             The current distance to its curr_sig instance in absolute value 
             from the train head.'''
-        return abs(self.curr_sig.MP - self.curr_MP) if self.curr_sig else float('inf')
+        return abs(self.curr_sig.MP -
+                   self.curr_MP) if self.curr_sig else float('inf')
 
     @property
     def trains_ahead_same_dir(self):
         '''
             A list of other trains ahead of the train with the same direction. 
             The lower the list index, the closer with the train.'''
-        return self.system.get_trains_between_points(self.curr_sigpoint, self.shooting_point_port[0], obv=True)
+        return self.system.get_trains_between_points(
+            self.curr_sigpoint, self.shooting_point_port[0], obv=True)
 
     @property
     def trains_behind_same_dir(self):
         '''
             A list of other trains behind the train with the same direction. 
             The lower the list index, the closer with the train.'''
-        return self.system.get_trains_between_points(self.rear_curr_prev_sigpoint, self.reverse_shooting_point_port[0], rev=True)
+        return self.system.get_trains_between_points(
+            self.rear_curr_prev_sigpoint,
+            self.reverse_shooting_point_port[0],
+            rev=True)
 
     @property
     def trains_ahead_oppo_dir(self):
         '''
             A list of other trains ahead of the train with the opposite direction. 
             The lower the list index, the closer with the train.'''
-        return self.system.get_trains_between_points(self.curr_sigpoint, self.shooting_point_port[0], rev=True)
+        return self.system.get_trains_between_points(
+            self.curr_sigpoint, self.shooting_point_port[0], rev=True)
 
     @property
     def trains_behind_oppo_dir(self):
         '''
             A list of other trains behind the train with the opposite direction. 
             The lower the list index, the closer with the train.'''
-        return self.system.get_trains_between_points(self.rear_curr_prev_sigpoint, self.reverse_shooting_point_port[0], obv=True)
+        return self.system.get_trains_between_points(
+            self.rear_curr_prev_sigpoint,
+            self.reverse_shooting_point_port[0],
+            obv=True)
 
     @property
     def pending_route(self):
@@ -664,8 +702,10 @@ class Train():
         elif self.curr_sigpoint == self.curr_control_point:
             if not self.curr_sig.route:
                 return True
-        elif not self.system.get_trains_between_points(self.curr_sigpoint, self.curr_control_point, obv=True):
-            if not self.curr_control_point.signal_by_port[self.curr_control_pointport].route:
+        elif not self.system.get_trains_between_points(
+                self.curr_sigpoint, self.curr_control_point, obv=True):
+            if not self.curr_control_point.signal_by_port[
+                    self.curr_control_pointport].route:
                 return True
         return False
 
@@ -676,17 +716,18 @@ class Train():
             @return: None'''
         # TODO: implement geographical spans within interlocking points
         assert self.curr_sig.route in sigpoint.current_routes
-        assert self.curr_sig in [sig for p,
-                                 sig in sigpoint.signal_by_port.items()]
+        assert self.curr_sig in [
+            sig for p, sig in sigpoint.signal_by_port.items()
+        ]
         assert min(curr_MP, new_MP) <= self.curr_sig.MP <= max(curr_MP, new_MP)
         assert not self.stopped
 
         _route = getattr(self.curr_sig, 'route')
         _permit_track = getattr(self.curr_sig, 'permit_track')
-        _next_enroute_sigpoint = getattr(
-            self.curr_sig, 'next_enroute_sigpoint')
-        _next_enroute_sigpoint_port = getattr(
-            self.curr_sig, 'next_enroute_sigpoint_port')
+        _next_enroute_sigpoint = getattr(self.curr_sig,
+                                         'next_enroute_sigpoint')
+        _next_enroute_sigpoint_port = getattr(self.curr_sig,
+                                              'next_enroute_sigpoint_port')
         terminate = False if _next_enroute_sigpoint else True
         initiate = False if self.curr_prev_sigpoint else True
 
@@ -702,9 +743,9 @@ class Train():
             assert len(self.curr_sig.permit_track.train) == 0
             print('train {} initiated entering into track {}'.format(
                 self, _permit_track))
-            self.curr_spd_lmt_abs = self.curr_target_spd_abs    # update current speed limit
+            self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             self.curr_sig.permit_track.train.append(
-                self)       # occupy the track to enter
+                self)  # occupy the track to enter
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
             # close the route to protect interlocking
@@ -717,9 +758,9 @@ class Train():
 
         elif not initiate and not terminate:
             assert len(self.curr_sig.permit_track.train) == 0
-            self.curr_spd_lmt_abs = self.curr_target_spd_abs    # update current speed limit
+            self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             self.curr_sig.permit_track.train.append(
-                self)       # occupy the track to enter
+                self)  # occupy the track to enter
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
             # only close the route of ControlPoint along the way
@@ -735,19 +776,20 @@ class Train():
         elif terminate:
             # no track to occupy because of terminating
             assert isinstance(sigpoint, ControlPoint)
-            self.curr_spd_lmt_abs = self.curr_target_spd_abs    # update current speed limit
+            self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
             # close the route to protect interlocking
             sigpoint.close_route(_route)
-            self.curr_routing_path_segment = (
-                (sigpoint, _route[1]), (None, None))
+            self.curr_routing_path_segment = ((sigpoint, _route[1]), (None,
+                                                                      None))
             self.curr_occuping_routing_path.insert(
                 0, self.curr_routing_path_segment)
 
         else:
-            raise ValueError('train {} crossing signalpoint {} failed unexpectedly'
-                             .format(self, sigpoint))
+            raise ValueError(
+                'train {} crossing signalpoint {} failed unexpectedly'.format(
+                    self, sigpoint))
 
     def rear_cross_sigpoint(self, sigpoint, rear_curr_MP, new_rear_MP):
         '''
@@ -757,8 +799,9 @@ class Train():
         '''
         # TODO: implement geographical spans within interlocking points
         assert self in sigpoint.curr_train_with_route.keys()
-        assert self.rear_curr_sig in [sig for p,
-                                      sig in sigpoint.signal_by_port.items()]
+        assert self.rear_curr_sig in [
+            sig for p, sig in sigpoint.signal_by_port.items()
+        ]
         assert min(rear_curr_MP, new_rear_MP) <= self.rear_curr_sig.MP <= max(
             rear_curr_MP, new_rear_MP)
         assert not self.stopped
@@ -832,8 +875,10 @@ class Train():
             delta_s = self.curr_speed * self.system.refresh_time + \
                 0.5 * self.curr_acc * self.system.refresh_time ** 2
             self.curr_MP += delta_s
-            self.pos_spd_list.append(
-                [self.curr_MP, self._curr_speed, self.curr_spd_lmt_abs, self.curr_target_spd_abs])
+            self.pos_spd_list.append([
+                self.curr_MP, self._curr_speed, self.curr_spd_lmt_abs,
+                self.curr_target_spd_abs
+            ])
         elif not self.terminated:
             self.time_pos_list.append([self.system.sys_time, self.curr_MP])
             self.rear_time_pos_list.append(
@@ -849,21 +894,25 @@ class Train():
         if self.pending_route:
             _enterable = True
             for n in self.system.control_points:
-                if (n.MP - self.curr_control_point.MP) * self.sign_MP(self.curr_routing_path_segment) > 0:
-                    if not self.system.capacity_enterable(self.curr_control_point, n):
+                if (n.MP - self.curr_control_point.MP) * self.sign_MP(
+                        self.curr_routing_path_segment) > 0:
+                    if not self.system.capacity_enterable(
+                            self.curr_control_point, n):
                         _enterable = False
             if _enterable:
                 _pending_route_to_open = self.curr_control_point.find_route_for_port(
                     self.curr_control_pointport)
                 if _pending_route_to_open:
                     _locked_routes_due_to_train = []
-                    for _, r in self.curr_control_point.curr_train_with_route.items():
+                    for _, r in self.curr_control_point.curr_train_with_route.items(
+                    ):
                         _locked_routes_due_to_train.append(r)
                         _locked_routes_due_to_train.extend(
-                            self.curr_control_point.mutex_routes_by_route.get(r))
+                            self.curr_control_point.mutex_routes_by_route.get(
+                                r))
                     if _pending_route_to_open not in _locked_routes_due_to_train:
-                        print(self, 'requesting', _pending_route_to_open,
-                              'at', self.curr_control_point)
+                        print(self, 'requesting', _pending_route_to_open, 'at',
+                              self.curr_control_point)
                         self.curr_control_point.open_route(
                             _pending_route_to_open)
 
@@ -888,7 +937,8 @@ class Train():
         '''
             Whether the train is during the dos pos and time period
             @return: True or False'''
-        return dos_pos == self.curr_track and self.system.dos_period[0] <= self.system.sys_time <= self.system.dos_period[1]
+        return dos_pos == self.curr_track and self.system.dos_period[
+            0] <= self.system.sys_time <= self.system.dos_period[1]
 
     def let_faster_train(self):
         '''TODO: implement better judgment to determine if the train needs to be pased be the other.
