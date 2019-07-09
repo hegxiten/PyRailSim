@@ -213,13 +213,10 @@ class System():
             Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
             Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
             Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
-            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0),
-            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1),
-            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
-            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
-            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0),
-            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1),
-            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
+            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, siding=True),
+            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, siding=True),
+            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, siding=True),
+            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, siding=True),
             Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
             Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
         ]   # yapf: disable

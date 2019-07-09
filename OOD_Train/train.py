@@ -12,6 +12,13 @@ from infrastructure import Track, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 
+class TrainList(list):
+    """
+        A list-like container for Train instances wihtin a simulation system.
+        TODO: implement customized attributes of TrainList: 
+            append, insert, __getitem__, __setitem__, __delitem__, etc."""
+
+
 class Train():
     """
         Constructor Parameters
@@ -138,7 +145,6 @@ class Train():
             TODO: Implement rank for both directions.'''
         self.system.trains.sort()
         return self.system.trains.index(self)
-
 
     @property
     def terminated(self):
@@ -381,7 +387,7 @@ class Train():
                         self.curr_sig.route[0]].MP
                     self.cross_sigpoint(self.curr_sigpoint, self._curr_MP,
                                         new_MP)
-                    self._curr_MP = _new_prev_sig_MP + (new_MP-_curr_sig_MP)
+                    self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                     # if entering a separate MP Track, interpolate distance at MP changing point
             else:
                 # 1.2 the train head is initiating, crossing the entry SignalPoint (ControlPoint)
@@ -390,7 +396,7 @@ class Train():
                 _curr_sig_MP = self.curr_sigpoint.signal_by_port[
                     self.curr_sig.route[0]].MP
                 self.cross_sigpoint(self.curr_sigpoint, self._curr_MP, new_MP)
-                self._curr_MP = _new_prev_sig_MP + (new_MP-_curr_sig_MP)
+                self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                 # if entering a separate MP Track, interpolate distance at MP changing point
         else:
             # 2 the train head is out of the system (going to terminate)
@@ -856,7 +862,7 @@ class Train():
         delta_s = spd * self.system.refresh_time
         # False, when hold the speed and the train will
         # cross its current facing signal in the upcoming cycle.
-        if (tgt_MP-MP) * (tgt_MP - (MP+delta_s)) < 0:
+        if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
             return False
         # True, after holding speed within the cycle if the brake distance still satisfies.
         # brake distance is by its maximum deceleration value.
@@ -883,7 +889,7 @@ class Train():
                 self.system.refresh_time
             # False, if the train accelerates and its will
             # cross its current facing signal in the upcoming cycle.
-            if (tgt_MP-MP) * (tgt_MP - (MP+delta_s)) < 0:
+            if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
                 return False
             # True, after acceleration within the cycle if the brake distance still satisfies.
             # brake distance is by its maximum deceleration value.
@@ -932,12 +938,10 @@ class Train():
                     self.curr_control_pointport)
                 if _pending_route_to_open:
                     _locked_routes_due_to_train = []
-                    for _, r in self.curr_control_point.curr_train_with_route.items(
-                    ):
+                    for _, r in self.curr_control_point.curr_train_with_route.items():
                         _locked_routes_due_to_train.append(r)
                         _locked_routes_due_to_train.extend(
-                            self.curr_control_point.mutex_routes_by_route.get(
-                                r))
+                            self.curr_control_point.mutex_routes_by_route.get(r))
                     if _pending_route_to_open not in _locked_routes_due_to_train:
                         print(self, 'requesting', _pending_route_to_open, 'at',
                               self.curr_control_point)
@@ -970,16 +974,16 @@ class Train():
         return dos_pos == self.curr_track and self.system.dos_period[
             0] <= self.system.sys_time <= self.system.dos_period[1]
 
-    def let_faster_train(self):
+    def jamming_train_behind(self):
         '''TODO: implement better judgment to determine if the train needs to be pased be the other.
             @return: True or False'''
         self.system.trains.sort()
-        _proximate_train_following_behind_ = self.system.trains[self.rank + 1]
+        _proximate_train_following_behind = self.system.trains[self.rank + 1]
         if self.rank < len(self.system.trains) - 1:
-            if self.max_speed < self.system.trains[self.rank + 1].max_speed:
-                return True
-        return  (self.rank < self.system.train_num - 1)                                     \
-            and (self.max_speed < self.system.trains[self.rank + 1].max_speed)              \
-            and ((self.system.trains[self.rank + 1].curr_track == self.curr_track - 1)
-                  and self.system.blocks[self.curr_track].is_Occupied())                    \
-            or self.system.trains[self.rank + 1].curr_track == self.curr_track
+            if self.max_speed < _proximate_train_following_behind.max_speed:
+                if abs(_proximate_train_following_behind.curr_MP -
+                       self.rear_curr_MP) < (
+                           _proximate_train_following_behind.curr_track.length +
+                           self.rear_curr_track.length):
+                    return True
+        return False

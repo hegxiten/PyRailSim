@@ -47,7 +47,8 @@ class Track(Observable):
                  R_point,
                  R_point_port,
                  edge_key=0,
-                 allow_sp=65):  # speed as mph
+                 allow_sp=65,
+                 siding=False):  # speed as mph
         super().__init__()
         self._train = []
         self._routing = None
@@ -60,7 +61,7 @@ class Track(Observable):
         self.allow_sp = allow_sp / 3600
         self.add_observer(L_point)
         self.add_observer(R_point)
-
+        self.siding = siding
         self.system = system
         self.__bigblock = None
         self.__curr_routing_path = None
