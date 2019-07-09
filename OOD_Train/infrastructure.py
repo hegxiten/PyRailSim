@@ -4,6 +4,23 @@ import networkx as nx
 from observe import Observable, Observer
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
+class Yard(Observable, Observer):
+    def __init__(self,):
+        self.tracks = []
+
+    @property
+    def has_available_track(self):
+        for trk in self.tracks:
+            if not trk.train:
+                return True
+        return False
+
+    @property
+    def all_trains(self):
+        _all_trains = []
+        for tlist in [trk.train for trk in self.tracks]:
+            _all_trains.extend([trn for trn in tlist])
+        return _all_trains
 
 class Track(Observable):
     @staticmethod
@@ -48,7 +65,7 @@ class Track(Observable):
                  R_point_port,
                  edge_key=0,
                  allow_sp=65,
-                 siding=False):  # speed as mph
+                 yard=None):  # speed as mph
         super().__init__()
         self._train = []
         self._routing = None
@@ -61,10 +78,12 @@ class Track(Observable):
         self.allow_sp = allow_sp / 3600
         self.add_observer(L_point)
         self.add_observer(R_point)
-        self.siding = siding
         self.system = system
         self.__bigblock = None
         self.__curr_routing_path = None
+        self.yard = yard
+        if self.yard:
+            self.yard.tracks.append(self)
 
     def __repr__(self):
         return 'Track MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1],

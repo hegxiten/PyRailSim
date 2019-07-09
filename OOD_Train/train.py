@@ -97,7 +97,7 @@ class Train():
             if not kwargs.get('dest_segment') else kwargs.get('dest_segment')
 
         self._curr_routing_path_segment = self.init_segment
-        self._curr_occuping_routing_path = [self._curr_routing_path_segment]
+        self._curr_occupying_routing_path = [self._curr_routing_path_segment]
         self._curr_MP = self.curr_sig.MP
         self._rear_curr_MP = self.curr_MP - self.length * \
             self.sign_MP(self.curr_routing_path_segment)
@@ -133,7 +133,7 @@ class Train():
 
     def __repr__(self):
         return 'train index {}, current occupation: {}, head MP: {}, rear MP {}'\
-            .format(self.train_idx, self.curr_occuping_routing_path,
+            .format(self.train_idx, self.curr_occupying_routing_path,
                     str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
                     str("%.2f" % round(self.rear_curr_MP, 2)).rjust(5, ' '))
 
@@ -191,11 +191,12 @@ class Train():
             self.rear_curr_sigpoint, self.rear_curr_sigport)
 
     @property
-    def curr_occuping_routing_path(self):
+    def curr_occupying_routing_path(self):
         '''
             A list of routing path tuples being occupied by the train.
             The routing path tuples are in order from train head to rear.'''
-        return self._curr_occuping_routing_path
+        return self._curr_occupying_routing_path \
+            if self.length != 0 else [self.curr_routing_path_segment]
 
     @property
     def curr_tracks(self):
@@ -203,7 +204,7 @@ class Train():
             A list of Track instances being occupied by the train.
             The Track instances are in order from train head to rear.'''
         _curr_tracks = []
-        for r in self.curr_occuping_routing_path:
+        for r in self.curr_occupying_routing_path:
             _track = self.system.get_track_by_point_port_pairs(
                 r[0][0], r[0][1], r[1][0], r[1][1])
             if _track:
@@ -294,19 +295,19 @@ class Train():
     def rear_curr_sigpoint(self):
         '''
             The SignalPoint instance the train rear is moving towards currently.'''
-        return self.curr_occuping_routing_path[-1][1][0]
+        return self.curr_occupying_routing_path[-1][1][0]
 
     @property
     def rear_curr_prev_sigpoint(self):
         '''
             The SignalPoint instance the train rear has just passed.'''
-        return self.curr_occuping_routing_path[-1][0][0]
+        return self.curr_occupying_routing_path[-1][0][0]
 
     @property
     def rear_curr_sigport(self):
         '''
             The port of rear_curr_sigpoint the train rear is moving towards.'''
-        return self.curr_occuping_routing_path[-1][1][1]
+        return self.curr_occupying_routing_path[-1][1][1]
 
     @property
     def rear_curr_prev_sigport(self):
@@ -315,7 +316,7 @@ class Train():
             Note:
                 this is not the port that the train rear has just passed. It is rather the
                 port on the BACK of the port the train rear has just passed/cleared signal.'''
-        return self.curr_occuping_routing_path[-1][0][1]
+        return self.curr_occupying_routing_path[-1][0][1]
 
     @property
     def curr_control_point(self):
@@ -409,9 +410,6 @@ class Train():
     def rear_curr_MP(self):  # in miles
         '''
             The current MilePost of the train rear, in miles.'''
-        if self.rear_curr_track:
-            assert min(self.rear_curr_track.MP) <= self._rear_curr_MP <= max(
-                self.rear_curr_track.MP)
         return self._rear_curr_MP
 
     @rear_curr_MP.setter
@@ -437,10 +435,10 @@ class Train():
                     else:
                         # 2.1.1.2 train rear is entering a new track (crossing its current SignalPoint)
                         # Note: new track of the train rear may have a separate MP system
-                        assert len(self.curr_occuping_routing_path) >= 2
-                        _rear_route = \
-                            (self.curr_occuping_routing_path[-1][1][1],
-                             self.curr_occuping_routing_path[-2][0][1])
+                        assert len(self.curr_occupying_routing_path) >= 2
+                        _rear_route = (
+                                self.curr_occupying_routing_path[-1][1][1],
+                                self.curr_occupying_routing_path[-2][0][1])
                         _new_rear_prev_sig_MP = self.rear_curr_sigpoint.signal_by_port[
                             _rear_route[1]].MP
                         _rear_curr_sig_MP = self.rear_curr_sigpoint.signal_by_port[
@@ -453,14 +451,14 @@ class Train():
                         # if entering a separate MP Track, interpolate distance at MP changing point
                 else:
                     # 2.2 initiating, train rear is going to cross the entry ControlPoint
-                    assert len(self.curr_occuping_routing_path) >= 2
+                    assert len(self.curr_occupying_routing_path) >= 2
                     if (new_rear_MP - self.rear_curr_sig.MP) * (
                             self._rear_curr_MP - self.rear_curr_sig.MP) < 0:
                         # 2.2.1 rear entering the new track (crossing entry CP)
                         # Note: the train rear is sure to acquire a new MP system
                         _rear_route = \
-                            (self.curr_occuping_routing_path[-1][1][1],
-                             self.curr_occuping_routing_path[-2][0][1])
+                            (self.curr_occupying_routing_path[-1][1][1],
+                             self.curr_occupying_routing_path[-2][0][1])
                         _new_rear_prev_sig_MP = self.rear_curr_sigpoint.signal_by_port[
                             _rear_route[1]].MP
                         _rear_curr_sig_MP = self.rear_curr_sigpoint.signal_by_port[
@@ -775,7 +773,7 @@ class Train():
         if initiate:
             assert isinstance(sigpoint, ControlPoint)
             assert len(self.curr_sig.permit_track.train) == 0
-            print('train {} initiated entering into track {}'.format(
+            print('{0} initiated entering into {1}'.format(
                 self, _permit_track))
             self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             self.curr_sig.permit_track.train.append(
@@ -787,8 +785,12 @@ class Train():
             self.curr_routing_path_segment = \
                 ((sigpoint, _route[1]), (_next_enroute_sigpoint,
                                          _next_enroute_sigpoint_port))
-            self.curr_occuping_routing_path.insert(
+            self.curr_occupying_routing_path.insert(
                 0, self.curr_routing_path_segment)
+            # record the time of entering the system, serving train generation's
+            # time separation
+            self.enter_time = self.system.sys_time
+            self.system.last_train_init_time = self.enter_time
 
         elif not initiate and not terminate:
             assert len(self.curr_sig.permit_track.train) == 0
@@ -804,7 +806,7 @@ class Train():
             self.curr_routing_path_segment = \
                 ((sigpoint, _route[1]), (_next_enroute_sigpoint,
                                          _next_enroute_sigpoint_port))
-            self.curr_occuping_routing_path.insert(
+            self.curr_occupying_routing_path.insert(
                 0, self.curr_routing_path_segment)
 
         elif terminate:
@@ -817,7 +819,7 @@ class Train():
             sigpoint.close_route(_route)
             self.curr_routing_path_segment = ((sigpoint, _route[1]), (None,
                                                                       None))
-            self.curr_occuping_routing_path.insert(
+            self.curr_occupying_routing_path.insert(
                 0, self.curr_routing_path_segment)
 
         else:
@@ -849,7 +851,7 @@ class Train():
         del sigpoint.curr_train_with_route[self]
         if self.rear_curr_track:
             self.rear_curr_track.train.remove(self)
-        self.curr_occuping_routing_path.pop(-1)
+        self.curr_occupying_routing_path.pop(-1)
         # TODO:----dispatching logic may need to modify here
         # ---------to determine if further bigblock actions are needed
 
@@ -864,7 +866,8 @@ class Train():
         # cross its current facing signal in the upcoming cycle.
         if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
             return False
-        # True, after holding speed within the cycle if the brake distance still satisfies.
+        # After holding speed within the cycle if the brake distance still hold:
+        # return True
         # brake distance is by its maximum deceleration value.
         elif abs(tgt_MP - (MP + delta_s)) > \
                 self.abs_brake_distance(spd, tgt_spd, self.max_dcc) and abs(tgt_MP - MP) > abs(delta_s):
@@ -943,11 +946,87 @@ class Train():
                         _locked_routes_due_to_train.extend(
                             self.curr_control_point.mutex_routes_by_route.get(r))
                     if _pending_route_to_open not in _locked_routes_due_to_train:
-                        print(self, 'requesting', _pending_route_to_open, 'at',
-                              self.curr_control_point)
-                        self.curr_control_point.open_route(
-                            _pending_route_to_open)
+                        if not self.curr_track or not self.curr_track.yard:
+                            print(self, 'requested', _pending_route_to_open, 'at',
+                                self.curr_control_point)
+                            self.curr_control_point.open_route(
+                                _pending_route_to_open)
+                        elif self.curr_track.yard:
+                            if all([trk.train for trk in self.curr_track.yard.tracks]):
+                                if abs(self.max_speed) == min([trn.max_speed for trn in self.curr_track.yard.all_trains]):
+                                    print(self, 'requested', _pending_route_to_open, 'at',
+                                        self.curr_control_point)
+                                    self.curr_control_point.open_route(
+                                        _pending_route_to_open)
+                            else:
+                                if not self.jamming_train_behind():
+                                    print(self, 'requested', _pending_route_to_open, 'at',
+                                        self.curr_control_point)
+                                    self.curr_control_point.open_route(
+                                        _pending_route_to_open) 
+                                
+                        
+    def is_during_dos(self, dos_pos):
+        '''
+            Whether the train is during the dos pos and time period
+            @return: True or False'''
+        return dos_pos == self.curr_track and self.system.dos_period[
+            0] <= self.system.sys_time <= self.system.dos_period[1]
 
+    def jamming_train_behind(self):
+        '''
+            TODO: implement better judgment to determine if the train is jamming
+            the one behind because it is slower.
+            @return: True or False'''
+        self.system.trains.sort()
+        _proximate_train_following_behind = self.system.trains[self.rank + 1]
+        if not self.curr_track or not self.rear_curr_track:
+            return False
+        if self.rank < len(self.system.trains) - 1:
+            if self.max_speed < _proximate_train_following_behind.max_speed:
+                if abs(_proximate_train_following_behind.curr_MP -
+                       self.rear_curr_MP) < (
+                           _proximate_train_following_behind.curr_track.length +
+                           self.rear_curr_track.length):
+                    return True
+        if self.curr_track.yard:
+            _all_trains = self.curr_track.yard.all_trains
+            _rest_trains = _all_trains.remove(self)
+            if self.stopped and any([not t.stopped for t in _rest_trains]):
+                return True
+        return False
+'''self.system.trains.sort()
+        _proximate_train_following_behind = self.system.trains[self.rank + 1]
+        if not self.curr_track or not self.rear_curr_track:
+            return False
+        elif self.curr_track.yard:
+            _all_trains = self.curr_track.yard.all_trains
+            _rest_trains = _all_trains.remove(self)
+            if self.stopped:
+                if _rest_trains and any([not t.stopped for t in _rest_trains]):
+                    return True
+        elif self.max_speed < _proximate_train_following_behind.max_speed:
+            if abs(_proximate_train_following_behind.curr_MP -
+                    self.rear_curr_MP) < (
+                        _proximate_train_following_behind.curr_track.length +
+                        self.rear_curr_track.length):
+                return Trueself.system.trains.sort()
+        _proximate_train_following_behind = self.system.trains[self.rank + 1]
+        if not self.curr_track or not self.rear_curr_track:
+            return False
+        elif self.curr_track.yard:
+            _all_trains = self.curr_track.yard.all_trains
+            _rest_trains = _all_trains.remove(self)
+            if self.stopped:
+                if _rest_trains and any([not t.stopped for t in _rest_trains]):
+                    return True
+        elif self.max_speed < _proximate_train_following_behind.max_speed:
+            if abs(_proximate_train_following_behind.curr_MP -
+                    self.rear_curr_MP) < (
+                        _proximate_train_following_behind.curr_track.length +
+                        self.rear_curr_track.length):
+                return True
+'''
     def __lt__(self, othertrain):
         '''
             implement __lt__ to sort trains based on their current MilePost.
@@ -965,25 +1044,4 @@ class Train():
                 return False
             # elif self.rank < othertrain.rank:
             #     return False
-        return False
-
-    def is_during_dos(self, dos_pos):
-        '''
-            Whether the train is during the dos pos and time period
-            @return: True or False'''
-        return dos_pos == self.curr_track and self.system.dos_period[
-            0] <= self.system.sys_time <= self.system.dos_period[1]
-
-    def jamming_train_behind(self):
-        '''TODO: implement better judgment to determine if the train needs to be pased be the other.
-            @return: True or False'''
-        self.system.trains.sort()
-        _proximate_train_following_behind = self.system.trains[self.rank + 1]
-        if self.rank < len(self.system.trains) - 1:
-            if self.max_speed < _proximate_train_following_behind.max_speed:
-                if abs(_proximate_train_following_behind.curr_MP -
-                       self.rear_curr_MP) < (
-                           _proximate_train_following_behind.curr_track.length +
-                           self.rear_curr_track.length):
-                    return True
         return False

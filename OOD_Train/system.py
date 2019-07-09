@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 import networkx as nx
 from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
-from infrastructure import Track, BigBlock
+from infrastructure import Yard, Track, BigBlock
 from train import Train
 
 
@@ -196,16 +196,18 @@ class System():
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        TEST_NODE = {   0: ControlPoint(self, idx=0, ports=[0, 1], MP=0.0),
-                        1: AutoPoint(self, 1, MP=5.0),
-                        2: AutoPoint(self, 2, MP=10.0),
-                        3: ControlPoint(self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
-                        4: ControlPoint(self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
-                        5: AutoPoint(self, 5, MP=25.0),
-                        6: ControlPoint(self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
-                        7: ControlPoint(self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
-                        8: AutoPoint(self, 8, MP=40.0),
-                        9: AutoPoint(self, 9, MP=45.0),
+        TEST_SIDINGS = [Yard(), Yard()]
+
+        TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
+                        1: AutoPoint(    self, idx=1, MP=5.0),
+                        2: AutoPoint(    self, idx=2, MP=10.0),
+                        3: ControlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
+                        4: ControlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
+                        5: AutoPoint(    self, idx=5, MP=25.0),
+                        6: ControlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
+                        7: ControlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
+                        8: AutoPoint(    self, idx=8, MP=40.0),
+                        9: AutoPoint(    self, idx=9, MP=45.0),
                         10: ControlPoint(self, idx=10, ports=[0, 1], MP=50.0)
         }   # yapf: disable
 
@@ -213,10 +215,13 @@ class System():
             Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
             Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
             Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
-            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, siding=True),
-            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, siding=True),
-            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, siding=True),
-            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, siding=True),
+            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[0]),
+            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[0]),
+            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
+            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
+            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
             Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
             Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
         ]   # yapf: disable
@@ -266,10 +271,9 @@ class System():
 
         # F is a shallow copy of G: attrbutes of G/F components
         # are pointing at the same memory.
-
         def _get_new_edge(node, length=False):
-            at_neighbor = [j for j in F.neighbors(i)]
-            assert len(at_neighbor) == len(F.edges(i)) == 2
+            at_neighbor = [j for j in F.neighbors(node)]
+            assert len(at_neighbor) == len(F.edges(node)) == 2
             edgetrk_L_points = [
                 F[at_neighbor[0]][node][0]['instance'].L_point,
                 F[node][at_neighbor[1]][0]['instance'].L_point
@@ -278,10 +282,10 @@ class System():
                 F[at_neighbor[0]][node][0]['instance'].R_point,
                 F[node][at_neighbor[1]][0]['instance'].R_point
             ]
-            edgetrk_L_points.remove(i)
-            edgetrk_R_points.remove(i)
-            new_edge_length = F[at_neighbor[0]][i][0]['instance'].length + \
-                F[i][at_neighbor[1]][0]['instance'].length
+            edgetrk_L_points.remove(node)
+            edgetrk_R_points.remove(node)
+            new_edge_length = F[at_neighbor[0]][node][0]['instance'].length + \
+                F[node][at_neighbor[1]][0]['instance'].length
             if length:
                 return edgetrk_L_points[0], edgetrk_R_points[0], new_edge_length
             else:
@@ -337,9 +341,10 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
-    def generate_train(self, init_point, init_port, dest_point, dest_port):
-        '''Generate train only. 
+    def generate_train(self, init_point, init_port, dest_point, dest_port, length=1):
         '''
+            Generate train only.'''
+        _new_train = None
         if self.capacity_enterable(init_point, dest_point):
             init_segment = ((None, None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port)\
@@ -350,7 +355,7 @@ class System():
                 init_segment[0][0], init_segment[0][1], init_segment[1][0],
                 init_segment[1][1])
             if not init_track:
-                new_train = Train(
+                _new_train = Train(
                     system=self,
                     init_time=self.sys_time,
                     init_segment=init_segment,
@@ -359,15 +364,14 @@ class System():
                     max_acc=self.acc_container[self.train_num %
                                                len(self.acc_container)],
                     max_dcc=self.dcc_container[self.train_num %
-                                               len(self.dcc_container)])
-                return
+                                               len(self.dcc_container)],
+                    length=length)
             elif init_track.is_Occupied:
                 print(
                     '\tWarning: cannot generate train: track is occupied. Hold new train for track availablity.'
                 )
-                return
             elif not init_track.routing:
-                new_train = Train(
+                _new_train = Train(
                     system=self,
                     init_time=self.sys_time,
                     init_segment=init_segment,
@@ -376,11 +380,11 @@ class System():
                     max_acc=self.acc_container[self.train_num %
                                                len(self.acc_container)],
                     max_dcc=self.dcc_container[self.train_num %
-                                               len(self.dcc_container)])
-                return
+                                               len(self.dcc_container)],
+                    length=length)
             elif Train.sign_MP(init_segment) == init_track.sign_routing(
                     init_track.routing):
-                new_train = Train(
+                _new_train = Train(
                     system=self,
                     init_time=self.sys_time,
                     init_segment=init_segment,
@@ -389,18 +393,17 @@ class System():
                     max_acc=self.acc_container[self.train_num %
                                                len(self.acc_container)],
                     max_dcc=self.dcc_container[self.train_num %
-                                               len(self.dcc_container)])
-                return
+                                               len(self.dcc_container)],
+                    length=length)
             else:
                 print(
                     '\tWarning: cannot generate train: confliting routing. Hold new train for routing availablity.'
                 )
-                return
         else:
             print(
                 '\tWarning: cannot generate train: Capacity Maxed-out. Hold new train for capacity.'
             )
-            return
+        return _new_train
 
     def capacity_enterable(self, init_point, dest_point):
         '''
