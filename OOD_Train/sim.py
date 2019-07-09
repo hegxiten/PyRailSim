@@ -1,80 +1,51 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import os
-import sys
-sys.path.append(
-    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
-)
-from time import sleep
-from threading import Thread
+import random
 import numpy as np
 from datetime import datetime, timedelta
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import style
+
+import threading
+import logging
+import time
+
 from train import Train
 from system import System
 from infrastructure import Track, BigBlock
-import random
 
 
-def string_diagram(sys):
+def string_diagram(frame, sys, fig, axes):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''
-    plt.rcParams['figure.dpi'] = 100
-    plt.rcParams['figure.figsize'] = (15.0, 8.0)
-    # set the canvas size as 1500*800 with dpi == 100
-    fig, ax = plt.subplots(1, 1)
-    init_sys = simulation()
-    next_sys = simulation.next()
-    plt.show(block=False)
-    plt.draw()
-
-    fig.ion()
-    start_time, end_time = sys.init_time, sys.term_time
+    axes.clear()
     colors = ['red', 'green', 'blue', 'black', 'orange', 'cyan', 'magenta']
     color_num = len(colors)
     t_color = [colors[i % color_num] for i in range(len(sys.trains))]
     x, y = [], []
-    plt.show(block=False)
     for i in range(len(sys.trains)):
         x.append([
             mdates.date2num(datetime.fromtimestamp(j))
             for (j, _) in sys.trains[i].time_pos_list
         ])
         y.append([j for (_, j) in sys.trains[i].time_pos_list])
-        plt.plot([
+        axes.plot([
             mdates.date2num(datetime.fromtimestamp(j))
             for (j, _) in sys.trains[i].time_pos_list
         ], [j for (_, j) in sys.trains[i].time_pos_list],
-                 color=t_color[i])
+                  color=t_color[i])
 
-    train_idx = list(range(len(sys.trains)))
-    min_t, max_t = min([i[0] for i in x if i]), max([i[-1] for i in x if i])
-
-    plt.title('String Diagram')
-    hours = mdates.HourLocator()
-    minutes = mdates.MinuteLocator()
-    seconds = mdates.SecondLocator()
-    dateFmt = mdates.DateFormatter("%H:%M")
-    plt.gca().xaxis.set_major_locator(hours)
-    plt.gca().xaxis.set_minor_locator(minutes)
-    plt.gca().xaxis.set_major_formatter(dateFmt)
-    plt.xticks(rotation=90)
-    plt.grid(True, linestyle="-.", color="r", linewidth="0.1")
-    plt.legend()
-    plt.xlabel('Time')
-    plt.ylabel('Mile Post/miles')
-    plt.axis([(datetime.fromtimestamp(start_time - 500)),
-              (datetime.fromtimestamp(end_time + 500)), -5, 55])
     # #     ===============================================================================
-    #     time_length = end_time - start_time
+    #     time_length = sys.term_time - sys.init_time
     #     step_size = 10
     #     for start in range(1,time_length + 1, step_size):
-    #         plt.axis([(datetime.fromtimestamp(start_time - 500)), \
-    #             (datetime.fromtimestamp(end_time + 500)), -5 , 55])
+    #         plt.axis([(datetime.fromtimestamp(sys.init_time - 500)), \
+    #             (datetime.fromtimestamp(sys.term_time + 500)), -5 , 55])
 
     #         for n in range(len(x)-1):
-    #             new_x_y = [[mdates.date2num(datetime.fromtimestamp(i)), j] for i, j in zip(x[n], y[n]) if i < start_time + start and i > start_time + start - 1 - step_size]
+    #             new_x_y = [[mdates.date2num(datetime.fromtimestamp(i)), j] for i, j in zip(x[n], y[n]) if i < sys.init_time + start and i > sys.init_time + start - 1 - step_size]
     #             new_x = []
     #             new_y = []
     #             for i , j in new_x_y:
@@ -88,15 +59,12 @@ def string_diagram(sys):
     #             # print('Length of new_y: {}'.format(len(new_y)))
     #         plt.pause(0.00001)
     # #     ===============================================================================
-    plt.gca().axhspan(15, 20, color='yellow', alpha=0.5)
-    plt.gca().axhspan(30, 35, color='yellow', alpha=0.5)
-    plt.gca().axvspan((datetime.fromtimestamp(start_time + 90*60)),
-                      (datetime.fromtimestamp(start_time + 150*60)),
-                      color='black',
-                      alpha=0.5)
-    plt.draw()
-    plt.pause(1)
-    plt.ioff()
+    axes.axhspan(15, 20, color='yellow', alpha=0.5)
+    axes.axhspan(30, 35, color='yellow', alpha=0.5)
+    axes.axvspan((datetime.fromtimestamp(sys.init_time + 90 * 60)),
+                 (datetime.fromtimestamp(sys.init_time + 150 * 60)),
+                 color='black',
+                 alpha=0.5)
 
 
 def speed_curve(sys, train):
@@ -131,8 +99,7 @@ def speed_curve(sys, train):
     # plt.ioff()
 
 
-def simulation():
-
+def simulation_setup():
     sim_init_time = datetime.strptime('2018-01-10 10:00:00',
                                       "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00',
@@ -188,15 +155,48 @@ def simulation():
         max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)],
         max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
         length=1)
-    while sys.sys_time - sys.init_time <= 5 * 60:
-        # while not K165.terminated or not K166.terminated or not T165.terminated or not T166.terminated:
-        T166.request_routing()
-        T166.update_acc()
-        T165.request_routing()
-        T165.update_acc()
-        K166.request_routing()
-        K166.update_acc()
-        K165.request_routing()
-        K165.update_acc()
-        sys.sys_time += sys.refresh_time
-        yield sys
+    setattr(sys, 'K166', K166)
+    setattr(sys, 'T166', T166)
+    setattr(sys, 'K165', K165)
+    setattr(sys, 'T165', T165)
+    return sys
+
+
+if __name__ == "__main__":
+    sys = simulation_setup()
+
+    format = "%(asctime)s: %(message)s"
+    logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+    logging.info("Main    : before simulator thread starts")
+    sys_launch_thread = threading.Thread(
+        target=sys.launch,
+        kwargs={'launch_duration': (sys.term_time - sys.init_time)})
+    logging.info("Main    : before running thread")
+    sys_launch_thread.start()
+    logging.info("Main    : wait for the thread to finish")
+    sys_launch_thread.join()
+    logging.info("Main    : all done")
+
+# https://medium.com/@grvsinghal/speed-up-your-python-code-using-multiprocessing-on-windows-and-jupyter-or-ipython-2714b49d6fac
+
+sys.launch(launch_duration=(sys.term_time - sys.init_time))
+
+plt.rcParams['figure.dpi'] = 100  # set the canvas dpi as 100
+fig = plt.figure(figsize=(8, 6))
+ax1 = fig.add_subplot(1, 1, 1)
+hours = mdates.HourLocator()
+minutes = mdates.MinuteLocator()
+seconds = mdates.SecondLocator()
+dateFmt = mdates.DateFormatter("%H:%M")
+fig.suptitle('String Diagram')
+ax1.xaxis.set_major_locator(hours)
+ax1.xaxis.set_minor_locator(minutes)
+ax1.xaxis.set_major_formatter(dateFmt)
+plt.xticks(rotation=90)
+plt.grid(True, linestyle="-.", color="r", linewidth="0.1")
+plt.legend()
+plt.xlabel('Time')
+plt.ylabel('Mile Post/miles')
+plt.axis([(datetime.fromtimestamp(sys.init_time - 500)),
+          (datetime.fromtimestamp(sys.term_time + 500)), -5, 55])

@@ -1,18 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import os
-import sys
-sys.path.append(
-    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
-)
-
 from abc import ABCMeta, abstractmethod, abstractproperty
 from observe import Observable, Observer
 from itertools import combinations, permutations
 from collections import defaultdict
 
 
-class Aspect(object):
+class Aspect():
     """
     Aspect shows the meaning of the signals. 
     Could be compared with other aspects with more/less favorable comparison.

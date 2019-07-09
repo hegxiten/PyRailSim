@@ -1,19 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import os
-import sys
-sys.path.append(
-    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
-)
-
-import networkx as nx
 import copy
+import random
+import numpy as np
+import logging
+from datetime import datetime, timedelta
+import networkx as nx
 from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
 from infrastructure import Track, BigBlock
 from train import Train
-import random
-import numpy as np
-from datetime import datetime, timedelta
 
 
 class System():
@@ -105,7 +100,7 @@ class System():
         _max_diff_square_of_spd = max(
             [abs(i[0]**2 - i[1]**2) for i in _speed_diff_pairs])
         _min_track_length = min([t.length for t in self.tracks])
-        return _max_diff_square_of_spd / (2*_min_track_length)
+        return _max_diff_square_of_spd / (2 * _min_track_length)
 
     @property
     def trains(self):
@@ -508,6 +503,16 @@ class System():
             return _trains_rev_dir
         else:
             return []
+
+    def launch(self, launch_duration=None):
+        logging.info("Thread %s: starting", 'simulator')
+        if launch_duration:
+            while self.sys_time - self.init_time <= launch_duration:
+                for t in self.trains:
+                    t.request_routing()
+                    t.update_acc()
+                self.sys_time += self.refresh_time
+        logging.info("Thread %s: finishing", 'simulator')
 
     def update_routing(self):
         for trn in self.trains:

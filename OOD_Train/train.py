@@ -1,14 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import random
 import numpy as np
 from datetime import datetime, timedelta
 from infrastructure import Track, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
-import os
-import sys
-sys.path.append(
-    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train')
 
 
 class Train():
@@ -947,3 +943,6 @@ class Train():
             and ((self.system.trains[self.rank + 1].curr_track == self.curr_track - 1
                   and self.system.blocks[self.curr_track].is_Occupied())
                  or self.system.trains[self.rank + 1].curr_track == self.curr_track)
+
+if __name__ == '__main__':
+    print(Train)
