@@ -973,10 +973,13 @@ class Train():
     def let_faster_train(self):
         '''TODO: implement better judgment to determine if the train needs to be pased be the other.
             @return: True or False'''
-        return self.rank < self.system.train_num - 1 and self.max_speed < self.system.trains[self.rank + 1].max_speed\
-            and ((self.system.trains[self.rank + 1].curr_track == self.curr_track - 1
-                  and self.system.blocks[self.curr_track].is_Occupied())
-                 or self.system.trains[self.rank + 1].curr_track == self.curr_track)
-
-if __name__ == '__main__':
-    print(Train)
+        self.system.trains.sort()
+        _proximate_train_following_behind_ = self.system.trains[self.rank + 1]
+        if self.rank < len(self.system.trains) - 1:
+            if self.max_speed < self.system.trains[self.rank + 1].max_speed:
+                return True
+        return  (self.rank < self.system.train_num - 1)                                     \
+            and (self.max_speed < self.system.trains[self.rank + 1].max_speed)              \
+            and ((self.system.trains[self.rank + 1].curr_track == self.curr_track - 1)
+                  and self.system.blocks[self.curr_track].is_Occupied())                    \
+            or self.system.trains[self.rank + 1].curr_track == self.curr_track
