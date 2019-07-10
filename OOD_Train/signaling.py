@@ -123,7 +123,7 @@ class Signal(Observable, Observer):
 
     @property
     def aspect(self):
-        # print('call aspect of {} route {}'.format(self.sigpoint,self.route))
+        # print('\tcall aspect of {} route {}'.format(self.sigpoint,self.route))
         self._aspect.route = self.route
         if not self.route:
             self._aspect.color = 'r'
@@ -501,7 +501,7 @@ class ControlPoint(InterlockingPoint):
         assert len(route) == 2
         assert isinstance(route, tuple)
         if route in self.current_routes:  # do nothing when trying to open an existing route
-            print('route {} for {} already opened'.format(route, self))
+            print('\troute {} for {} already opened'.format(route, self))
         elif route not in self.current_routes:
             # if not in all_valid routes, the route to open is banned
             if route not in self.all_valid_routes:
@@ -518,12 +518,12 @@ class ControlPoint(InterlockingPoint):
                             conflict_routes.append(cr)
                     for cr in conflict_routes:
                         self.close_route(cr)
-                    print('conflicting routes {} are closed for {} to open'.
+                    print('\tconflicting routes {} are closed for {} to open'.
                           format(conflict_routes, route))
                 # if conflicting with bigblock routing, don't open route
                 self.current_routes.append(route)
                 self.set_bigblock_routing_by_controlpoint_route(route)
-                print('route {} of {} is opened'.format(route, self))
+                print('\troute {} of {} is opened'.format(route, self))
                 # ControlPoint port traffic routing: route[0] -> route[1]
                 # BigBlock routing:
                 #   (somewhere, someport) -> (self, route[0]) and
@@ -532,10 +532,10 @@ class ControlPoint(InterlockingPoint):
     def close_route(self, route=None):
         if route:
             assert route in self._current_routes
-            print('route {} of {} is closed'.format(route, self))
+            print('\troute {} of {} is closed'.format(route, self))
             self.current_routes.remove(route)
         else:
-            print('all routes fof {} are closed'.format(self))
+            print('\tall routes fof {} are closed'.format(self))
             self.current_routes = []
             for p in self.ports:
                 self.cancel_bigblock_routing_by_port(p)

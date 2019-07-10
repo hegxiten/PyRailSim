@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import os
+import sys
+sys.path.append(
+    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
+)
 import networkx as nx
 from observe import Observable, Observer
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint

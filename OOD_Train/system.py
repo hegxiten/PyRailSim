@@ -10,6 +10,14 @@ from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
 from infrastructure import Yard, Track, BigBlock
 from train import Train
 
+class DispatchPlan():
+    def __init__(self, sys):
+        pass
+    def meetings(self, ):
+        pass
+    def passings(self, ):
+        pass
+
 
 class System():
     """
@@ -35,7 +43,7 @@ class System():
         # CPU format time in sec, transferable to numerical value or str values
         self.init_time = init_time.timestamp()
         self.term_time = float('inf') \
-            if not kwargs.get('term_time') else kwargs.get('term_time').timestamp()
+            if kwargs.get('term_time') is None else kwargs.get('term_time').timestamp()
         self.G_origin = self.graph_constructor()
         self.G_skeleton = self.graph_extractor(self.G_origin)
 
@@ -62,11 +70,11 @@ class System():
             for t in kwargs.get('dos_period') if type(t) == str
         ]
         self.dos_pos = - \
-            1 if not kwargs.get('dos_pos') else kwargs.get('dos_pos')
+            1 if kwargs.get('dos_pos') is None else kwargs.get('dos_pos')
 
         self._trains = []
         _min_spd, _max_spd, _min_acc, _max_acc = 0.01, 0.02, 2.78e-05 * 0.85, 2.78e-05 * 1.15
-        self.headway = 500 if not kwargs.get('headway') else kwargs.get(
+        self.headway = 500 if kwargs.get('headway') is None else kwargs.get(
             'headway')
         self.last_train_init_time = self.sys_time
         self.sp_container = args[0]\
@@ -79,7 +87,7 @@ class System():
             i if i >= self.sys_min_dcc else self.sys_min_dcc
             for i in self.dcc_container
         ]
-        self.refresh_time = 1 if not kwargs.get('refresh_time') else kwargs.get(
+        self.refresh_time = 1 if kwargs.get('refresh_time') is None else kwargs.get(
             'refresh_time')
 
         # self.register(self.blocks)
@@ -341,10 +349,11 @@ class System():
                 t.bigblock = F[u][v][k]['instance']
         return F
 
-    def generate_train(self, init_point, init_port, dest_point, dest_port, length=1):
+    def generate_train(self, init_point, init_port, dest_point, dest_port, **kwargs):
         '''
             Generate train only.'''
         _new_train = None
+        length = 1 if kwargs.get('length') is None else kwargs.get('length')
         if self.capacity_enterable(init_point, dest_point):
             init_segment = ((None, None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port)\
@@ -504,14 +513,24 @@ class System():
         else:
             return []
 
-    def launch(self, launch_duration=None):
+    def launch(self, launch_duration, auto_generate_train=False):
         logging.info("Thread %s: starting", 'simulator')
-        if launch_duration:
-            while self.sys_time - self.init_time <= launch_duration:
-                for t in self.trains:
+        while self.sys_time - self.init_time <= launch_duration:
+            self.trains.sort()
+            for t in self.trains:
+                try:
                     t.request_routing()
                     t.update_acc()
-                self.sys_time += self.refresh_time
+                except:
+                    print(t)
+                    raise(ValueError('Raise Error to Stop Simulation'))
+            if auto_generate_train:
+                if self.sys_time - self.last_train_init_time >= self.headway:
+                    if not self.signal_points[0].curr_train_with_route.keys():
+                        if all([t.curr_routing_path_segment != ((None,None),(self.signal_points[0],0)) for t in self.trains]):
+                            if not self.tracks[0].train:
+                                t = self.generate_train(self.signal_points[0], 0, self.signal_points[10], 1, length=1)
+            self.sys_time += self.refresh_time
         logging.info("Thread %s: finishing", 'simulator')
 
     def update_routing(self):
