@@ -376,13 +376,19 @@ class InterlockingPoint(Observable, Observer):
                 if vr not in self.non_mutex_routes_by_route[
                         r] and vr not in _current_invalid_routes:
                     _current_invalid_routes.append(vr)
-        for _, r in self.curr_train_with_route.items():
+        for r in self.locked_routes_due_to_train:
             if r not in _current_invalid_routes:
                 _current_invalid_routes.append(r)
-            for mr in self.mutex_routes_by_route[r]:
-                if mr not in _current_invalid_routes:
-                    _current_invalid_routes.append(mr)
         return _current_invalid_routes
+    
+    @property
+    def locked_routes_due_to_train(self):
+        _locked_routes = []
+        for _, r in self.curr_train_with_route.items():
+            _locked_routes.append(r)
+            _locked_routes.extend(
+                self.mutex_routes_by_route.get(r))
+        return _locked_routes
 
 
 class AutoPoint(InterlockingPoint):

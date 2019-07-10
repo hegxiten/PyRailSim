@@ -25,8 +25,8 @@ class System():
         ----------
         :headway: (**kw), seconds
             Traffic headway in seconds for unidirectional trains. 500 by default.
-        :dos_pos: int (**kw)
-            Index of block to be attacked by DoS. -1 by default (no DoS).
+        :dos_pos: (MP1, MP2) (**kw)
+            Tuple of MPs to be attacked by DoS. (None,None) by default (no DoS).
         :refresh_time: int (**kw), seconds
             Seconds between two consecutive traverse calculations of the simulation.
         :sp_containter: list (**kw), mph
@@ -69,8 +69,8 @@ class System():
             datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp()
             for t in kwargs.get('dos_period') if type(t) == str
         ]
-        self.dos_pos = - \
-            1 if kwargs.get('dos_pos') is None else kwargs.get('dos_pos')
+        self.dos_pos = (None,None) \
+            if kwargs.get('dos_pos') is None else kwargs.get('dos_pos')
 
         self._trains = []
         _min_spd, _max_spd, _min_acc, _max_acc = 0.01, 0.02, 2.78e-05 * 0.85, 2.78e-05 * 1.15
@@ -524,6 +524,7 @@ class System():
                 except:
                     print(t)
                     raise(ValueError('Raise Error to Stop Simulation'))
+
             if auto_generate_train:
                 if self.sys_time - self.last_train_init_time >= self.headway:
                     if not self.signal_points[0].curr_train_with_route.keys():
@@ -768,5 +769,4 @@ if __name__ == '__main__':
                  dcc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
                  headway=headway,
-                 dos_pos=-1,
                  refresh_time=20)

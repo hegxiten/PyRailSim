@@ -510,7 +510,8 @@ class Train():
         # assert always-on braking distance/speed limit satisfaction to find bugs
         _old_speed = self._curr_speed
         # store the old speed value internally for logical processing
-        # the intended new_speed to set is based on speed delta acquired by its curr_acc
+        # the intended new_speed to set is based on speed delta acquired by its 
+        # current acceleration
         if new_speed * _old_speed >= 0:  # 1
             if abs(new_speed) > abs(_old_speed):  # 1.1
                 if (self.curr_spd_lmt_abs - abs(new_speed)) * (
@@ -743,6 +744,16 @@ class Train():
         return False
 
     @property
+    def all_rest_cps_enterable(self):
+        for n in self.system.control_points:
+            if (n.MP - self.curr_control_point.MP) * self.sign_MP(
+                    self.curr_routing_path_segment) > 0:
+                if not self.system.capacity_enterable(
+                        self.curr_control_point, n):
+                    return False
+        return True
+
+    @property
     def is_passable(self):
         '''
             determine if the train is slower than the one behind and needs to be
@@ -753,20 +764,25 @@ class Train():
         self.system.trains.sort()
         if self.rank == len(self.system.trains) - 1:
             return False
-        elif not self.curr_track or not self.rear_curr_track:
+
+        _trn_follow_behind = self.system.trains[self.rank + 1]
+        _dist_to_trn_behind = abs(self.rear_curr_MP - _trn_follow_behind.curr_MP)
+        if not self.curr_track or not self.rear_curr_track:
             return False
-        else:
-            _trn_follow_behind = self.system.trains[self.rank + 1]
-            if self.max_speed < _trn_follow_behind.max_speed:
+        if not self.max_speed < _trn_follow_behind.max_speed:
+            return False
+        if self.rank - self.train_idx > 1:
+            return False
+
+        if self.curr_track.yard:
+            _all_trains = self.curr_track.yard.all_trains
+            _rest_trains = [t for t in _all_trains if t != self]
+            if not _rest_trains and _dist_to_trn_behind <= 10:
                 return True
-            if self.curr_track.yard:
-                _all_trains = self.curr_track.yard.all_trains
-                _rest_trains = [t for t in _all_trains if t != self]
-                if self.stopped and any([not t.stopped for t in _rest_trains]):
-                    if self.rank > self.train_idx and self.rank - self.train_idx <=1:
-                        # difference between rank and initial index is the number of trains
-                        # that passed this train.
-                        return True
+            if self.stopped and any([not t.stopped for t in _rest_trains]):
+                # difference between rank and initial index is the number of trains
+                # that passed this train.
+                return True
         return False
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
@@ -954,59 +970,41 @@ class Train():
             Method of the train to call the closest ControlPoint to clear a route. 
             Serve the myopic dispatch logic where trains only calls the cloest CPs.
             @return: None'''
-        if self.pending_route:
-            _enterable = True
-            for n in self.system.control_points:
-                if (n.MP - self.curr_control_point.MP) * self.sign_MP(
-                        self.curr_routing_path_segment) > 0:
-                    if not self.system.capacity_enterable(
-                            self.curr_control_point, n):
-                        _enterable = False
-            if _enterable:
-                _pending_route_to_open = self.curr_control_point.find_route_for_port(
+        if self.pending_route and self.all_rest_cps_enterable:
+            _pending_route_to_open = \
+                self.curr_control_point.find_route_for_port(
                     self.curr_control_pointport)
-                if _pending_route_to_open:
-                    _locked_routes_due_to_train = []
-                    for _, r in self.curr_control_point.curr_train_with_route.items(
-                    ):
-                        _locked_routes_due_to_train.append(r)
-                        _locked_routes_due_to_train.extend(
-                            self.curr_control_point.mutex_routes_by_route.get(
-                                r))
-                    if _pending_route_to_open not in _locked_routes_due_to_train:
-                        if not self.curr_track or not self.curr_track.yard:
+            if not _pending_route_to_open:
+                return
+            if _pending_route_to_open not in self.curr_control_point.current_invalid_routes:
+                if not self.curr_track or not self.curr_track.yard:
+                    print(
+                        'train idx: {}, MP: {} requested {} at CP: {}'.
+                        format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
+                                _pending_route_to_open,
+                                self.curr_control_point.MP))
+                    self.curr_control_point.open_route(
+                        _pending_route_to_open)
+                elif self.curr_track.yard:
+                    if all([trk.train for trk in self.curr_track.yard.tracks]):
+                        if abs(self.max_speed) == max([trn.max_speed for trn in
+                                self.curr_track.yard.all_trains]):
                             print(
-                                'train idx: {}, MP: {} requested {} at CP: {}'.
-                                format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                       _pending_route_to_open,
-                                       self.curr_control_point.MP))
+                                'train idx: {}, MP: {} requested {} at CP: {}'
+                                .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
+                                        _pending_route_to_open,
+                                        self.curr_control_point.MP))
                             self.curr_control_point.open_route(
                                 _pending_route_to_open)
-                        elif self.curr_track.yard:
-                            if all([
-                                    trk.train
-                                    for trk in self.curr_track.yard.tracks
-                            ]):
-                                if abs(self.max_speed) == max([
-                                        trn.max_speed for trn in
-                                        self.curr_track.yard.all_trains
-                                ]):
-                                    print(
-                                        'train idx: {}, MP: {} requested {} at CP: {}'
-                                        .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                                _pending_route_to_open,
-                                                self.curr_control_point.MP))
-                                    self.curr_control_point.open_route(
-                                        _pending_route_to_open)
-                            else:
-                                if not self.is_passable:
-                                    print(
-                                        'train idx: {}, MP: {} requested {} at CP: {}'
-                                        .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                                _pending_route_to_open,
-                                                self.curr_control_point.MP))
-                                    self.curr_control_point.open_route(
-                                        _pending_route_to_open)
+                    else:
+                        if not self.is_passable:
+                            print(
+                                'train idx: {}, MP: {} requested {} at CP: {}'
+                                .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
+                                        _pending_route_to_open,
+                                        self.curr_control_point.MP))
+                            self.curr_control_point.open_route(
+                                _pending_route_to_open)
 
     def is_during_dos(self, dos_pos):
         '''

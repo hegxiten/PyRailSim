@@ -126,7 +126,7 @@ def simulation_setup():
     sys = System(sim_init_time, sp_container, acc_container, dcc_container,
                 term_time=sim_term_time,
                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
-                dos_pos=-1,
+                dos_pos=(15,20),
                 headway=headway, 
                 refresh_time=50)
     return sys
