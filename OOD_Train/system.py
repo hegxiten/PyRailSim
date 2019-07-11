@@ -114,6 +114,7 @@ class System():
     def trains(self):
         '''
             List of all trains inside the system.'''
+        self._trains.sort()
         return self._trains
 
     @property

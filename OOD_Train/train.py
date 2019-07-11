@@ -17,7 +17,21 @@ class TrainList(list):
         A list-like container for Train instances wihtin a simulation system.
         TODO: implement customized attributes of TrainList: 
             append, insert, __getitem__, __setitem__, __delitem__, etc."""
+    def __init__(self):
+        self._uptrains = []
+        self._downtrains = []
 
+    @property
+    def uptrains(self):     return self._uptrains
+    
+    @property
+    def downtrains(self):   return self._downtrains
+
+    def append(self, new_train):
+        if new_train.uptrain:
+            self._uptrains.append(new_train)
+        if new_train.downtrain:
+            self._downtrains.append(new_train)
 
 class Train():
     """
@@ -143,7 +157,6 @@ class Train():
             rank of the train starting from the first train to the last. 
             First: 0; Last: len(self.system.trains) - 1
             TODO: Implement rank for both directions.'''
-        self.system.trains.sort()
         return self.system.trains.index(self)
 
     @property
@@ -173,6 +186,15 @@ class Train():
         else:
             self._stopped = False
         return self._stopped
+
+    @property
+    def curr_sign(self):    return self.sign_MP(self.curr_routing_path_segment)
+
+    @property
+    def uptrain(self):      return True if self.curr_sign == -1 else False
+
+    @property
+    def downtrain(self):    return True if self.curr_sign == +1 else False
 
     @property
     def curr_track(self):
@@ -753,36 +775,39 @@ class Train():
                     return False
         return True
 
-    @property
-    def is_passable(self):
+    def is_passable(self, max_passes=1):
         '''
             determine if the train is slower than the one behind and needs to be
             put on the siding to let the follower pass it.
+            Rank minus initial index is the number of trains have passed it.
             @return: True or False
             TODO: implement better judgment to consider more conditions, such as
                 priority, proximity (to the follower), etc.'''
-        self.system.trains.sort()
+        # the last train is not passable by any train
         if self.rank == len(self.system.trains) - 1:
             return False
-
+        # for any train that is not the last one:
         _trn_follow_behind = self.system.trains[self.rank + 1]
         _dist_to_trn_behind = abs(self.rear_curr_MP - _trn_follow_behind.curr_MP)
         if not self.curr_track or not self.rear_curr_track:
-            return False
-        if not self.max_speed < _trn_follow_behind.max_speed:
-            return False
-        if self.rank - self.train_idx > 1:
-            return False
+            return False    # not passable when not fully entered yet
+        if not (self.max_speed < _trn_follow_behind.max_speed):
+            return False    # not passable if not slower than the one behind
+        if self.rank - self.train_idx >= max_passes:
+            return False    # not passable if has already been passed by once
 
         if self.curr_track.yard:
             _all_trains = self.curr_track.yard.all_trains
             _rest_trains = [t for t in _all_trains if t != self]
-            if not _rest_trains and _dist_to_trn_behind <= 10:
-                return True
             if self.stopped and any([not t.stopped for t in _rest_trains]):
-                # difference between rank and initial index is the number of trains
-                # that passed this train.
+                return True # during the pass, hold the stopped train from move
+            if all([trk.train for trk in self.curr_track.yard.tracks]):
+                if abs(self.max_speed) == max([trn.max_speed for trn in
+                                self.curr_track.yard.all_trains]):
+                    return True
+            if self.curr_track.yard.available_tracks >= 1 and _dist_to_trn_behind <= 10:
                 return True
+            
         return False
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
@@ -974,7 +999,7 @@ class Train():
             _pending_route_to_open = \
                 self.curr_control_point.find_route_for_port(
                     self.curr_control_pointport)
-            if not _pending_route_to_open:
+            if _pending_route_to_open is None:
                 return
             if _pending_route_to_open not in self.curr_control_point.current_invalid_routes:
                 if not self.curr_track or not self.curr_track.yard:
@@ -997,7 +1022,7 @@ class Train():
                             self.curr_control_point.open_route(
                                 _pending_route_to_open)
                     else:
-                        if not self.is_passable:
+                        if not self.is_passable(max_passes=1):
                             print(
                                 'train idx: {}, MP: {} requested {} at CP: {}'
                                 .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
@@ -1013,21 +1038,27 @@ class Train():
         return dos_pos == self.curr_track and self.system.dos_period[
             0] <= self.system.sys_time <= self.system.dos_period[1]
 
-    def __lt__(self, othertrain):
+    def __lt__(self, other):
         '''
             implement __lt__ to sort trains based on their current MilePost.
             If MilePosts are the same, compare max_speed.
             TODO: implement better algorithms to compare train priority.'''
-        if self.curr_MP > othertrain.curr_MP:
-            return True
-        elif self.curr_MP < othertrain.curr_MP:
-            return False
-        # when MP is the same between self and othertrain:
-        elif self.curr_MP == othertrain.curr_MP:
-            if self.max_speed > othertrain.max_speed:
+        if not self.terminated:
+            if self.curr_MP > other.curr_MP:
                 return True
-            elif self.max_speed < othertrain.max_speed:
+            elif self.curr_MP < other.curr_MP:
                 return False
-            # elif self.rank < othertrain.rank:
-            #     return False
+            # when MP is the same between self and other:
+            elif self.curr_MP == other.curr_MP:
+                if self.max_speed > other.max_speed:
+                    return True
+                elif self.max_speed < other.max_speed:
+                    return False
+                # elif self.rank < other.rank:
+                #     return False
+        if self.terminated:
+            _self_term_time = max([time for [time,_] in self.time_pos_list])
+            _other_term_time = max([time for [time,_] in other.time_pos_list])
+            if _self_term_time < _other_term_time:
+                return True
         return False

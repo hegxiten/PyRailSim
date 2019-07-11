@@ -14,11 +14,12 @@ class Yard(Observable, Observer):
         self.tracks = []
 
     @property
-    def has_available_track(self):
+    def available_tracks(self):
+        count = 0
         for trk in self.tracks:
             if not trk.train:
-                return True
-        return False
+                count += 1
+        return count
 
     @property
     def all_trains(self):
