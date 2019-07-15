@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import networkx as nx
 from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
 from infrastructure import Yard, Track, BigBlock
-from train import Train
+from train import TrainList, Train
 
 class DispatchPlan():
     def __init__(self, sys):
@@ -72,7 +72,7 @@ class System():
         self.dos_pos = (None,None) \
             if kwargs.get('dos_pos') is None else kwargs.get('dos_pos')
 
-        self._trains = []
+        self._trains = TrainList()
         _min_spd, _max_spd, _min_acc, _max_acc = 0.01, 0.02, 2.78e-05 * 0.85, 2.78e-05 * 1.15
         self.headway = 500 if kwargs.get('headway') is None else kwargs.get(
             'headway')
@@ -114,7 +114,6 @@ class System():
     def trains(self):
         '''
             List of all trains inside the system.'''
-        self._trains.sort()
         return self._trains
 
     @property
@@ -355,6 +354,8 @@ class System():
             Generate train only.'''
         _new_train = None
         length = 1 if kwargs.get('length') is None else kwargs.get('length')
+        init_time = self.sys_time if kwargs.get('init_time') is None \
+            else kwargs.get('init_time')
         if self.capacity_enterable(init_point, dest_point):
             init_segment = ((None, None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port)\
@@ -367,7 +368,7 @@ class System():
             if not init_track:
                 _new_train = Train(
                     system=self,
-                    init_time=self.sys_time,
+                    init_time=init_time,
                     init_segment=init_segment,
                     max_sp=self.sp_container[self.train_num %
                                              len(self.sp_container)],
@@ -383,7 +384,7 @@ class System():
             elif not init_track.routing:
                 _new_train = Train(
                     system=self,
-                    init_time=self.sys_time,
+                    init_time=init_time,
                     init_segment=init_segment,
                     max_sp=self.sp_container[self.train_num %
                                              len(self.sp_container)],
@@ -396,7 +397,7 @@ class System():
                     init_track.routing):
                 _new_train = Train(
                     system=self,
-                    init_time=self.sys_time,
+                    init_time=init_time,
                     init_segment=init_segment,
                     max_sp=self.sp_container[self.train_num %
                                              len(self.sp_container)],
@@ -517,7 +518,6 @@ class System():
     def launch(self, launch_duration, auto_generate_train=False):
         logging.info("Thread %s: starting", 'simulator')
         while self.sys_time - self.init_time <= launch_duration:
-            self.trains.sort()
             for t in self.trains:
                 try:
                     t.request_routing()
@@ -527,16 +527,16 @@ class System():
                     raise(ValueError('Raise Error to Stop Simulation'))
 
             if auto_generate_train:
-                if self.sys_time - self.last_train_init_time >= self.headway:
+                if self.sys_time+self.refresh_time - self.last_train_init_time >= self.headway:
                     if not self.signal_points[0].curr_train_with_route.keys():
-                        if all([t.curr_routing_path_segment != ((None,None),(self.signal_points[0],0)) for t in self.trains]):
+                        if all([t.curr_routing_path_segment != ((None,None),(self.signal_points[0],0)) for t in self.trains.all_trains]):
                             if not self.tracks[0].train:
-                                t = self.generate_train(self.signal_points[0], 0, self.signal_points[10], 1, length=1)
+                                t = self.generate_train(self.signal_points[0], 0, self.signal_points[10], 1, length=1, init_time=sys.last_train_init_time+sys.headway)
             self.sys_time += self.refresh_time
         logging.info("Thread %s: finishing", 'simulator')
 
     def update_routing(self):
-        for trn in self.trains:
+        for trn in self.trains.all_trains:
             if not trn.curr_sig:
                 pass
             elif not trn.curr_sig.route:
@@ -547,20 +547,12 @@ class System():
 
     def refresh(self):
         self.generate_train()
-        self.trains.sort()
         self.update_routing()
-        for t in self.trains:
+        for t in self.trains.all_trains:
             t.update_acc()
-        self.trains.sort()  # 更新完每列列车后进行排序，为调度逻辑做准备
         for i, tr in enumerate(self.trains):
             tr.rank = i
         self.sys_time += self.refresh_time
-
-    def clear_train(self, train=None):
-        if train:
-            self.trains.remove(train)
-        else:
-            self.trains = []
 
     def update_blk_right(self, i):
         '''

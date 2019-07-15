@@ -8,11 +8,12 @@ sys.path.append(
 import random
 import numpy as np
 from datetime import datetime, timedelta
+from collections.abc import MutableSequence
 from infrastructure import Track, BigBlock
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
 
-class TrainList(list):
+class TrainList(MutableSequence):
     """
         A list-like container for Train instances wihtin a simulation system.
         TODO: implement customized attributes of TrainList: 
@@ -22,11 +23,64 @@ class TrainList(list):
         self._downtrains = []
 
     @property
-    def uptrains(self):     return self._uptrains
+    def uptrains(self):   
+        self._uptrains.sort()
+        return self._uptrains
     
     @property
-    def downtrains(self):   return self._downtrains
+    def downtrains(self):
+        self._downtrains.sort()
+        return self._downtrains
 
+    @property
+    def all_trains(self):
+        _all_trains = self.uptrains + self.downtrains
+        _all_idx = [t.train_idx for t in _all_trains]
+        return [t for _,t in sorted(zip(_all_idx,_all_trains))]
+
+    def __str__(self):
+        return str(self.all_trains)
+
+    def same_way_trains(self, trn):
+        if trn.uptrain:
+            return self.uptrains
+        if trn.downtrain:
+            return self.downtrains
+
+    def __repr__(self):
+        return "<{0} {1}>".format(self.__class__.__name__, self.all_trains)
+
+    def __len__(self):
+        """List length"""
+        return len(self.all_trains)
+
+    def __getitem__(self, ii):
+        return self.all_trains[ii]
+
+    def __delitem__(self, ii):
+        _to_del = self.all_trains[ii]
+        if _to_del in self._uptrains:
+            _idx = self._uptrains.index(_to_del)
+            del self._uptrains[_idx]
+        if _to_del in self._downtrains:
+            _idx = self._downtrains.index(_to_del)
+            del self._downtrains[_idx]
+            
+    def __setitem__(self, ii, trn):
+        _to_set = self.all_trains[ii]
+        if _to_set in self._uptrains:
+            _idx = self._uptrains.index(_to_del)
+            self._uptrains[_idx] = trn
+        if _to_set in self._downtrains:
+            _idx = self._downtrains.index(_to_del)
+            self._downtrains[_idx] = trn
+
+    def insert(self, trn):
+        if trn.uptrain:
+            self._uptrains.append(trn)
+        if trn.downtrain:
+            self._downtrains.append(trn)
+        
     def append(self, new_train):
         if new_train.uptrain:
             self._uptrains.append(new_train)
@@ -117,8 +171,7 @@ class Train():
             self.sign_MP(self.curr_routing_path_segment)
         self.train_idx = len(self.system.trains)
         self.symbol = 2 * self.train_idx \
-            if self.sign_MP(self.curr_routing_path_segment) == 1 \
-            else 2 * self.train_idx - 1
+            if self.uptrain else 2 * self.train_idx + 1
         self.system.trains.append(self)
         self.max_speed = max_sp
         self.max_acc = max_acc
@@ -157,7 +210,16 @@ class Train():
             rank of the train starting from the first train to the last. 
             First: 0; Last: len(self.system.trains) - 1
             TODO: Implement rank for both directions.'''
-        return self.system.trains.index(self)
+        return self.system.trains.same_way_trains(self).index(self)
+
+    @property
+    def curr_sign(self):    return self.sign_MP(self.curr_routing_path_segment)
+
+    @property
+    def uptrain(self):      return True if self.curr_sign == -1 else False
+
+    @property
+    def downtrain(self):    return True if self.curr_sign == +1 else False
 
     @property
     def terminated(self):
@@ -186,15 +248,6 @@ class Train():
         else:
             self._stopped = False
         return self._stopped
-
-    @property
-    def curr_sign(self):    return self.sign_MP(self.curr_routing_path_segment)
-
-    @property
-    def uptrain(self):      return True if self.curr_sign == -1 else False
-
-    @property
-    def downtrain(self):    return True if self.curr_sign == +1 else False
 
     @property
     def curr_track(self):
@@ -748,6 +801,14 @@ class Train():
             obv=True)
 
     @property
+    def trn_follow_behind(self):
+        return self.system.trains.same_way_trains(self)[self.rank + 1]
+
+    @property
+    def dist_to_trn_behind(self): 
+        return abs(self.rear_curr_MP - self.trn_follow_behind.curr_MP)
+
+    @property
     def pending_route(self):
         '''
             Status property shows if the train is pending a route at its current
@@ -774,41 +835,6 @@ class Train():
                         self.curr_control_point, n):
                     return False
         return True
-
-    def is_passable(self, max_passes=1):
-        '''
-            determine if the train is slower than the one behind and needs to be
-            put on the siding to let the follower pass it.
-            Rank minus initial index is the number of trains have passed it.
-            @return: True or False
-            TODO: implement better judgment to consider more conditions, such as
-                priority, proximity (to the follower), etc.'''
-        # the last train is not passable by any train
-        if self.rank == len(self.system.trains) - 1:
-            return False
-        # for any train that is not the last one:
-        _trn_follow_behind = self.system.trains[self.rank + 1]
-        _dist_to_trn_behind = abs(self.rear_curr_MP - _trn_follow_behind.curr_MP)
-        if not self.curr_track or not self.rear_curr_track:
-            return False    # not passable when not fully entered yet
-        if not (self.max_speed < _trn_follow_behind.max_speed):
-            return False    # not passable if not slower than the one behind
-        if self.rank - self.train_idx >= max_passes:
-            return False    # not passable if has already been passed by once
-
-        if self.curr_track.yard:
-            _all_trains = self.curr_track.yard.all_trains
-            _rest_trains = [t for t in _all_trains if t != self]
-            if self.stopped and any([not t.stopped for t in _rest_trains]):
-                return True # during the pass, hold the stopped train from move
-            if all([trk.train for trk in self.curr_track.yard.tracks]):
-                if abs(self.max_speed) == max([trn.max_speed for trn in
-                                self.curr_track.yard.all_trains]):
-                    return True
-            if self.curr_track.yard.available_tracks >= 1 and _dist_to_trn_behind <= 10:
-                return True
-            
-        return False
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         '''
@@ -984,9 +1010,9 @@ class Train():
                 self.curr_target_spd_abs
             ])
         elif not self.terminated:
-            self.time_pos_list.append([self.system.sys_time, self.curr_MP])
+            self.time_pos_list.append([self.system.sys_time+self.system.refresh_time, self.curr_MP])
             self.rear_time_pos_list.append(
-                [self.system.sys_time, self.rear_curr_MP])
+                [self.system.sys_time+self.system.refresh_time, self.rear_curr_MP])
         else:
             pass
 
@@ -1011,25 +1037,53 @@ class Train():
                     self.curr_control_point.open_route(
                         _pending_route_to_open)
                 elif self.curr_track.yard:
-                    if all([trk.train for trk in self.curr_track.yard.tracks]):
-                        if abs(self.max_speed) == max([trn.max_speed for trn in
+                    if not self.currently_passable(max_passes=1):
+                        print(
+                            'train idx: {}, MP: {} requested {} at CP: {}'
+                            .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
+                                    _pending_route_to_open,
+                                    self.curr_control_point.MP))
+                        self.curr_control_point.open_route(
+                            _pending_route_to_open)
+                    elif self.currently_passable(max_passes=1):
+                        # no actions of its current CP (no route to open)
+                        for cp in self.system.control_points:
+                            for (p1,p2) in cp.current_routes:
+                                if cp.bigblock_by_port.get(p2):
+                                    if self in cp.bigblock_by_port[p2].train:
+                                        _route_to_change = cp.find_route_for_port(p1)
+                                        cp.open_route(_route_to_change)
+
+    def currently_passable(self, max_passes=1):
+        '''
+            determine if the train is slower than the one behind and needs to be
+            put on the siding to let the follower pass it.
+            Rank minus initial index is the number of trains have passed it.
+            @return: True or False
+            TODO: implement better judgment to consider more conditions, such as
+                priority, proximity (to the follower), etc.'''
+        # the last train is not passable by any train
+        if self.rank == len(self.system.trains.same_way_trains(self)) - 1:
+            return False
+        # for any train that is not the last one:
+        if not self.curr_track or not self.rear_curr_track:
+            return False    # not passable when not fully entered yet
+        if not (self.max_speed < self.trn_follow_behind.max_speed):
+            return False    # not passable if not slower than the one behind
+        if self.rank - self.train_idx >= max_passes:
+            return False    # not passable if has already been passed by once
+        if self.curr_track.yard:
+            _all_trains = self.curr_track.yard.all_trains
+            _rest_trains = [t for t in _all_trains if t != self]
+            if self.stopped and any([not t.stopped for t in _rest_trains]):
+                return True # during the pass, hold the stopped train from move
+            if all([trk.train for trk in self.curr_track.yard.tracks]):
+                if abs(self.max_speed) == max([trn.max_speed for trn in
                                 self.curr_track.yard.all_trains]):
-                            print(
-                                'train idx: {}, MP: {} requested {} at CP: {}'
-                                .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                        _pending_route_to_open,
-                                        self.curr_control_point.MP))
-                            self.curr_control_point.open_route(
-                                _pending_route_to_open)
-                    else:
-                        if not self.is_passable(max_passes=1):
-                            print(
-                                'train idx: {}, MP: {} requested {} at CP: {}'
-                                .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                        _pending_route_to_open,
-                                        self.curr_control_point.MP))
-                            self.curr_control_point.open_route(
-                                _pending_route_to_open)
+                    return True
+            if self.curr_track.yard.available_tracks >= 1 and self.dist_to_trn_behind <= 10:
+                return True
+        return False
 
     def is_during_dos(self, dos_pos):
         '''
@@ -1045,20 +1099,19 @@ class Train():
             TODO: implement better algorithms to compare train priority.'''
         if not self.terminated:
             if self.curr_MP > other.curr_MP:
-                return True
+                return True if self.downtrain else False
             elif self.curr_MP < other.curr_MP:
-                return False
-            # when MP is the same between self and other:
+                return False if self.downtrain else True
+            # when MP is the same, compare max speed as a priority indicator
             elif self.curr_MP == other.curr_MP:
                 if self.max_speed > other.max_speed:
-                    return True
+                    return True if self.downtrain else False
                 elif self.max_speed < other.max_speed:
-                    return False
-                # elif self.rank < other.rank:
-                #     return False
-        if self.terminated:
+                    return False if self.downtrain else True
+        if self.terminated and other.terminated:
             _self_term_time = max([time for [time,_] in self.time_pos_list])
             _other_term_time = max([time for [time,_] in other.time_pos_list])
             if _self_term_time < _other_term_time:
                 return True
-        return False
+        if self.terminated and not other.terminated:
+            return True

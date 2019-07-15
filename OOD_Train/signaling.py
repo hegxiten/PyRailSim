@@ -516,7 +516,8 @@ class ControlPoint(InterlockingPoint):
                         self))
             elif route in self.all_valid_routes:
                 # being in all_valid_routes means the route to open is not banned
-                # it is only possible to be conflicting with somrane existing routes
+                # the route to open is only possible to be conflicting with 
+                # existing routes
                 conflict_routes = []
                 if route in self.current_invalid_routes:
                     for cr in self.current_routes:
@@ -546,15 +547,13 @@ class ControlPoint(InterlockingPoint):
             for p in self.ports:
                 self.cancel_bigblock_routing_by_port(p)
 
-    def find_route_for_port(self, port):
+    def find_route_for_port(self, port, destport=None):
         _candidate_ports = [i for i in self.available_ports_by_port[port]]
+        tn = [len(self.bigblock_by_port[p].train) if self.bigblock_by_port.get(p) else 0 for p in _candidate_ports]
         for p in self.available_ports_by_port[port]:
             _candi_bblk = self.bigblock_by_port.get(p)
             _candi_track = self.track_by_port.get(p)
             if not _candi_bblk or not _candi_track:
-                continue
-            elif _candi_track.is_Occupied:
-                _candidate_ports.remove(p)
                 continue
             elif not _candi_bblk.routing:
                 continue
@@ -563,9 +562,20 @@ class ControlPoint(InterlockingPoint):
                 if _candi_bblk.train:
                     _candidate_ports.remove(p)
                     continue
+            elif _candi_bblk.routing == ((self, p), (_candi_bblk.shooting_point(
+                    point=self), _candi_bblk.shooting_port(port=p))):
+                if len(_candi_bblk.train) != min(tn):
+                    _candidate_ports.remove(p)
+                    continue
         if not _candidate_ports:
             return None
         else:
+            for p in _candidate_ports:
+                try:
+                    if len(self.bigblock_by_port[p].train) == min(tn):
+                        return (port, p)
+                except:
+                    continue
             return (port, _candidate_ports[0])
 
     def set_bigblock_routing_by_controlpoint_route(self, route):
