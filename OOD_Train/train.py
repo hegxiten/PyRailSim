@@ -1078,8 +1078,8 @@ class Train():
             if self.stopped and any([not t.stopped for t in _rest_trains]):
                 return True # during the pass, hold the stopped train from move
             if all([trk.train for trk in self.curr_track.yard.tracks]):
-                if abs(self.max_speed) == max([trn.max_speed for trn in
-                                self.curr_track.yard.all_trains]):
+                if abs(self.max_speed) == min([abs(trn.max_speed) 
+                        for trn in self.curr_track.yard.all_trains]):
                     return True
             if self.curr_track.yard.available_tracks >= 1 and self.dist_to_trn_behind <= 10:
                 return True
