@@ -37,6 +37,24 @@ class TrainList(MutableSequence):
         _all_trains = self.uptrains + self.downtrains
         _all_idx = [t.train_idx for t in _all_trains]
         return [t for _,t in sorted(zip(_all_idx,_all_trains))]
+    
+    @property
+    def all_trains_by_MP(self):
+        _all_MP = [t.curr_MP for t in self.all_trains]
+        return [t for _,t in sorted(zip(_all_MP,self.all_trains))]
+
+    @property
+    def upcoming_meets(self):
+        _upcoming_meets = []
+        if len(self.all_trains_by_MP) > 1:
+            for i in range(len(self.all_trains_by_MP)-1):
+                if self.all_trains_by_MP[i].downtrain:
+                    if self.all_trains_by_MP[i+1].uptrain:
+                        if (self.all_trains_by_MP[i],
+                            self.all_trains_by_MP[i+1]) not in _upcoming_meets:
+                            _upcoming_meets.append((self.all_trains_by_MP[i],
+                                self.all_trains_by_MP[i+1]))
+        return _upcoming_meets
 
     def __str__(self):
         return str(self.all_trains)

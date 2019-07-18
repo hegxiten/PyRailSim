@@ -114,8 +114,6 @@ def speed_curve(sys, train, scatter=False):
     import pylab; pylab.rcParams['figure.figsize'] = (15.0, 8.0)
     plt.pause(0.01)
 
-
-
 def simulation_setup():
     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
@@ -130,11 +128,6 @@ def simulation_setup():
                 headway=headway, 
                 refresh_time=50)
     return sys
-
-
-sys = simulation_setup()
-sys.launch(launch_duration=(sys.term_time-sys.init_time), auto_generate_train=True)
-string_diagram(sys)
 
 if __name__ == "__main__":
     sys = simulation_setup()
