@@ -204,7 +204,7 @@ class System():
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        TEST_SIDINGS = [Yard(), Yard()]
+        TEST_SIDINGS = [Yard(), Yard(), Yard(), Yard()]
 
         TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
@@ -223,12 +223,12 @@ class System():
             Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
             Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
             Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
-            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[0]),
-            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[0]),
+            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
             Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
             Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
-            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[1]),
-            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
             Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
             Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
             Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
