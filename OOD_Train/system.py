@@ -10,14 +10,18 @@ from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
 from infrastructure import Yard, Track, BigBlock
 from train import TrainList, Train
 
-class DispatchPlan():
+from collections.abc import MutableSequence
+
+class CorridorState():
     def __init__(self, sys):
-        pass
+        self.sys = sys
+
+    
     def meetings(self, ):
         pass
+
     def passings(self, ):
         pass
-
 
 class System():
     """
@@ -43,7 +47,8 @@ class System():
         # CPU format time in sec, transferable to numerical value or str values
         self.init_time = init_time.timestamp()
         self.term_time = float('inf') \
-            if kwargs.get('term_time') is None else kwargs.get('term_time').timestamp()
+            if kwargs.get('term_time') is None \
+            else kwargs.get('term_time').timestamp()
         self.G_origin = self.graph_constructor()
         self.G_skeleton = self.graph_extractor(self.G_origin)
 
@@ -51,31 +56,25 @@ class System():
         # list of all SignalPoints, including AutoPoints and ControlPoints
         self.control_points = list(self.G_skeleton.nodes())
         # list of all ControlPoints. Indices are different from signal_points.
-        self.vertex_points = [
-            cp for cp in self.control_points if cp.vertex == True
-        ]
+        self.vertex_points = [cp for cp in self.control_points 
+            if cp.vertex == True]
         # list of all vertex ControlPoints where trains can initiate/terminate.
-        self.tracks = [
-            data['instance']
-            for (u, v, data) in list(self.G_origin.edges(data=True))
-        ]
+        self.tracks = [data['instance']
+            for (u, v, data) in list(self.G_origin.edges(data=True))]
         # list of all Tracks.
-        self.bigblocks = [
-            data['instance']
-            for (u, v, data) in list(self.G_skeleton.edges(data=True))
-        ]
+        self.bigblocks = [data['instance']
+            for (u, v, data) in list(self.G_skeleton.edges(data=True))]
         # list of all BigBlocks.
-        self.dos_period = [
-            datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp()
-            for t in kwargs.get('dos_period') if type(t) == str
-        ]
+        self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp()
+            for t in kwargs.get('dos_period') if type(t) == str]
         self.dos_pos = (None,None) \
             if kwargs.get('dos_pos') is None else kwargs.get('dos_pos')
 
         self._trains = TrainList()
-        _min_spd, _max_spd, _min_acc, _max_acc = 0.01, 0.02, 2.78e-05 * 0.85, 2.78e-05 * 1.15
-        self.headway = 500 if kwargs.get('headway') is None else kwargs.get(
-            'headway')
+        _min_spd, _max_spd, _min_acc, _max_acc = \
+            0.01, 0.02, 2.78e-05 * 0.85, 2.78e-05 * 1.15
+        self.headway = 500 if kwargs.get('headway') is None \
+            else kwargs.get('headway')
         self.last_train_init_time = self.sys_time
         self.sp_container = args[0]\
             if args else [random.uniform(_min_spd, _max_spd) for i in range(20)]
@@ -83,12 +82,10 @@ class System():
             if args else [random.uniform(_min_acc, _max_acc) for i in range(20)]
         self.dcc_container = args[2]\
             if args else [random.uniform(self.sys_min_dcc*1.15, self.sys_min_dcc*1.25) for i in range(20)]
-        self.dcc_container = [
-            i if i >= self.sys_min_dcc else self.sys_min_dcc
-            for i in self.dcc_container
-        ]
-        self.refresh_time = 1 if kwargs.get('refresh_time') is None else kwargs.get(
-            'refresh_time')
+        self.dcc_container = [i if i >= self.sys_min_dcc else self.sys_min_dcc
+            for i in self.dcc_container]
+        self.refresh_time = 1 if kwargs.get('refresh_time') is None \
+            else kwargs.get('refresh_time')
 
         # self.register(self.blocks)
         # register method links the observation relationships
@@ -172,11 +169,8 @@ class System():
                         if cp.track_by_port.get(r[1]):
                             _routing_list.append([((None, None), (cp, r[0]))])
 
-        _routing_list = [
-            i for i in
-            [getattr(_bblk, 'self_routing_path') for _bblk in self.bigblocks]
-            if i
-        ]
+        _routing_list = [i for i in [getattr(_bblk, 'self_routing_path') 
+            for _bblk in self.bigblocks]if i]
         add_cleared_routing_external_virtual_bblk()
         _traversed = []
         while has_repeating_routing_paths(_routing_list, _traversed):
@@ -189,6 +183,18 @@ class System():
                         _routing_list[j].extend(_routing_list[i])
                         _traversed.append(_routing_list[i])
         return _routing_list
+
+    @property
+    def topo(self):
+        _topolist = []
+        for t in self.tracks:
+            if t.yard not in _topolist:
+                pass
+
+    @property
+    def statelist(self):
+        _statelist = []
+        pass
 
     def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
         for t in self.tracks:
@@ -204,7 +210,7 @@ class System():
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        TEST_SIDINGS = [Yard(), Yard()]
+        TEST_SIDINGS = [Yard(self), Yard(self)]
 
         TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
