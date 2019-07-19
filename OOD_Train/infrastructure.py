@@ -9,24 +9,6 @@ import networkx as nx
 from observe import Observable, Observer
 from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
 
-class Yard(Observable, Observer):
-    def __init__(self,):
-        self.tracks = []
-
-    @property
-    def available_tracks(self):
-        count = 0
-        for trk in self.tracks:
-            if not trk.train:
-                count += 1
-        return count
-
-    @property
-    def all_trains(self):
-        _all_trains = []
-        for tlist in [trk.train for trk in self.tracks]:
-            _all_trains.extend([trn for trn in tlist])
-        return _all_trains
 
 class Track(Observable):
     @staticmethod
@@ -169,6 +151,29 @@ class Track(Observable):
             assert sign_MP in (-1, +1)
             return self.L_point_port if sign_MP == -1 else self.R_point_port
 
+    def __lt__(self, other):
+        '''
+            implement __lt__ to sort yards based on their MilePost.
+            If MilePosts are the same, compare key in Graphs.
+            MP system of self and other has to be the same: same corridor.'''
+        if self.MP == other.MP:
+            if self.edge_key < other.edge_key:
+                return True
+        if self.length == other.length:
+            if max(self.MP) <= min(other.MP): return True
+            if min(other.MP) < max(self.MP) < max(other.MP): return True
+        if self.length < other.length:
+            if max(self.MP) <= min(other.MP): return True
+            if min(other.MP) < max(self.MP) < max(other.MP): return True
+            if min(other.MP) <= min(self.MP):
+                if min(self.MP) - min(other.MP) < max(other.MP) - max(self.MP):
+                    return True
+        if self.length > other.length:
+            if max(self.MP) <= min(other.MP): return True
+            if min(other.MP) < max(self.MP) < max(other.MP): return True
+            if min(self.MP) < min(other.MP):
+                if min(other.MP) - min(self.MP) > max(self.MP) - max(other.MP):
+                    return True
 
 class BigBlock(Track):
     def __init__(self,
@@ -290,6 +295,36 @@ class BigBlock(Track):
             self.tracks[0].routing = ((start_point, start_port),
                                       self.routing[1])
 
+class Yard(Observable, Observer):
+    __lt__ = Track.__lt__
+    
+    def __init__(self,sys):
+        self.system = sys
+        self.tracks = []
+
+    @property
+    def MP(self):
+        return (min([t.MP for t in self.tracks]), 
+            max([t.MP for t in self.tracks])) if self.tracks else (None,None)
+        
+
+    @property
+    def available_tracks(self):
+        count = 0
+        for trk in self.tracks:
+            if not trk.train:
+                count += 1
+        return count
+
+    @property
+    def all_trains(self):
+        _all_trains = []
+        for tlist in [trk.train for trk in self.tracks]:
+            _all_trains.extend([trn for trn in tlist])
+        return _all_trains
+
+    
+    
     #-----------------------------#
 
     def find_available_track(self):
