@@ -185,6 +185,20 @@ class System():
         return _routing_list
 
     @property
+    def curr_routing_paths_cp(self):
+        _routing_paths_cp = []
+        for rp in self.curr_routing_paths:
+            _cp_rp = []
+            for ((p1, port1), (p2, port2)) in rp:
+                if p1 is None or isinstance(p1, ControlPoint):
+                    _cp_rp.append([(p1, port1),None])
+                if p2 is None or isinstance(p2, ControlPoint):
+                    _cp_rp[-1][1] = (p2, port2)
+                    _cp_rp[-1] = tuple(_cp_rp[-1])
+            _routing_paths_cp.append(_cp_rp)
+        return _routing_paths_cp
+
+    @property
     def topo(self):
         _topolist = []
         for t in self.tracks:
@@ -210,7 +224,7 @@ class System():
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
         # TODO: to be achieved in network_constructor.py
-        TEST_SIDINGS = [Yard(self), Yard(self)]
+        TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self)]
 
         TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),

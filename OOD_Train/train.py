@@ -43,27 +43,8 @@ class TrainList(MutableSequence):
         _all_MP = [t.curr_MP for t in self.all_trains]
         return [t for _,t in sorted(zip(_all_MP,self.all_trains))]
 
-    @property
-    def upcoming_meets(self):
-        _upcoming_meets = []
-        if len(self.all_trains_by_MP) > 1:
-            for i in range(len(self.all_trains_by_MP)-1):
-                if self.all_trains_by_MP[i].downtrain:
-                    if self.all_trains_by_MP[i+1].uptrain:
-                        if (self.all_trains_by_MP[i],
-                            self.all_trains_by_MP[i+1]) not in _upcoming_meets:
-                            _upcoming_meets.append((self.all_trains_by_MP[i],
-                                self.all_trains_by_MP[i+1]))
-        return _upcoming_meets
-
     def __str__(self):
         return str(self.all_trains)
-
-    def same_way_trains(self, trn):
-        if trn.uptrain:
-            return self.uptrains
-        if trn.downtrain:
-            return self.downtrains
 
     def __repr__(self):
         return "<{0} {1}>".format(self.__class__.__name__, self.all_trains)
@@ -221,14 +202,20 @@ class Train():
             .format(self.train_idx, self.curr_occupying_routing_path,
                     str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
                     str("%.2f" % round(self.rear_curr_MP, 2)).rjust(5, ' '))
-
+    @property
+    def same_way_trains(self):
+        if self.uptrain:
+            return self.system.trains.uptrains
+        if self.downtrain:
+            return self.system.trains.downtrains
+    
     @property
     def rank(self):
         '''
             rank of the train starting from the first train to the last. 
             First: 0; Last: len(self.system.trains) - 1
             TODO: Implement rank for both directions.'''
-        return self.system.trains.same_way_trains(self).index(self)
+        return self.same_way_trains(self).index(self)
 
     @property
     def curr_sign(self):    return self.sign_MP(self.curr_routing_path_segment)
@@ -820,7 +807,7 @@ class Train():
 
     @property
     def trn_follow_behind(self):
-        return self.system.trains.same_way_trains(self)[self.rank + 1]
+        return self.same_way_trains(self)[self.rank + 1]
 
     @property
     def dist_to_trn_behind(self): 
@@ -1081,7 +1068,7 @@ class Train():
             TODO: implement better judgment to consider more conditions, such as
                 priority, proximity (to the follower), etc.'''
         # the last train is not passable by any train
-        if self.rank == len(self.system.trains.same_way_trains(self)) - 1:
+        if self.rank == len(self.same_way_trains(self)) - 1:
             return False
         # for any train that is not the last one:
         if not self.curr_track or not self.rear_curr_track:
