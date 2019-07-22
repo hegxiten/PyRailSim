@@ -11,6 +11,7 @@ from infrastructure import Yard, Track, BigBlock
 from train import TrainList, Train
 
 from collections.abc import MutableSequence
+from itertools import combinations, permutations
 
 class CorridorState():
     def __init__(self, sys):
