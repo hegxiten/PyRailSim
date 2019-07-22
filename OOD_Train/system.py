@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import copy
-import random
-import numpy as np
 import logging
-from datetime import datetime, timedelta
-import networkx as nx
-from signaling import Aspect, AutoSignal, HomeSignal, AutoPoint, ControlPoint
-from infrastructure import Yard, Track, BigBlock
-from train import TrainList, Train
-
+import random
 from collections.abc import MutableSequence
+from datetime import datetime, timedelta
 from itertools import combinations, permutations
+
+import networkx as nx
+import numpy as np
+
+from infrastructure import BigBlock, Track, Yard
+from rail_networkx import all_simple_paths, shortest_path
+from signaling import Aspect, AutoPoint, AutoSignal, ControlPoint, HomeSignal
+from train import Train, TrainList
+
 
 class CorridorState():
     def __init__(self, sys):
@@ -343,7 +346,7 @@ class System():
                 # default 0 as mainline, idx as track number
 
         for (u, v, k) in F.edges(keys=True):
-            blk_path = nx.shortest_path(G, u, v)
+            blk_path = shortest_path(G, u, v)
             big_block_edges = [(blk_path[i], blk_path[i + 1])
                                for i in range(len(blk_path) - 1)]
             big_block_instance = BigBlock(self,
@@ -362,7 +365,8 @@ class System():
             for (n, m) in big_block_edges:
                 if G[n][m][k]['instance'] not in big_block_instance.tracks:
                     big_block_instance.tracks.append(G[n][m][k]['instance'])
-                # get the list of track unit components of a bigblock, and record in the instance
+                # get the list of track unit components of a bigblock, 
+                # and record in the instance
 
             F[u][v][k]['attr'] = big_block_instance.__dict__
             F[u][v][k]['instance'] = big_block_instance
@@ -453,7 +457,7 @@ class System():
             <= _parallel_tracks - _occupied_parallel_tracks else False
 
     def num_parallel_tracks(self, init_point, dest_point):
-        _mainline_section = nx.shortest_path(self.G_origin, init_point,
+        _mainline_section = shortest_path(self.G_origin, init_point,
                                              dest_point)
         _start_point = _mainline_section.pop(0)
         count = 0
@@ -463,13 +467,13 @@ class System():
                 if t in _mainline_section:
                     _mainline_section.remove(t)
             for p in _mainline_section:
-                if len(list(nx.all_simple_paths(self.G_origin, _start_point,
+                if len(list(all_simple_paths(self.G_origin, _start_point,
                                                 p))) == 1:
                     _traversed.append(p)
                     continue
                 else:
                     count += len(
-                        list(nx.all_simple_paths(self.G_origin, _start_point,
+                        list(all_simple_paths(self.G_origin, _start_point,
                                                  p))) - 1
                     _traversed.append(p)
                     _start_point = p
@@ -504,8 +508,7 @@ class System():
             this pair of O-D nodes.
             @option: filter trains running at the obversed/reversed direction 
             compared with the from-to path.'''
-        all_paths = list(
-            nx.all_simple_paths(self.G_origin, from_point, to_point))
+        all_paths = list(all_simple_paths(self.G_origin, from_point, to_point))
         _trains_all = []
         _trains_obv_dir = []
         _trains_rev_dir = []

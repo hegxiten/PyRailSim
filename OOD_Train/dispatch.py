@@ -1,19 +1,21 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import random
 import sys
+
 sys.path.append(
     'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
 )
-import random
-import numpy as np
-from datetime import datetime, timedelta
+
 from collections.abc import MutableSequence
-import networkx as nx
+from datetime import datetime, timedelta
 from itertools import combinations, permutations
 
-from infrastructure import Track, BigBlock
-from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
+import networkx as nx
+import numpy as np
+
+from rail_networkx import all_simple_paths, shortest_path
 
 
 class Dispatcher():
@@ -25,10 +27,10 @@ class Dispatcher():
         route = []
         cp_path = path
         if cp_path is None:
-            cp_path = nx.shortest_path(self.system.G_skeleton, 
+            cp_path = shortest_path(self.system.G_skeleton, 
                             source=src, target=tgt, weight='edge_key') \
                     if mainline==True else \
-                    next(nx.all_simple_paths(self.system.G_skeleton, 
+                    next(all_simple_paths(self.system.G_skeleton, 
                                             source=src, target=tgt))
         port_by_bblk = lambda bblk, cp: [p for p in cp.ports 
             if cp.bigblock_by_port.get(p) == bblk][0]
@@ -58,7 +60,7 @@ class Dispatcher():
 
     def get_all_routes(self, src, srcport, tgt, tgtport):
         route_list = []
-        cp_paths = list(nx.all_simple_paths(self.system.G_skeleton, 
+        cp_paths = list(all_simple_paths(self.system.G_skeleton, 
                                             source=src, target=tgt))
         while cp_paths:
             _single_cp_route = cp_paths[0]
@@ -68,7 +70,7 @@ class Dispatcher():
                 cp_paths.pop(0)
                 route_list.append(_single_route)
         return route_list
-        
+
     def max_MA_limit(self, route):
         pass
 

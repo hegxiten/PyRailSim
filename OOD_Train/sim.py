@@ -1,20 +1,22 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import logging
 import random
-import numpy as np
+import threading
+import time
 from datetime import datetime, timedelta
+
+import matplotlib.animation as animation
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+import numpy as np
 from matplotlib import style
 
-import threading
-import logging
-import time
-
-from train import Train
+from infrastructure import BigBlock, Track, Yard
+from signaling import Aspect, AutoPoint, AutoSignal, ControlPoint, HomeSignal
 from system import System
-from infrastructure import Track, BigBlock
+from train import Train
+
 
 def string_diagram(sys):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 

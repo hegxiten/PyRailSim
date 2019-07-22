@@ -1,9 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 from abc import ABCMeta, abstractmethod, abstractproperty
-from observe import Observable, Observer
-from itertools import combinations, permutations
 from collections import defaultdict
+from itertools import combinations, permutations
+
+import networkx as nx
+
+import infrastructure
+from observe import Observable, Observer
+from rail_networkx import all_simple_paths, shortest_path
 
 
 class Aspect():
@@ -103,6 +108,14 @@ class Signal(Observable, Observer):
         else:
             return -self.sigpoint.signal_by_port[self.sigpoint.opposite_port(
                 self.port_idx)].facing_direction_sign
+
+    @property
+    def upwards(self):
+        return True if self.facing_direction_sign == -1 else False
+    
+    @property
+    def downwards(self):
+        return True if self.facing_direction_sign == 1 else False
 
     @property
     def route(self):
@@ -227,16 +240,66 @@ class Signal(Observable, Observer):
                         continue
         return _number
 
-    #-------------------------#
-    def clear(self, port):
-        pass
+    @property
+    def tracks_to_enter(self):
+        return [self.sigpoint.track_by_port[p] 
+                for p in self.sigpoint.available_ports_by_port[self.port_idx]]
 
-    def close(self, port):
-        pass
+    @property
+    def following_sigpoints(self):
+        _sigpoints = []
+        for t in self.tracks_to_enter:
+            for p in [t.L_point, t.R_point]:
+                if p != self.sigpoint:
+                    _sigpoints.append(p)
+        return _sigpoints
 
+    @abstractproperty
+    def bblks_to_enter(self):
+        raise NotImplementedError(  "Needed to be implemented in AutoSignal or \
+            HomeSignal")
+
+    @abstractproperty
+    def following_controlpoints(self):
+        raise NotImplementedError(  "Needed to be implemented in AutoSignal or \
+            HomeSignal")
+
+    def reachable(self, other):
+        def reachable_sigpoint(p):
+            gen = all_simple_paths(self.system.G_origin, self.sigpoint, p)
+            while True:
+                try:
+                    if next(gen)[1] in self.following_sigpoints:
+                        return True
+                except: break
+            return False
+        def reachable_track(t):
+            if self.sigpoint in (t.L_point, t.R_point):
+                if self.governed_track == t: return False
+                else:
+                    for p in self.sigpoint.available_ports_by_port[self.port_idx]:
+                        if t == self.sigpoint.track_by_port[p]: return True
+            # include AutoPoint's bigblock instance entirely covering the signal
+            for p in (t.L_point, t.R_point):
+                if reachable_sigpoint(p) is True: return True
+            return False
+        if isinstance(other, InterlockingPoint):
+            return reachable_sigpoint(other)
+        if isinstance(other, Signal):
+            if other.sigpoint != self.sigpoint:
+                return reachable_sigpoint(other.sigpoint)
+            else: return True \
+                if other.port_idx in \
+                    self.sigpoint.available_ports_by_port[self.port_idx] \
+                else False
+        if isinstance(other, infrastructure.Track) \
+            or isinstance(other, infrastructure.BigBlock):
+            return reachable_track(other)
+        return False
+
+    #--------------------------#
     def update(self, observable, update_message):
-        pass
-        return
+        raise NotImplementedError("Old update function to be cleaned")
         assert observable.type in ['abs', 'home', 'block', 'bigblock']
         # print("{} signal {} is observing {} signal {}".format(self.port_idx, self.pos, observable.port_idx, observable.pos))
         # print("Because {} signal {} changed from {} to {}:".format(observable.port_idx, str(observable.pos), update_message['old'].color, update_message['new'].color))
@@ -259,8 +322,7 @@ class Signal(Observable, Observer):
                 self.change_color_to('y', True)
 
     def change_color_to(self, color, isNotified=True):
-        pass
-        return
+        raise NotImplementedError("Old change_color_to function to be cleaned")
         new_aspect = Aspect(color)
         print("\t {} signal changed from {} to {}".format(
             self.port_idx, self.aspect.color, color))
@@ -277,6 +339,16 @@ class AutoSignal(Signal):
     def __repr__(self):
         return 'AutoSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
 
+    @property
+    def bblks_to_enter(self):
+        return [self.sigpoint.bigblock]
+
+    @property
+    def following_controlpoints(self):
+        if self.downwards:
+            return [self.sigpoint.bigblock.R_point]
+        if self.upwards:
+            return [self.sigpoint.bigblock.L_point]
 
 class HomeSignal(Signal):
     def __init__(self, port_idx, sigpoint, MP=None):
@@ -287,35 +359,27 @@ class HomeSignal(Signal):
     def __repr__(self):
         return 'HomeSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
 
-    # #--------------------------------#
-    # def update(self, observable, update_message):
-    #     pass
-    #     return
-    #     if observable.type == 'block':
-    #         if update_message:      # block 有车
-    #             self.change_color_to('r', False)
-    #     # 情况4
-    #     elif observable.type == 'home' and self.hs_type == 'A'\
-    #         and observable.port_idx != self.port_idx:
-    #         if update_message.color != 'r':                          # 反向主体信号非红
-    #             self.change_color_to('r', True)
-    #     elif observable.type == 'home' and self.hs_type == 'B'\
-    #         and observable.port_idx != self.port_idx:
-    #         if update_message.color != 'r':                          # 反向主体信号非红
-    #             self.change_color_to('r', False)
-    #     elif observable.type == 'abs': # and 同时还放车进入下一个abs:
-    #         if update_message.color == 'yy':                         # observable:        g -> yy
-    #             self.change_color_to('g', False)                            # observer:            -> g
-    #         elif update_message.color == 'y':                        # observable:     g/yy -> y
-    #             self.change_color_to('yy', False)                           # observer:            -> yy
-    #         elif update_message.color == 'r':                        # observable: g/yy/y/r -> r
-    #             self.change_color_to('y', False)
+    @property
+    def bblks_to_enter(self):
+        return [self.sigpoint.bigblock_by_port[p]
+                for p in self.sigpoint.available_ports_by_port[self.port_idx]]
 
+    @property
+    def following_controlpoints(self):
+        _cps = []
+        for bblk in self.bblks_to_enter:
+            for p in [bblk.L_point, bblk.R_point]:
+                if p != self.sigpoint:
+                    _cps.append(p)
+        return _cps
+
+    @property
+    def governed_bigblock(self):
+        return self.sigpoint.bigblock_by_port.get(self.port_idx)
 
 class InterlockingPoint(Observable, Observer):
     """
-    Abstract Class, a.k.a SignalPoint/Sigpoint
-    """
+        Base Class, a.k.a SignalPoint/Sigpoint"""
 
     def __init__(self, system, idx, MP=None):
         super().__init__()
@@ -390,6 +454,11 @@ class InterlockingPoint(Observable, Observer):
                 self.mutex_routes_by_route.get(r))
         return _locked_routes
 
+    @abstractproperty
+    def banned_paths(self):
+        raise NotImplementedError("Needed to be implemented in AutoPoint or \
+            ControlPoint")
+
 
 class AutoPoint(InterlockingPoint):
     def __init__(self, system, idx, MP=None):
@@ -400,12 +469,9 @@ class AutoPoint(InterlockingPoint):
         self.non_mutex_routes_by_route = {}
         self.ban_ports_by_port = {}
         self.all_valid_routes = [(0, 1), (1, 0)]
-
         # build up signals
-        self.signal_by_port = {
-            0: AutoSignal(0, self, MP=self.MP),
-            1: AutoSignal(1, self, MP=self.MP)
-        }
+        self.signal_by_port = { 0: AutoSignal(0, self, MP=self.MP),
+                                1: AutoSignal(1, self, MP=self.MP)}
         # register the AutoPoint's ownership over the signals
         for _, sig in self.signal_by_port.items():
             sig.sigpoint = self
@@ -413,6 +479,10 @@ class AutoPoint(InterlockingPoint):
 
     def __repr__(self):
         return 'AutoPoint{}'.format(self.idx)
+
+    @property
+    def bigblock(self):
+        return [t.bigblock for _,t in self.track_by_port.items()][0]
 
     @property
     def current_routes(self):
@@ -426,6 +496,9 @@ class AutoPoint(InterlockingPoint):
                 elif p == 0 and p == t.routing[0][1]:
                     self._current_routes = [(1, 0)]
         return self._current_routes
+
+    @property
+    def banned_paths(self): return []
 
     def opposite_port(self, port):
         '''Return the signal port on the other side of the given port of an AutoSignal.
@@ -503,6 +576,37 @@ class ControlPoint(InterlockingPoint):
             assert i in self.all_valid_routes
         self._current_routes = new_route_list
 
+    @property
+    def banned_paths(self):
+        _banned_path = []
+        _banned_path_raw_graph = []
+        for p in self.ports:
+            if not self.ban_ports_by_port.get(p): continue
+            one_end_track = self.track_by_port.get(p)
+            one_end = one_end_track.shooting_point(point=self) \
+                if one_end_track else None
+            for bp in self.ban_ports_by_port[p]:
+                the_other_end = \
+                        self.track_by_port[bp].shooting_point(point=self) \
+                        if self.track_by_port.get(bp) else None
+                _banned_path_raw_graph.append((one_end, the_other_end))
+                _banned_path_raw_graph.append((the_other_end, one_end))
+        _banned_path.extend(_banned_path_raw_graph)
+        _banned_path_skeleton_graph = []
+        for p in self.ports:
+            if not self.ban_ports_by_port.get(p): continue
+            one_end_bblk = self.bigblock_by_port.get(p)
+            one_end = one_end_bblk.shooting_point(point=self) \
+                if one_end_bblk else None
+            for bp in self.ban_ports_by_port[p]:
+                the_other_end = \
+                        self.bigblock_by_port[bp].shooting_point(point=self) \
+                        if self.bigblock_by_port.get(bp) else None
+                _banned_path_skeleton_graph.append((one_end, the_other_end))
+                _banned_path_skeleton_graph.append((the_other_end, one_end))
+        _banned_path.extend(_banned_path_skeleton_graph)
+        return _banned_path
+    
     def open_route(self, route):
         assert len(route) == 2
         assert isinstance(route, tuple)

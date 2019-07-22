@@ -1,16 +1,17 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import os
+import random
 import sys
 sys.path.append(
     'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
 )
-import random
-import numpy as np
-from datetime import datetime, timedelta
 from collections.abc import MutableSequence
-from infrastructure import Track, BigBlock
-from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
+from datetime import datetime, timedelta
+
+import numpy as np
+
+from signaling import AutoPoint, AutoSignal, ControlPoint, HomeSignal
 
 
 class TrainList(MutableSequence):
@@ -215,7 +216,7 @@ class Train():
             rank of the train starting from the first train to the last. 
             First: 0; Last: len(self.system.trains) - 1
             TODO: Implement rank for both directions.'''
-        return self.same_way_trains(self).index(self)
+        return self.same_way_trains.index(self)
 
     @property
     def curr_sign(self):    return self.sign_MP(self.curr_routing_path_segment)
@@ -807,7 +808,7 @@ class Train():
 
     @property
     def trn_follow_behind(self):
-        return self.same_way_trains(self)[self.rank + 1]
+        return self.same_way_trains[self.rank + 1]
 
     @property
     def dist_to_trn_behind(self): 
@@ -1068,7 +1069,7 @@ class Train():
             TODO: implement better judgment to consider more conditions, such as
                 priority, proximity (to the follower), etc.'''
         # the last train is not passable by any train
-        if self.rank == len(self.same_way_trains(self)) - 1:
+        if self.rank == len(self.same_way_trains) - 1:
             return False
         # for any train that is not the last one:
         if not self.curr_track or not self.rear_curr_track:

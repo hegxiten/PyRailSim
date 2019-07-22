@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+
 sys.path.append(
     'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
 )
+
 import networkx as nx
+
 from observe import Observable, Observer
-from signaling import AutoSignal, HomeSignal, AutoPoint, ControlPoint
+
 
 
 class Track(Observable):
@@ -139,6 +142,7 @@ class Track(Observable):
         if sign_MP is not None:
             assert sign_MP in (-1, +1)
             return self.L_point if sign_MP == -1 else self.R_point
+        return None
 
     def shooting_port(self, point=None, port=None, sign_MP=None):
         if point is not None:
@@ -150,6 +154,7 @@ class Track(Observable):
         if sign_MP is not None:
             assert sign_MP in (-1, +1)
             return self.L_point_port if sign_MP == -1 else self.R_point_port
+        return None
 
     def __lt__(self, other):
         '''

@@ -1,16 +1,18 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import random
-from signaling import Signal
 import time
-import numpy as np
 from datetime import datetime, timedelta
-import matplotlib.patches as mpatches
+
 import matplotlib.dates as mdates
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from train import Train
+import numpy as np
+
+from infrastructure import *
+from signaling import Signal
 from system import System
-from infrastructure import Track, BigBlock
+from train import Train
 
 
 def run_with_string_diagram(sys, sys_dos, start_time, end_time):
