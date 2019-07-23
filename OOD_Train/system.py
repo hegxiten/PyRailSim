@@ -20,7 +20,6 @@ class CorridorState():
     def __init__(self, sys):
         self.sys = sys
 
-    
     def meetings(self, ):
         pass
 
@@ -258,6 +257,50 @@ class System():
             Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
         ]   # yapf: disable
 
+        TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
+
+        TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
+                        1: AutoPoint(    self, idx=1, MP=5.0),
+                        2: ControlPoint( self, idx=2, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=10.0),
+                        3: ControlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
+                        4: ControlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
+                        5: ControlPoint( self, idx=5, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=25.0),
+                        6: ControlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
+                        7: ControlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
+                        8: ControlPoint( self, idx=8, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=40.0),
+                        9: AutoPoint(    self, idx=9, MP=45.0),
+                        10: ControlPoint(self, idx=10, ports=[0, 1], MP=50.0),
+                        11: AutoPoint(   self, idx=11, MP=30.0),
+                        12: AutoPoint(   self, idx=12, MP=35.0),
+                        13: ControlPoint(self, idx=13, ports=[0, 1], MP=20.0),
+                        14: ControlPoint(self, idx=14, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=5.0),
+                        15: AutoPoint(   self, idx=15, MP=10.0),
+                        16: ControlPoint(self, idx=16, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=15.0),
+        }   # yapf: disable
+
+        TEST_TRACK = [
+            Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
+            Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
+            Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
+            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
+            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
+            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
+            Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
+            Track(self, TEST_NODE[9], 1, TEST_NODE[10],0),
+            Track(self, TEST_NODE[5], 3, TEST_NODE[11],0, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[11],1, TEST_NODE[12],0, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[12],1, TEST_NODE[8], 2, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[2], 3, TEST_NODE[14],0),
+            Track(self, TEST_NODE[14],3, TEST_NODE[15],0, yard=TEST_SIDINGS[3]),
+            Track(self, TEST_NODE[15],1, TEST_NODE[16],2, yard=TEST_SIDINGS[3]),
+            Track(self, TEST_NODE[14],1, TEST_NODE[16],0, yard=TEST_SIDINGS[3]),
+            Track(self, TEST_NODE[16],1, TEST_NODE[13],0),
+        ]   # yapf: disable
+
         _node = TEST_NODE if not node else node
         nbunch = [_node[i] for i in range(len(_node))]
         _track = TEST_TRACK if not track else track
@@ -275,15 +318,16 @@ class System():
                        t.R_point,
                        key=t.edge_key,
                        attr=t.__dict__,
-                       instance=t)
+                       instance=t,
+                       L_point=t.L_point,
+                       R_point=t.R_point)
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
             t.L_point.track_by_port[t.L_point_port] = t.R_point.track_by_port[
                 t.R_point_port] = t
 
-        for i in G.nodes(
-        ):  # register the neighbor nodes as observers to each node
+        for i in G.nodes():  # register neighbor nodes as observers to each node
             i.neighbor_nodes.extend([n for n in G.neighbors(i)])
             for n in G.neighbors(i):
                 i.add_observer(n)
@@ -341,30 +385,34 @@ class System():
                 F.add_edge(new_L_point,
                            new_R_point,
                            attr=new_track.__dict__,
-                           instance=new_track)
+                           instance=new_track,
+                           L_point=new_L_point,
+                           R_point=new_R_point)
                 # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
                 # default 0 as mainline, idx as track number
 
         for (u, v, k) in F.edges(keys=True):
-            blk_path = shortest_path(G, u, v)
+            _L_point, _R_point = F[u][v][k]['L_point'], F[u][v][k]['R_point']
+            blk_path = shortest_path(G, _L_point, _R_point)
             big_block_edges = [(blk_path[i], blk_path[i + 1])
                                for i in range(len(blk_path) - 1)]
             big_block_instance = BigBlock(self,
-                                          u,
+                                          _L_point,
                                           F[u][v][k]['instance'].L_point_port,
-                                          v,
+                                          _R_point,
                                           F[u][v][k]['instance'].R_point_port,
                                           edge_key=k,
                                           raw_graph=G,
                                           cp_graph=F)
-            u.bigblock_by_port[F[u][v][k]
+            _L_point.bigblock_by_port[F[u][v][k]
                                ['instance'].L_point_port] = big_block_instance
-            v.bigblock_by_port[F[u][v][k]
+            _R_point.bigblock_by_port[F[u][v][k]
                                ['instance'].R_point_port] = big_block_instance
 
             for (n, m) in big_block_edges:
-                if G[n][m][k]['instance'] not in big_block_instance.tracks:
-                    big_block_instance.tracks.append(G[n][m][k]['instance'])
+                for _k in G[n][m]:
+                    if G[n][m][_k]['instance'] not in big_block_instance.tracks:
+                        big_block_instance.tracks.append(G[n][m][_k]['instance'])
                 # get the list of track unit components of a bigblock, 
                 # and record in the instance
 

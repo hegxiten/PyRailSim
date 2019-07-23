@@ -510,7 +510,6 @@ class AutoPoint(InterlockingPoint):
             if p != port:
                 return p
 
-
 class ControlPoint(InterlockingPoint):
     def __init__(self,
                  system,
@@ -578,33 +577,28 @@ class ControlPoint(InterlockingPoint):
 
     @property
     def banned_paths(self):
-        _banned_path = []
-        _banned_path_raw_graph = []
-        for p in self.ports:
-            if not self.ban_ports_by_port.get(p): continue
-            one_end_track = self.track_by_port.get(p)
-            one_end = one_end_track.shooting_point(point=self) \
-                if one_end_track else None
-            for bp in self.ban_ports_by_port[p]:
-                the_other_end = \
+        def collect_banned_paths(skeleton=False):
+            _banned_path_collection = []
+            for p in self.ports:
+                if not self.ban_ports_by_port.get(p): continue
+                one_end = self
+                for bp in self.ban_ports_by_port[p]:
+                    if skeleton == False:
+                        the_other_end = \
                         self.track_by_port[bp].shooting_point(point=self) \
                         if self.track_by_port.get(bp) else None
-                _banned_path_raw_graph.append((one_end, the_other_end))
-                _banned_path_raw_graph.append((the_other_end, one_end))
-        _banned_path.extend(_banned_path_raw_graph)
-        _banned_path_skeleton_graph = []
-        for p in self.ports:
-            if not self.ban_ports_by_port.get(p): continue
-            one_end_bblk = self.bigblock_by_port.get(p)
-            one_end = one_end_bblk.shooting_point(point=self) \
-                if one_end_bblk else None
-            for bp in self.ban_ports_by_port[p]:
-                the_other_end = \
+                    if skeleton == True:
+                        the_other_end = \
                         self.bigblock_by_port[bp].shooting_point(point=self) \
                         if self.bigblock_by_port.get(bp) else None
-                _banned_path_skeleton_graph.append((one_end, the_other_end))
-                _banned_path_skeleton_graph.append((the_other_end, one_end))
-        _banned_path.extend(_banned_path_skeleton_graph)
+                    if (one_end, the_other_end) not in _banned_path_collection:
+                        _banned_path_collection.append((one_end, the_other_end))
+                    if (the_other_end, one_end) not in _banned_path_collection:
+                        _banned_path_collection.append((the_other_end, one_end))
+            return _banned_path_collection
+        _banned_path = []
+        _banned_path.extend(collect_banned_paths(skeleton=False))
+        _banned_path.extend(collect_banned_paths(skeleton=True))
         return _banned_path
     
     def open_route(self, route):
