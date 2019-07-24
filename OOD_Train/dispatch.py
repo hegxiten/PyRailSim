@@ -28,7 +28,7 @@ class Dispatcher():
         cp_path = path
         if cp_path is None:
             cp_path = shortest_path(self.system.G_skeleton, 
-                            source=src, target=tgt, weight='edge_key') \
+                            source=src, target=tgt, weight='weight_mainline') \
                     if mainline==True else \
                     next(all_simple_paths(self.system.G_skeleton, 
                                             source=src, target=tgt))

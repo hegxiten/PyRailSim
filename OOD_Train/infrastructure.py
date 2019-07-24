@@ -56,7 +56,8 @@ class Track(Observable):
                  R_point_port,
                  edge_key=0,
                  allow_sp=65,
-                 yard=None):  # speed as mph
+                 yard=None,
+                 **kwargs):  # speed as mph
         super().__init__()
         self._train = []
         self._routing = None
@@ -70,11 +71,16 @@ class Track(Observable):
         self.add_observer(L_point)
         self.add_observer(R_point)
         self.system = system
-        self.__bigblock = None
-        self.__curr_routing_path = None
         self.yard = yard
         if self.yard:
             self.yard.tracks.append(self)
+        defaultmainline = lambda lp, rp: True if lp == 1 and rp == 0 else False
+        self.mainline = defaultmainline(self.L_point_port, self.R_point_port) \
+            if kwargs.get('mainline') is None \
+            else kwargs.get('mainline')
+        self.mainline_weight = float('inf') if self.mainline == False else 0
+        self.__bigblock = None
+        self.__curr_routing_path = None
 
     def __repr__(self):
         return 'Track MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1],
@@ -161,6 +167,9 @@ class Track(Observable):
             implement __lt__ to sort yards based on their MilePost.
             If MilePosts are the same, compare key in Graphs.
             MP system of self and other has to be the same: same corridor.'''
+        if getattr(self, 'mainline', False) is True:
+            if getattr(self, 'mainline', False) is False:
+                return True
         if self.MP == other.MP:
             if self.edge_key < other.edge_key:
                 return True
@@ -190,9 +199,7 @@ class BigBlock(Track):
                  edge_key=0,
                  raw_graph=None,
                  cp_graph=None):
-        super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key)
-        assert isinstance(raw_graph, nx.MultiGraph)
-        assert isinstance(cp_graph, nx.MultiGraph)
+        super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=edge_key)
         self.type = 'bigblock'
         self._routing = None
         self.tracks = []

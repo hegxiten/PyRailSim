@@ -279,26 +279,26 @@ class System():
         }   # yapf: disable
 
         TEST_TRACK = [
-            Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
-            Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
-            Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
-            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1]),
+            Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0, mainline=True),
+            Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0, mainline=True),
+            Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0, mainline=True),
+            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1], mainline=True),
             Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
-            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
-            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
-            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2]),
+            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0, mainline=True),
+            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0, mainline=True),
+            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2], mainline=True),
             Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
-            Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
-            Track(self, TEST_NODE[9], 1, TEST_NODE[10],0),
+            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0, mainline=True),
+            Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0, mainline=True),
+            Track(self, TEST_NODE[9], 1, TEST_NODE[10],0, mainline=True),
             Track(self, TEST_NODE[5], 3, TEST_NODE[11],0, yard=TEST_SIDINGS[2]),
             Track(self, TEST_NODE[11],1, TEST_NODE[12],0, yard=TEST_SIDINGS[2]),
             Track(self, TEST_NODE[12],1, TEST_NODE[8], 2, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[2], 3, TEST_NODE[14],0),
+            Track(self, TEST_NODE[2], 3, TEST_NODE[14],0, mainline=True),
             Track(self, TEST_NODE[14],3, TEST_NODE[15],0, yard=TEST_SIDINGS[3]),
             Track(self, TEST_NODE[15],1, TEST_NODE[16],2, yard=TEST_SIDINGS[3]),
-            Track(self, TEST_NODE[14],1, TEST_NODE[16],0, yard=TEST_SIDINGS[3]),
-            Track(self, TEST_NODE[16],1, TEST_NODE[13],0),
+            Track(self, TEST_NODE[14],1, TEST_NODE[16],0, yard=TEST_SIDINGS[3], mainline=True),
+            Track(self, TEST_NODE[16],1, TEST_NODE[13],0, mainline=True),
         ]   # yapf: disable
 
         _node = TEST_NODE if not node else node
@@ -318,14 +318,14 @@ class System():
                        t.R_point,
                        key=t.edge_key,
                        attr=t.__dict__,
-                       instance=t,
-                       L_point=t.L_point,
-                       R_point=t.R_point)
+                       instance=t)
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
             t.L_point.track_by_port[t.L_point_port] = t.R_point.track_by_port[
                 t.R_point_port] = t
+            G[t.L_point][t.R_point][t.edge_key]['weight_mainline'] \
+                = t.mainline_weight
 
         for i in G.nodes():  # register neighbor nodes as observers to each node
             i.neighbor_nodes.extend([n for n in G.neighbors(i)])
@@ -373,26 +373,23 @@ class System():
             # all the following graph updates are targeted on F
             if i.type == 'at':
                 new_L_point, new_R_point = _get_new_edge(i)
-                assert len(F[new_L_point][i]) == len(F[i][new_R_point]) == 1
                 new_track = Track(self,
                                   new_L_point,
                                   F[new_L_point][i][0]['instance'].L_point_port,
                                   new_R_point,
                                   F[i][new_R_point][0]['instance'].R_point_port,
                                   edge_key=0)
-
                 F.remove_node(i)
                 F.add_edge(new_L_point,
                            new_R_point,
                            attr=new_track.__dict__,
-                           instance=new_track,
-                           L_point=new_L_point,
-                           R_point=new_R_point)
+                           instance=new_track)
                 # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
                 # default 0 as mainline, idx as track number
 
         for (u, v, k) in F.edges(keys=True):
-            _L_point, _R_point = F[u][v][k]['L_point'], F[u][v][k]['R_point']
+            _L_point, _R_point = \
+                F[u][v][k]['instance'].L_point, F[u][v][k]['instance'].R_point
             blk_path = shortest_path(G, _L_point, _R_point)
             big_block_edges = [(blk_path[i], blk_path[i + 1])
                                for i in range(len(blk_path) - 1)]
@@ -408,18 +405,20 @@ class System():
                                ['instance'].L_point_port] = big_block_instance
             _R_point.bigblock_by_port[F[u][v][k]
                                ['instance'].R_point_port] = big_block_instance
-
             for (n, m) in big_block_edges:
                 for _k in G[n][m]:
                     if G[n][m][_k]['instance'] not in big_block_instance.tracks:
                         big_block_instance.tracks.append(G[n][m][_k]['instance'])
                 # get the list of track unit components of a bigblock, 
                 # and record in the instance
-
+            for t in big_block_instance.tracks:
+                t.bigblock = big_block_instance
+            big_block_instance.mainline = True if all([t.mainline 
+                    for t in big_block_instance.tracks]) else False
             F[u][v][k]['attr'] = big_block_instance.__dict__
             F[u][v][k]['instance'] = big_block_instance
-            for t in F[u][v][k]['instance'].tracks:
-                t.bigblock = F[u][v][k]['instance']
+            F[u][v][k]['weight_mainline'] = big_block_instance.mainline_weight
+            
         return F
 
     def generate_train(self, init_point, init_port, dest_point, dest_port, **kwargs):
