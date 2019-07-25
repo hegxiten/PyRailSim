@@ -19,11 +19,29 @@ from rail_networkx import all_simple_paths, shortest_path
 
 
 class Dispatcher():
+    @staticmethod
+    def cp_leading_to(autopoint, port):
+        assert autopoint.__class__.__name__ == 'AutoPoint'
+        if autopoint.signal_by_port[port].upwards:
+            return autopoint.bigblock.L_point
+        if autopoint.signal_by_port[port].downwards:
+            return autopoint.bigblock.R_point
+    
     def __init__(self, sys):
         self.system = sys
         setattr(self.system, 'dispatcher', self)
 
+    def get_path(self, route):
+        return
+        _path = []
+        
+            
+
     def get_route(self, src, srcport, tgt, tgtport, path=None, mainline=True):
+        src = src if src.__class__.__name__ == 'ControlPoint' \
+            else self.cp_leading_to(src, srcport)
+        tgt = tgt if tgt.__class__.__name__ == 'ControlPoint' \
+            else self.cp_leading_to(tgt, tgtport)
         route = []
         cp_path = path
         if cp_path is None:
@@ -59,6 +77,10 @@ class Dispatcher():
         return route
 
     def get_all_routes(self, src, srcport, tgt, tgtport):
+        src = src if src.__class__.__name__ == 'ControlPoint' \
+            else self.cp_leading_to(src, srcport)
+        tgt = tgt if tgt.__class__.__name__ == 'ControlPoint' \
+            else self.cp_leading_to(tgt, tgtport)
         route_list = []
         cp_paths = list(all_simple_paths(self.system.G_skeleton, 
                                             source=src, target=tgt))

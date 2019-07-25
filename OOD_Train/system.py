@@ -10,8 +10,8 @@ from itertools import combinations, permutations
 import networkx as nx
 import numpy as np
 
-from infrastructure import BigBlock, Track, Yard
 from rail_networkx import all_simple_paths, shortest_path
+from infrastructure import BigBlock, Track, Yard
 from signaling import Aspect, AutoPoint, AutoSignal, ControlPoint, HomeSignal
 from train import Train, TrainList
 
@@ -261,21 +261,21 @@ class System():
 
         TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
-                        2: ControlPoint( self, idx=2, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=10.0),
-                        3: ControlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
-                        4: ControlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
-                        5: ControlPoint( self, idx=5, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=25.0),
-                        6: ControlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
-                        7: ControlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
-                        8: ControlPoint( self, idx=8, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=40.0),
+                        2: ControlPoint( self, idx=2, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=10.0),
+                        3: ControlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=15.0),
+                        4: ControlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=20.0),
+                        5: ControlPoint( self, idx=5, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=25.0),
+                        6: ControlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=30.0),
+                        7: ControlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=35.0),
+                        8: ControlPoint( self, idx=8, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=40.0),
                         9: AutoPoint(    self, idx=9, MP=45.0),
                         10: ControlPoint(self, idx=10, ports=[0, 1], MP=50.0),
                         11: AutoPoint(   self, idx=11, MP=30.0),
                         12: AutoPoint(   self, idx=12, MP=35.0),
                         13: ControlPoint(self, idx=13, ports=[0, 1], MP=20.0),
-                        14: ControlPoint(self, idx=14, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=5.0),
+                        14: ControlPoint(self, idx=14, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=5.0),
                         15: AutoPoint(   self, idx=15, MP=10.0),
-                        16: ControlPoint(self, idx=16, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=15.0),
+                        16: ControlPoint(self, idx=16, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=15.0),
         }   # yapf: disable
 
         TEST_TRACK = [
@@ -322,6 +322,7 @@ class System():
             # __dict__ of instances (CPs, ATs, Tracks) is pointing the same
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
+            t.tracks.append(t)
             t.L_point.track_by_port[t.L_point_port] = t.R_point.track_by_port[
                 t.R_point_port] = t
             G[t.L_point][t.R_point][t.edge_key]['weight_mainline'] \
@@ -347,7 +348,7 @@ class System():
 
         # F is a shallow copy of G: attrbutes of G/F components
         # are pointing at the same memory.
-        def _get_new_edge(node, length=False):
+        def _node_vars(node):
             at_neighbor = [j for j in F.neighbors(node)]
             assert len(at_neighbor) == len(F.edges(node)) == 2
             edgetrk_L_points = [
@@ -360,25 +361,33 @@ class System():
             ]
             edgetrk_L_points.remove(node)
             edgetrk_R_points.remove(node)
-            new_edge_length = F[at_neighbor[0]][node][0]['instance'].length + \
-                F[node][at_neighbor[1]][0]['instance'].length
-            if length:
-                return edgetrk_L_points[0], edgetrk_R_points[0], new_edge_length
-            else:
-                return edgetrk_L_points[0], edgetrk_R_points[0]
+            new_L_point, new_R_point = edgetrk_L_points[0], edgetrk_R_points[0]
+            old_L_trk = F[new_L_point][node][0]['instance']
+            old_R_trk = F[node][new_R_point][0]['instance']
+            return new_L_point, new_R_point, old_L_trk, old_R_trk
 
         for i in G.nodes():
             # only use G.nodes() instead of F.nodes() to get original nodes
             # to avoid dictionary size changing issues.
             # all the following graph updates are targeted on F
             if i.type == 'at':
-                new_L_point, new_R_point = _get_new_edge(i)
+                new_L_point, new_R_point, old_L_trk, old_R_trk = _node_vars(i)
                 new_track = Track(self,
                                   new_L_point,
                                   F[new_L_point][i][0]['instance'].L_point_port,
                                   new_R_point,
                                   F[i][new_R_point][0]['instance'].R_point_port,
                                   edge_key=0)
+                if len(old_L_trk.tracks) == 1 and old_L_trk in old_L_trk.tracks:
+                    new_track.tracks.append(old_L_trk)
+                else:
+                    new_track.tracks.extend([t for t in old_L_trk.tracks 
+                                                if t not in new_track.tracks])
+                if len(old_R_trk.tracks) == 1 and old_R_trk in old_R_trk.tracks:
+                    new_track.tracks.append(old_R_trk)
+                else:
+                    new_track.tracks.extend([t for t in old_R_trk.tracks 
+                                                if t not in new_track.tracks])
                 F.remove_node(i)
                 F.add_edge(new_L_point,
                            new_R_point,
@@ -390,27 +399,24 @@ class System():
         for (u, v, k) in F.edges(keys=True):
             _L_point, _R_point = \
                 F[u][v][k]['instance'].L_point, F[u][v][k]['instance'].R_point
-            blk_path = shortest_path(G, _L_point, _R_point)
-            big_block_edges = [(blk_path[i], blk_path[i + 1])
-                               for i in range(len(blk_path) - 1)]
             big_block_instance = BigBlock(self,
-                                          _L_point,
-                                          F[u][v][k]['instance'].L_point_port,
-                                          _R_point,
-                                          F[u][v][k]['instance'].R_point_port,
-                                          edge_key=k,
-                                          raw_graph=G,
-                                          cp_graph=F)
+                                        _L_point,
+                                        F[u][v][k]['instance'].L_point_port,
+                                        _R_point,
+                                        F[u][v][k]['instance'].R_point_port,
+                                        edge_key=k,
+                                        raw_graph=G,
+                                        cp_graph=F)
             _L_point.bigblock_by_port[F[u][v][k]
-                               ['instance'].L_point_port] = big_block_instance
+                            ['instance'].L_point_port] = big_block_instance
             _R_point.bigblock_by_port[F[u][v][k]
-                               ['instance'].R_point_port] = big_block_instance
-            for (n, m) in big_block_edges:
-                for _k in G[n][m]:
-                    if G[n][m][_k]['instance'] not in big_block_instance.tracks:
-                        big_block_instance.tracks.append(G[n][m][_k]['instance'])
-                # get the list of track unit components of a bigblock, 
-                # and record in the instance
+                            ['instance'].R_point_port] = big_block_instance
+            for t in F[u][v][k]['instance'].tracks:
+                t.bigblock = big_block_instance
+                if t not in big_block_instance.tracks:
+                    big_block_instance.tracks.append(t)
+            # get the list of track unit components of a bigblock, 
+            # and record in the instance
             for t in big_block_instance.tracks:
                 t.bigblock = big_block_instance
             big_block_instance.mainline = True if all([t.mainline 

@@ -467,7 +467,7 @@ class AutoPoint(InterlockingPoint):
         self.ports = [0, 1]
         self.available_ports_by_port = {0: [1], 1: [0]}  # define legal routes
         self.non_mutex_routes_by_route = {}
-        self.ban_ports_by_port = {}
+        self.ban_ports_by_port = {0: [0], 1: [1]}
         self.all_valid_routes = [(0, 1), (1, 0)]
         # build up signals
         self.signal_by_port = { 0: AutoSignal(0, self, MP=self.MP),
@@ -529,7 +529,7 @@ class ControlPoint(InterlockingPoint):
         self.available_ports_by_port = defaultdict(list)
         for i in self.ports:
             for j in self.ports:
-                if j not in self.ban_ports_by_port.get(i, []) and j != i:
+                if j not in self.ban_ports_by_port.get(i, []):
                     self.available_ports_by_port[i].append(j)
 
         self.signal_by_port = {}  # build up signals
@@ -578,24 +578,29 @@ class ControlPoint(InterlockingPoint):
     @property
     def banned_paths(self):
         def collect_banned_paths(skeleton=False):
-            _banned_path_collection = []
+            _banned_collection = []
             for p in self.ports:
                 if not self.ban_ports_by_port.get(p): continue
-                one_end = self
                 for bp in self.ban_ports_by_port[p]:
                     if skeleton == False:
+                        one_end = \
+                        self.track_by_port[p].shooting_point(point=self) \
+                        if self.track_by_port.get(p) else None
                         the_other_end = \
                         self.track_by_port[bp].shooting_point(point=self) \
                         if self.track_by_port.get(bp) else None
                     if skeleton == True:
+                        one_end = \
+                        self.bigblock_by_port[p].shooting_point(point=self) \
+                        if self.bigblock_by_port.get(p) else None
                         the_other_end = \
                         self.bigblock_by_port[bp].shooting_point(point=self) \
                         if self.bigblock_by_port.get(bp) else None
-                    if (one_end, the_other_end) not in _banned_path_collection:
-                        _banned_path_collection.append((one_end, the_other_end))
-                    if (the_other_end, one_end) not in _banned_path_collection:
-                        _banned_path_collection.append((the_other_end, one_end))
-            return _banned_path_collection
+                    if (one_end, self, the_other_end) not in _banned_collection:
+                        _banned_collection.append((one_end, self, the_other_end))
+                    if (the_other_end, self, one_end) not in _banned_collection:
+                        _banned_collection.append((the_other_end, self, one_end))
+            return _banned_collection
         _banned_path = []
         _banned_path.extend(collect_banned_paths(skeleton=False))
         _banned_path.extend(collect_banned_paths(skeleton=True))

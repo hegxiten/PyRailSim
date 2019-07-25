@@ -23,7 +23,7 @@ def no_banned_rail_paths_on_cp(func):
                 if len(path) <= 2:
                     yield path
                 elif all([
-                        True if (p1, p3) not in p2.banned_paths else False
+                        True if (p1, p2, p3) not in p2.banned_paths else False
                         for p1, p2, p3 in zip(path[0:], path[1:], path[2:])
                 ]):
                     yield path
@@ -34,15 +34,15 @@ def no_banned_rail_paths_on_cp(func):
 
         @wraps(func)
         def filter_banned_cp_path_shortest(G, source, target, weight=None):
-            raw_shortest_path = func(G, source, target, weight=weight)
-            if len(raw_shortest_path) <= 2:
-                return raw_shortest_path
+            raw_shortest = func(G, source, target, weight=weight)
+            if len(raw_shortest) <= 2:
+                return raw_shortest
             elif all([
-                    True if (p1, p3) not in p2.banned_paths else False for p1,
-                    p2, p3 in zip(raw_shortest_path[0:], raw_shortest_path[1:],
-                                  raw_shortest_path[2:])
+                    True if (p1, p2, p3) not in p2.banned_paths else False 
+                    for p1, p2, p3 in zip(raw_shortest[0:], raw_shortest[1:],
+                                  raw_shortest[2:])
             ]):
-                return raw_shortest_path
+                return raw_shortest
 
         return filter_banned_cp_path_shortest
 

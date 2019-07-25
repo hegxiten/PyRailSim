@@ -79,6 +79,7 @@ class Track(Observable):
             if kwargs.get('mainline') is None \
             else kwargs.get('mainline')
         self.mainline_weight = float('inf') if self.mainline == False else 0
+        self.tracks = []
         self.__bigblock = None
         self.__curr_routing_path = None
 
