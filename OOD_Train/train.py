@@ -192,6 +192,7 @@ class Train():
                         '\t Train initialization Warning: adding new train to a track already occupied!'
                     )
                 self.curr_track.train.append(self)
+        self.system.last_train_init_time = self.system.sys_time
 
     def __repr__(self):
         return 'train idx:{} occupying:{} head MP:{} rear MP:{}'\

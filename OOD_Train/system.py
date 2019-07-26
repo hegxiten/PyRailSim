@@ -432,66 +432,61 @@ class System():
             Generate train only.'''
         _new_train = None
         length = 1 if kwargs.get('length') is None else kwargs.get('length')
-        init_time = self.sys_time if kwargs.get('init_time') is None \
-            else kwargs.get('init_time')
         if self.capacity_enterable(init_point, dest_point):
             init_segment = ((None, None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port)\
-                else ((init_point.track_by_port[init_port].shooting_point(point=init_point),
-                       init_point.track_by_port[init_port].shooting_port(point=init_point)),
+                else (( init_point.track_by_port[init_port]
+                        .shooting_point(point=init_point),
+                        init_point.track_by_port[init_port]
+                        .shooting_port(point=init_point)),
                       (init_point, init_port))
+            dest_segment = ((dest_point, dest_port), (None, None)) \
+                if not dest_point.track_by_port.get(dest_port)\
+                else (( dest_point.track_by_port[dest_port]
+                        .shooting_point(point=dest_point),
+                        dest_point.track_by_port[dest_port]
+                        .shooting_port(point=dest_point)),
+                      (dest_point, dest_port))
             init_track = self.get_track_by_point_port_pairs(
-                init_segment[0][0], init_segment[0][1], init_segment[1][0],
-                init_segment[1][1])
+                init_segment[0][0], init_segment[0][1], 
+                init_segment[1][0], init_segment[1][1])
             if not init_track:
                 _new_train = Train(
                     system=self,
-                    init_time=init_time,
                     init_segment=init_segment,
-                    max_sp=self.spd_container[self.train_num %
-                                             len(self.spd_container)],
-                    max_acc=self.acc_container[self.train_num %
-                                               len(self.acc_container)],
-                    max_dcc=self.dcc_container[self.train_num %
-                                               len(self.dcc_container)],
+                    dest_segment=dest_segment,
+                    max_spd=random.choice(self.spd_container),
+                    max_acc=random.choice(self.acc_container),
+                    max_dcc=random.choice(self.dcc_container),
                     length=length)
             elif init_track.is_Occupied:
-                print(
-                    '\tWarning: cannot generate train: track is occupied. Hold new train for track availablity.'
-                )
+                print('\tWarning: cannot generate train: track is occupied. \
+                    Hold new train for track availablity.')
             elif not init_track.routing:
                 _new_train = Train(
                     system=self,
-                    init_time=init_time,
                     init_segment=init_segment,
-                    max_sp=self.spd_container[self.train_num %
-                                             len(self.spd_container)],
-                    max_acc=self.acc_container[self.train_num %
-                                               len(self.acc_container)],
-                    max_dcc=self.dcc_container[self.train_num %
-                                               len(self.dcc_container)],
+                    dest_segment=dest_segment,
+                    max_spd=random.choice(self.spd_container),
+                    max_acc=random.choice(self.acc_container),
+                    max_dcc=random.choice(self.dcc_container),
                     length=length)
             elif Train.sign_MP(init_segment) == init_track.sign_routing(
                     init_track.routing):
                 _new_train = Train(
                     system=self,
-                    init_time=init_time,
                     init_segment=init_segment,
-                    max_sp=self.spd_container[self.train_num %
-                                             len(self.spd_container)],
-                    max_acc=self.acc_container[self.train_num %
-                                               len(self.acc_container)],
-                    max_dcc=self.dcc_container[self.train_num %
-                                               len(self.dcc_container)],
+                    dest_segment=dest_segment,
+                    max_spd=random.choice(self.spd_container),
+                    max_acc=random.choice(self.acc_container),
+                    max_dcc=random.choice(self.dcc_container),
                     length=length)
             else:
-                print(
-                    '\tWarning: cannot generate train: confliting routing. Hold new train for routing availablity.'
-                )
+                print('\tWarning: cannot generate train: confliting routing. \
+                    Hold new train for routing availablity.')
         else:
-            print(
-                '\tWarning: cannot generate train: Capacity Maxed-out. Hold new train for capacity.'
-            )
+            print('\tWarning: cannot generate train: Capacity Maxed-out. \
+                Hold new train for capacity.')
         return _new_train
 
     def capacity_enterable(self, init_point, dest_point):
@@ -545,7 +540,8 @@ class System():
             test_G.remove_edge(t.curr_routing_path_segment[0][0],
                                t.curr_routing_path_segment[1][0])
             if nx.has_path(test_G, init_point, dest_point) and \
-                    Train.sign_MP(t.curr_routing_path_segment) * (dest_point.MP-init_point.MP) > 0:
+                Train.sign_MP(t.curr_routing_path_segment) * \
+                    (dest_point.MP-init_point.MP) > 0:
                 count += 1
         return count
 
@@ -567,28 +563,24 @@ class System():
             for i in range(len(p) - 1):
                 for k in list(self.G_origin[p[i]][p[i + 1]]):
                     for t in self.G_origin[p[i]][p[i + 1]][k]['instance'].train:
-                        if t.curr_routing_path_segment[0][0] in (p[i], p[i+1]) and\
-                                t.curr_routing_path_segment[1][0] in (p[i], p[i+1]):
+                        if t.curr_routing_path_segment[0][0] in (p[i], p[i+1]) \
+                        and t.curr_routing_path_segment[1][0] in (p[i], p[i+1]):
                             if t not in _trains_all:
                                 _trains_all.append(t)
                             if (t.curr_routing_path_segment[0][0],
-                                    t.curr_routing_path_segment[1][0]) == (
-                                        p[i], p[i + 1]):
+                                    t.curr_routing_path_segment[1][0]) == \
+                                        (p[i], p[i + 1]):
                                 if t not in _trains_obv_dir:
                                     _trains_obv_dir.append(t)
                             if (t.curr_routing_path_segment[0][0],
-                                    t.curr_routing_path_segment[1][0]) == (
-                                        p[i + 1], p[i]):
+                                    t.curr_routing_path_segment[1][0]) == \
+                                        (p[i + 1], p[i]):
                                 if t not in _trains_rev_dir:
                                     _trains_rev_dir.append(t)
-        if obv == True and rev == True:
-            return _trains_all
-        elif obv == True:
-            return _trains_obv_dir
-        elif rev == True:
-            return _trains_rev_dir
-        else:
-            return []
+        if obv == True and rev == True: return _trains_all
+        elif obv == True: return _trains_obv_dir
+        elif rev == True: return _trains_rev_dir
+        else: return []
 
     def launch(self, launch_duration, auto_generate_train=False):
         logging.info("Thread %s: starting", 'simulator')
@@ -600,17 +592,25 @@ class System():
                 except:
                     print(t)
                     raise(ValueError('Raise Error to Stop Simulation'))
-
             if auto_generate_train:
-                if self.sys_time+self.refresh_time - self.last_train_init_time >= self.headway:
+                if self.sys_time+self.refresh_time - self.last_train_init_time \
+                        >= self.headway:
                     if not self.signal_points[0].curr_train_with_route.keys():
-                        if all([t.curr_routing_path_segment != ((None,None),(self.signal_points[0],0)) for t in self.trains.all_trains]):
+                        if all([t.curr_routing_path_segment != 
+                                ((None,None),(self.signal_points[0],0)) 
+                                for t in self.trains.all_trains]):
                             if not self.tracks[0].train:
-                                t = self.generate_train(self.signal_points[0], 0, self.signal_points[10], 1, length=1, init_time=sys.last_train_init_time+sys.headway)
+                                t = self.generate_train(self.signal_points[0],
+                                                        0, 
+                                                        self.signal_points[10], 
+                                                        1, 
+                                                        length=1)
             self.sys_time += self.refresh_time
         logging.info("Thread %s: finishing", 'simulator')
 
     def update_routing(self):
+        '''
+            TODO: Combine dispatcher actions'''
         for trn in self.trains.all_trains:
             if not trn.curr_sig:
                 pass
@@ -621,6 +621,8 @@ class System():
                         (trn.curr_sigport, trn.intended_sigport))
 
     def refresh(self):
+        '''
+            TODO: Combine dispatcher actions; routing update actions.'''
         self.generate_train()
         self.update_routing()
         for t in self.trains.all_trains:
@@ -629,212 +631,19 @@ class System():
             tr.rank = i
         self.sys_time += self.refresh_time
 
-    def update_blk_right(self, i):
-        '''
-        logics of overpassing, manipulating CtrlPoints
-        TODO: translate the operations below into CtrlPoint manipulations'''
-        # 只管变化（若满足条件更新CP 路径，否则无操作）
-        # for track in self.blocks[i].tracks:
-        #     if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
-        #         track.right_signal.update_signal('r')
-        #     elif i + 1 < len(self.blocks) and not self.blocks[i + 1].is_Occupied():
-        #         track.right_signal.update_signal('r')
-        #     elif i + 2 < len(self.blocks) and not self.blocks[i + 2].is_Occupied():
-        #         track.right_signal.update_signal('yy')
-        #     elif i + 3 < len(self.blocks) and not self.blocks[i + 3].is_Occupied():
-        #         track.right_signal.update_signal('y')
-        #     else:
-        #         track.right_signal.update_signal('g')
-
-        # 如果track数量超过1才考虑让车情况。（第一个blk暂不考虑为多track）
-        if i > 0 and len(
-                self.blocks[i].tracks) > 1 and self.blocks[i].has_train():
-            # 让车情况下的变灯。
-            last_blk_has_train = False
-            if not self.blocks[i - 1].is_Occupied():  # 后一个blk有车
-                last_blk_has_train = True
-
-            ava_track = -1
-            prev_train_spd = 0
-
-            if last_blk_has_train and self.blocks[i].is_Occupied():
-                ava_track = self.blocks[i].find_available_track()
-                prev_train_spd = self.blocks[i - 1].tracks[0].train.max_spd
-
-            # 找到速度最快火车的track
-            max_train_track = ava_track
-            top_speed = prev_train_spd
-            if not self.blocks[i].is_Occupied():
-                top_speed = -1
-            fastest_train_track = 0
-            fastest_speed = -1
-            for j, track in enumerate(self.blocks[i].tracks):
-                if track.train != None and track.train.max_spd > top_speed:
-                    max_train_track = j
-                    top_speed = track.train.max_spd
-                if track.train != None and track.train.max_spd > fastest_speed:
-                    fastest_train_track = j
-                    fastest_speed = track.train.max_spd
-            if max_train_track != fastest_train_track:  # 说明最快车是后一个block的车。
-                fastest_train = self.blocks[i].tracks[fastest_train_track].train
-                target_spd = 0
-                fastest_train_brk_dis = (fastest_train.curr_speed**2 -
-                                         target_spd**2) / fastest_train.acc
-                dis_to_blk_end = self.block_intervals[i][1] - \
-                    fastest_train.curr_pos
-                if fastest_train_brk_dis > dis_to_blk_end:  # 如果刹车距离大于
-                    max_train_track = fastest_train_track
-
-            for j, track in enumerate(self.blocks[i].tracks):
-                # if max_train_track >= 0:
-                #     print(max_train_track)
-                if j != max_train_track:
-                    if j == max_train_track:
-                        print(j)
-                    track.right_signal.update_signal('r')
-
-    def update_track_signal_color(self):
-        '''
-        TODO: confirm if no longer needed or not
-        '''
-        for i in range(len(self.blocks)):
-            self.update_blk_right(i)  # 每次只更新右侧信号，是因为仅考虑从左到右的车流。
-
-    def register(self, blocks):
-        '''
-        TODO: confirm if no longer needed or not
-        '''
-        pass
-        return
-        # 本段代码及以下所有方法应该都用不上了。（除了self.__name__ = '__main__' 的测试代码）
-        # 将临近siding的blk的左灯或者右灯变为homesignal
-        multi_track_blk = []
-        for i, blk in enumerate(blocks):
-            if blk.track_number > 1:
-                multi_track_blk.append(i)
-            if i > 0 and blocks[i - 1].track_number > 1:
-                blk.tracks[0].left_signal = HomeSignal('right')
-                blk.tracks[0].left_signal.hs_type = 'B'
-            if i < len(blocks) - 1 and blocks[i + 1].track_number > 1:
-                blk.tracks[0].right_signal = HomeSignal('left')
-                blk.tracks[0].right_signal.hs_type = 'B'
-        # 订阅过程
-        # 右灯注册，前一个blk右灯注册后一个blk的右灯，跳过siding
-        # ABS订阅ABS
-        for i in range(len(blocks) - 1):
-            if blocks[i + 1].track_number <= 1:
-                curr_light = blocks[i].tracks[0].right_signal
-                next_light = blocks[i + 1].tracks[0].right_signal
-                next_light.add_observer(curr_light)
-        # 左灯注册，后一个blk左灯注册前一个blk的左灯，跳过siding
-        # ABS订阅ABS
-        for i in range(len(blocks)):
-            if i > 0 and blocks[i - 1].track_number <= 1:
-                curr_light = blocks[i].tracks[0].left_signal
-                last_light = blocks[i - 1].tracks[0].left_signal
-                last_light.add_observer(curr_light)
-        # 大blk中的homesignal订阅: single_track_blk右灯注册进入multi_track_blk的home左灯
-        # ABS订阅HS
-        curr_mul_tk_blk_idx = 0
-        for i in range(len(blocks)):
-            if curr_mul_tk_blk_idx == len(multi_track_blk):
-                break
-            if i not in multi_track_blk:
-                sgl_blk_tk = blocks[i].tracks[0]
-                mul_blk = blocks[multi_track_blk[curr_mul_tk_blk_idx]]
-                for tk_idx in range(mul_blk.track_number):
-                    mul_blk.tracks[tk_idx].left_signal.add_observer(
-                        sgl_blk_tk.right_signal)
-            else:
-                mul_blk = blocks[i]
-                sgl_blk_tk = blocks[i - 1].tracks[0]
-                for tk_idx in range(mul_blk.track_number):
-                    sgl_blk_tk.right_signal.add_observer(
-                        mul_blk.tracks[tk_idx].left_signal)
-                    sgl_blk_tk.left_signal.add_observer(
-                        mul_blk.tracks[tk_idx].left_signal)
-                curr_mul_tk_blk_idx += 1
-        # 大blk中的homesignal订阅: single_track_blk左灯注册进入multi_track_blk的home右灯
-        # ABS订阅HS
-        curr_mul_tk_blk_idx = len(multi_track_blk) - 1
-        for i in range(len(blocks) - 1, 0, -1):
-            if curr_mul_tk_blk_idx == -1:
-                break
-            if i not in multi_track_blk:
-                sgl_blk_tk = blocks[i].tracks[0]
-                mul_blk = blocks[multi_track_blk[curr_mul_tk_blk_idx]]
-                for tk_idx in range(mul_blk.track_number):
-                    mul_blk.tracks[tk_idx].right_signal.add_observer(
-                        sgl_blk_tk.left_signal)
-            else:
-                mul_blk = blocks[i]
-                sgl_blk_tk = blocks[i + 1].tracks[0]
-                for tk_idx in range(mul_blk.track_number):
-                    sgl_blk_tk.left_signal.add_observer(
-                        mul_blk.tracks[tk_idx].right_signal)
-                    sgl_blk_tk.right_signal.add_observer(
-                        mul_blk.tracks[tk_idx].right_signal)
-                curr_mul_tk_blk_idx -= 1
-
-        ##############################################################################
-        # 最左和最右的block中两盏灯为homesinal
-        self.blocks[0].tracks[0].right_signal = HomeSignal('left')
-        self.blocks[0].tracks[0].right_signal.hs_type = 'B'
-        self.blocks[len(self.blocks) -
-                    1].tracks[0].left_signal = HomeSignal('right')
-        self.blocks[len(self.blocks) - 1].tracks[0].left_signal.hs_type = 'B'
-
-        most_left_home_signal = self.blocks[0].tracks[0].right_signal
-        most_right_home_singal = self.blocks[len(self.blocks) -
-                                             1].tracks[0].left_signal
-
-        # 取出最左和最有的multi_blk_index
-        first_right = len(blocks)
-        first_left = -1
-        if len(multi_track_blk) != 0:
-            first_right = multi_track_blk[0]
-            first_left = multi_track_blk[-1]
-
-        # 将左边第一个multi_blk_index之前的blk的左灯全部注册到最左边第一个右灯上。
-        for i in range(first_right):
-            curr_left_signal = blocks[i].tracks[0].left_signal
-            most_left_home_signal.add_observer(curr_left_signal)
-
-        # 将右边第一个multi_blk_index之后的blk的右灯全部注册到最右边第一个左灯上。
-        for i in range(len(blocks) - 1, first_left, -1):
-            curr_right_signal = blocks[i].tracks[0].right_signal
-            most_right_home_singal.add_observer(curr_right_signal)
-        ##############################################################################
-
-        # 普通ABS测试
-        # self.blocks[0].tracks[0].right_signal.change_color_to('g')
-        # self.blocks[len(self.blocks) - 1].tracks[0].right_signal.change_color_to('r')
-        # 头尾HS测试
-        # self.blocks[0].tracks[0].right_signal.change_color_to('g')
-        # self.blocks[9].tracks[0].left_signal.change_color_to('g')
-        # multi_track_blk附近的HS测试 （B）
-        # self.blocks[4].tracks[0].left_signal.change_color_to('g')
-        # multi_track_blk的某个track灯为非红测试
-        self.blocks[4].tracks[0].right_signal.change_color_to('r')
-
 
 if __name__ == '__main__':
-    sim_init_time = datetime.strptime('2018-01-10 10:00:00',
-                                      "%Y-%m-%d %H:%M:%S")
-    sim_term_time = datetime.strptime('2018-01-10 15:30:00',
-                                      "%Y-%m-%d %H:%M:%S")
+    sim_init_time = datetime.strptime('2018-01-10 10:00:00',"%Y-%m-%d %H:%M:%S")
+    sim_term_time = datetime.strptime('2018-01-10 15:30:00',"%Y-%m-%d %H:%M:%S")
     spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
-    acc_container = [
-        random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
-    ]
-    dcc_container = [
-        random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
-    ]
-    headway = 200 * random.random() + 400
-    sys = System(sim_init_time,
-                 spd_container,
-                 acc_container,
-                 dcc_container,
-                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
-                 headway=headway,
-                 refresh_time=20)
+    acc_container = [0.5*random.uniform(2.78e-05*0.85, 2.78e-05*1.15) 
+                        for i in range(20)]
+    dcc_container = [0.2*random.uniform(2.78e-05*0.85, 2.78e-05*1.15) 
+                        for i in range(20)]
+    headway = 300 + random.random() * 400
+    sys = System(sim_init_time, spd_container, acc_container, dcc_container,
+                term_time=sim_term_time,
+                dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
+                dos_pos=(15,20),
+                headway=headway, 
+                refresh_time=50)

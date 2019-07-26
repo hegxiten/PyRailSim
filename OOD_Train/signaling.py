@@ -129,8 +129,8 @@ class Signal(Observable, Observer):
 
     @MP.setter
     def MP(self, new_MP):
-        print(
-            'Warning:\n\tSetting MilePost manually for {}!\n\tChanging from old MP {} to new MP {}'
+        print('Warning:\n\tSetting MilePost manually for {}!\n\t\
+            Changing from old MP {} to new MP {}'
             .format(self, self._MP, new_MP))
         self._MP = new_MP
 
@@ -150,7 +150,8 @@ class Signal(Observable, Observer):
             else:
                 self._aspect.color = 'y'
         elif self.number_of_blocks_cleared_ahead == 2:
-            if self.next_enroute_signal.next_enroute_signal.cleared_signal_to_exit_system:
+            if self.next_enroute_signal.next_enroute_signal.\
+                cleared_signal_to_exit_system:
                 self._aspect.color = 'g'
             else:
                 self._aspect.color = 'yy'
@@ -176,18 +177,18 @@ class Signal(Observable, Observer):
     @property
     # call a point instance from signal instance
     def next_enroute_sigpoint(self):
-        return self.permit_track.shooting_point(self.sigpoint) if self.permit_track\
-            else None
-
-    @property
-    def next_enroute_signal(self):
-        return self.next_enroute_sigpoint.signal_by_port[self.next_enroute_sigpoint_port] \
+        return self.permit_track.shooting_point(self.sigpoint) \
             if self.permit_track else None
 
     @property
+    def next_enroute_signal(self):
+        return self.next_enroute_sigpoint.signal_by_port[
+            self.next_enroute_sigpoint_port] if self.permit_track else None
+
+    @property
     def next_enroute_sigpoint_port(self):
-        return self.permit_track.shooting_port(point=self.sigpoint) if self.permit_track\
-            else None
+        return self.permit_track.shooting_port(point=self.sigpoint) \
+            if self.permit_track else None
 
     @property
     def cleared_signal_to_exit_system(self):
@@ -276,9 +277,8 @@ class Signal(Observable, Observer):
         def reachable_track(t):
             if self.sigpoint in (t.L_point, t.R_point):
                 if self.governed_track == t: return False
-                else:
-                    for p in self.sigpoint.available_ports_by_port[self.port_idx]:
-                        if t == self.sigpoint.track_by_port[p]: return True
+                for p in self.sigpoint.available_ports_by_port[self.port_idx]:
+                    if t == self.sigpoint.track_by_port[p]: return True
             # include AutoPoint's bigblock instance entirely covering the signal
             for p in (t.L_point, t.R_point):
                 if reachable_sigpoint(p) is True: return True
@@ -299,9 +299,7 @@ class Signal(Observable, Observer):
 
     #----------------deprecated----------------#
     def update(self, observable, update_message):
-        raise NotImplementedError("Old update function to be refactored")
-        # print("{} signal {} is observing {} signal {}".format(self.port_idx, self.pos, observable.port_idx, observable.pos))
-        # print("Because {} signal {} changed from {} to {}:".format(observable.port_idx, str(observable.pos), update_message['old'].color, update_message['new'].color))
+        raise NotImplementedError("Old-version function to be refactored")
         if observable.type == 'bigblock':
             self.change_color_to('r', False)
         elif observable.type == 'track':
@@ -312,7 +310,7 @@ class Signal(Observable, Observer):
         else: pass
 
     def change_color_to(self, color, isNotified=True):
-        raise NotImplementedError("Old change_color_to function to be refactored")
+        raise NotImplementedError("Old-version function to be refactored")
         self.aspect = new_aspect
         if isNotified:
             self.listener_updates(obj=self.aspect)
@@ -495,9 +493,9 @@ class AutoPoint(InterlockingPoint):
     def banned_paths(self): return []
 
     def opposite_port(self, port):
-        '''Return the signal port on the other side of the given port of an AutoSignal.
-        Method restricted to AutoSignal instances. 
         '''
+            Return the signal port on the other side of the given port of an 
+            AutoSignal. Method restricted to AutoSignal instances'''
         assert port in self.ports
         assert len(self.ports) == 2
         for p in self.ports:
@@ -596,9 +594,9 @@ class CtrlPoint(InterlockingPoint):
                         self.bigblock_by_port[bp].shooting_point(point=self) \
                         if self.bigblock_by_port.get(bp) else None
                     if (one_end, self, the_other_end) not in _banned_collection:
-                        _banned_collection.append((one_end, self, the_other_end))
+                        _banned_collection.append((one_end,self,the_other_end))
                     if (the_other_end, self, one_end) not in _banned_collection:
-                        _banned_collection.append((the_other_end, self, one_end))
+                        _banned_collection.append((the_other_end,self,one_end))
             return _banned_collection
         _banned_path = []
         _banned_path.extend(collect_banned_paths(skeleton=False))
@@ -672,13 +670,13 @@ class CtrlPoint(InterlockingPoint):
             if dest_pointport:
                 all_routes = self.system.dispatcher.all_routes_generator(self, 
                                     port, dest_pointport[0], dest_pointport[1])
-                _candi_ports = []
+                _candi = []
                 for r in all_routes:
-                    if set(_candi_ports) == set(self.available_ports_by_port[port]):
-                        return _candi_ports
-                    if r[1][0][1] not in _candi_ports:
-                        _candi_ports.append(r[1][0][1])
-                return _candi_ports
+                    if set(_candi) == set(self.available_ports_by_port[port]):
+                        return _candi
+                    if r[1][0][1] not in _candi:
+                        _candi.append(r[1][0][1])
+                return _candi
         _candidate_ports = candidate_ports(port, dest_pointport)
         trns = [len(self.bigblock_by_port[p].train) 
                 if self.bigblock_by_port.get(p) else 0 

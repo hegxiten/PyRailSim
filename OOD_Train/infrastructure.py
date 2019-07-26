@@ -16,8 +16,9 @@ from observe import Observable, Observer
 class Track(Observable):
     @staticmethod
     def sign_routing(rp_seg):
-        '''Return the sign (+/-) of traffic when input with a legal routing path segment
-        of a track or bigblock (describing its current traffic direction)'''
+        '''
+            Return the sign (+1/-1) of traffic when input with a legal routing 
+            path segment of a track/bigblock (describing traffic direction)'''
         if not rp_seg:  # no routing information (dormant track/bigblock)
             return 0
         elif rp_seg[0][0] and rp_seg[1][0]:
@@ -31,19 +32,23 @@ class Track(Observable):
                 raise ValueError('Undefined MP direction')
         elif not rp_seg[0][0]:  # initiating
             if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
-                    min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+                    min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(
+                                                            rp_seg[1][1])].MP):
                 return 1
             elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
-                    max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+                    max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(
+                                                            rp_seg[1][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
         elif not rp_seg[1][0]:  # terminating
             if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
-                    max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+                    max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(
+                                                            rp_seg[0][1])].MP):
                 return 1
             elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
-                    min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+                    min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(
+                                                            rp_seg[0][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
@@ -127,9 +132,10 @@ class Track(Observable):
 
     @routing.setter
     def routing(self, new_routing):
-        '''NOT RECOMMENDED: setting a routing property directly from a track when normal dispatching.
-        It is always recommended to set routing property from its bigblock instance.
         '''
+            NOT RECOMMENDED: setting a routing property directly from a track in
+            normal dispatching mode. 
+            Please set routing property by track's own bigblock instance.'''
         if new_routing:
             for (p, pport) in new_routing:
                 assert p in [self.L_point, self.R_point]
@@ -160,13 +166,16 @@ class Track(Observable):
     def shooting_port(self, point=None, port=None, sign_MP=None):
         if point is not None:
             assert point in (self.L_point, self.R_point)
-            return self.L_point_port if point == self.R_point else self.R_point_port
+            return self.L_point_port \
+                if point == self.R_point else self.R_point_port
         if port is not None:
             assert port in (self.L_point_port, self.R_point_port)
-            return self.L_point_port if port == self.R_point_port else self.R_point_port
+            return self.L_point_port \
+                if port == self.R_point_port else self.R_point_port
         if sign_MP is not None:
             assert sign_MP in (-1, +1)
-            return self.L_point_port if sign_MP == -1 else self.R_point_port
+            return self.L_point_port \
+                if sign_MP == -1 else self.R_point_port
         return None
 
     def __lt__(self, other):
@@ -206,7 +215,8 @@ class BigBlock(Track):
                  edge_key=0,
                  raw_graph=None,
                  cp_graph=None):
-        super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=edge_key)
+        super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, 
+                        edge_key=edge_key)
         self.type = 'bigblock'
         self._routing = None
         self.tracks = []
@@ -242,7 +252,7 @@ class BigBlock(Track):
             assert len(new_routing) == 2
             if self._routing != new_routing:
                 if self._routing:
-                    # only when no trains in the bigblock, the bigblock is allowed
+                    # only if when no trains in the bigblock, the bigblock is OK
                     # to change to a reversed routing
                     assert not self.train
                     _curr_shooting_cp = self._routing[1][0]
@@ -299,7 +309,8 @@ class BigBlock(Track):
                                           self.tracks[-1].R_point) else False
         if not reverse:
             for i in range(len(self.tracks) - 1):
-                (next_point, next_port) = (self.tracks[i].L_point, self.tracks[i].L_point_port) \
+                (next_point, next_port) = ( self.tracks[i].L_point, 
+                                            self.tracks[i].L_point_port) \
                     if start_point == self.tracks[i].R_point \
                     else (self.tracks[i].R_point, self.tracks[i].R_point_port)
                 self.tracks[i].routing = ((start_point, start_port),
@@ -310,7 +321,8 @@ class BigBlock(Track):
                                        self.routing[1])
         else:
             for i in range(len(self.tracks) - 1, 0, -1):
-                (next_point, next_port) = (self.tracks[i].L_point, self.tracks[i].L_point_port) \
+                (next_point, next_port) = ( self.tracks[i].L_point, 
+                                            self.tracks[i].L_point_port) \
                     if start_point == self.tracks[i].R_point \
                     else (self.tracks[i].R_point, self.tracks[i].R_point_port)
                 self.tracks[i].routing = ((start_point, start_port),
@@ -347,38 +359,3 @@ class Yard(Observable, Observer):
         for tlist in [trk.train for trk in self.tracks]:
             _all_trains.extend([trn for trn in tlist])
         return _all_trains
-
-    
-    
-    #-----------------------------#
-
-    def find_available_track(self):
-        pass
-        return
-        for idx, tk in enumerate(self.tracks):
-            if not tk.is_Occupied:
-                return idx
-
-    def free_track(self, idx):
-        pass
-        return
-        train = self.tracks[idx].train
-        train.curr_blk = -1
-        train.curr_track = 0
-        self.tracks[idx].leave()
-
-    def let_in(self, train):
-        pass
-        return
-        assert self.is_Occupied is False
-        self._train.append(train)
-        self.is_Occupied = True
-        self.listener_updates()
-
-    def let_out(self, train):
-        pass
-        return
-        assert self.is_Occupied is True
-        self._train.remove(train)
-        self.is_Occupied = False
-        self.listener_updates()
