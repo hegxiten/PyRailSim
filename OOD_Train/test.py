@@ -393,7 +393,7 @@ if __name__ == '__main__':
         system=sys,
         init_time=sys.sys_time,
         init_segment=((None, None), (sys.signal_points[0], 0)),
-        max_sp=T166.max_speed * 1.6,
+        max_sp=T166.max_spd * 1.6,
         max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)],
         max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
         length=1)

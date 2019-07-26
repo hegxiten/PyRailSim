@@ -84,9 +84,9 @@ class Track(Observable):
         self.__curr_routing_path = None
 
     def __repr__(self):
-        return 'Track MP:<{0} {1}> <{2} port:{3}--{4} port:{5}> key:{6}'\
+        return 'Track <MP:{0}~{1}> <{2} port:{3}~{4} port:{5}> key:{6}'\
             .format(str("%.1f" % round(self.MP[0], 1)).rjust(5, ' '), 
-                    str("%.1f" % round(self.MP[1], 1)).rjust(5, ' '), 
+                    str("%.1f" % round(self.MP[1], 1)).ljust(5, ' '), 
                     self.L_point,
                     str(self.L_point_port).rjust(2, ' '),
                     self.R_point, 
@@ -214,9 +214,9 @@ class BigBlock(Track):
         self.add_observer(R_cp)
 
     def __repr__(self):
-        return 'BgBlk MP:<{0} {1}> <{2} port:{3}--{4} port:{5}> key:{6}'\
+        return 'BgBlk <MP:{0}~{1}> <{2} port:{3}~{4} port:{5}> key:{6}'\
             .format(str("%.1f" % round(self.MP[0], 1)).rjust(5, ' '), 
-                    str("%.1f" % round(self.MP[1], 1)).rjust(5, ' '), 
+                    str("%.1f" % round(self.MP[1], 1)).ljust(5, ' '), 
                     self.L_point,
                     str(self.L_point_port).rjust(2, ' '),
                     self.R_point, 

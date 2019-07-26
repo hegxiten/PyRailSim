@@ -79,7 +79,7 @@ class System():
         self.headway = 500 if kwargs.get('headway') is None \
             else kwargs.get('headway')
         self.last_train_init_time = self.sys_time
-        self.sp_container = args[0]\
+        self.spd_container = args[0]\
             if args else [random.uniform(_min_spd, _max_spd) for i in range(20)]
         self.acc_container = args[1]\
             if args else [random.uniform(_min_acc, _max_acc) for i in range(20)]
@@ -448,8 +448,8 @@ class System():
                     system=self,
                     init_time=init_time,
                     init_segment=init_segment,
-                    max_sp=self.sp_container[self.train_num %
-                                             len(self.sp_container)],
+                    max_sp=self.spd_container[self.train_num %
+                                             len(self.spd_container)],
                     max_acc=self.acc_container[self.train_num %
                                                len(self.acc_container)],
                     max_dcc=self.dcc_container[self.train_num %
@@ -464,8 +464,8 @@ class System():
                     system=self,
                     init_time=init_time,
                     init_segment=init_segment,
-                    max_sp=self.sp_container[self.train_num %
-                                             len(self.sp_container)],
+                    max_sp=self.spd_container[self.train_num %
+                                             len(self.spd_container)],
                     max_acc=self.acc_container[self.train_num %
                                                len(self.acc_container)],
                     max_dcc=self.dcc_container[self.train_num %
@@ -477,8 +477,8 @@ class System():
                     system=self,
                     init_time=init_time,
                     init_segment=init_segment,
-                    max_sp=self.sp_container[self.train_num %
-                                             len(self.sp_container)],
+                    max_sp=self.spd_container[self.train_num %
+                                             len(self.spd_container)],
                     max_acc=self.acc_container[self.train_num %
                                                len(self.acc_container)],
                     max_dcc=self.dcc_container[self.train_num %
@@ -497,6 +497,7 @@ class System():
     def capacity_enterable(self, init_point, dest_point):
         '''
             Determines if a train could cross init_point towards dest_point.'''
+        print(init_point, dest_point)
         _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
         _outbound_trains = self.get_trains_between_points(from_point=init_point,
                                                           to_point=dest_point,
@@ -661,7 +662,7 @@ class System():
 
             if last_blk_has_train and self.blocks[i].is_Occupied():
                 ava_track = self.blocks[i].find_available_track()
-                prev_train_spd = self.blocks[i - 1].tracks[0].train.max_speed
+                prev_train_spd = self.blocks[i - 1].tracks[0].train.max_spd
 
             # 找到速度最快火车的track
             max_train_track = ava_track
@@ -671,12 +672,12 @@ class System():
             fastest_train_track = 0
             fastest_speed = -1
             for j, track in enumerate(self.blocks[i].tracks):
-                if track.train != None and track.train.max_speed > top_speed:
+                if track.train != None and track.train.max_spd > top_speed:
                     max_train_track = j
-                    top_speed = track.train.max_speed
-                if track.train != None and track.train.max_speed > fastest_speed:
+                    top_speed = track.train.max_spd
+                if track.train != None and track.train.max_spd > fastest_speed:
                     fastest_train_track = j
-                    fastest_speed = track.train.max_speed
+                    fastest_speed = track.train.max_spd
             if max_train_track != fastest_train_track:  # 说明最快车是后一个block的车。
                 fastest_train = self.blocks[i].tracks[fastest_train_track].train
                 target_spd = 0
@@ -825,7 +826,7 @@ if __name__ == '__main__':
                                       "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00',
                                       "%Y-%m-%d %H:%M:%S")
-    sp_container = [random.uniform(0.01, 0.02) for i in range(20)]
+    spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
     acc_container = [
         random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
     ]
@@ -834,7 +835,7 @@ if __name__ == '__main__':
     ]
     headway = 200 * random.random() + 400
     sys = System(sim_init_time,
-                 sp_container,
+                 spd_container,
                  acc_container,
                  dcc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],

@@ -148,20 +148,24 @@ class Train():
             else:
                 raise ValueError('Undefined MP direction')
 
-    def __init__(self, system, init_time, init_segment, max_sp, max_acc,
-                 max_dcc, **kwargs):
+    def __init__(self, system, init_segment, dest_segment,
+                    max_spd, max_acc, max_dcc, **kwargs):
         ((_curr_prev_sigpoint, _prev_sigport), (_curr_sigpoint,
                                                 _prev_sigport)) = init_segment
         self.system = system
         self.length = 1 \
             if kwargs.get('length') is None else kwargs.get('length')
-
+        self.max_spd = max_spd
+        self.max_acc = max_acc
+        self.max_dcc = max_dcc
+        
         self.init_segment = init_segment
-        self.shooting_point_port = (self.system.signal_points[0], 0) \
+        self.dest_segment = dest_segment
+        self.dest_pointport = (self.system.signal_points[0], 0) \
             if self.sign_MP(self.init_segment) == -1 else (self.system.signal_points[-1], 1)
-        self.reverse_shooting_point_port = (self.system.signal_points[0], 0) \
+        self.init_pointport = (self.system.signal_points[0], 0) \
             if self.sign_MP(self.init_segment) == 1 else (self.system.signal_points[-1], 1)
-        self.dest_segment = (self.shooting_point_port, (None, None)) \
+        self.dest_segment = (self.dest_pointport, (None, None)) \
             if kwargs.get('dest_segment') is None else kwargs.get('dest_segment')
 
         self._curr_routing_path_segment = self.init_segment
@@ -173,9 +177,6 @@ class Train():
         self.symbol = 2 * self.train_idx \
             if self.uptrain else 2 * self.train_idx + 1
         self.system.trains.append(self)
-        self.max_speed = max_sp
-        self.max_acc = max_acc
-        self.max_dcc = max_dcc
 
         self._curr_speed = 0
         self._curr_acc = 0
@@ -779,7 +780,7 @@ class Train():
             A list of other trains ahead of the train with the same direction. 
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
-            self.curr_sigpoint, self.shooting_point_port[0], obv=True)
+            self.curr_sigpoint, self.dest_pointport[0], obv=True)
 
     @property
     def trains_behind_same_dir(self):
@@ -788,7 +789,7 @@ class Train():
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
             self.rear_curr_prev_sigpoint,
-            self.reverse_shooting_point_port[0],
+            self.init_pointport[0],
             rev=True)
 
     @property
@@ -797,7 +798,7 @@ class Train():
             A list of other trains ahead of the train with the opposite direction. 
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
-            self.curr_sigpoint, self.shooting_point_port[0], rev=True)
+            self.curr_sigpoint, self.dest_pointport[0], rev=True)
 
     @property
     def trains_behind_oppo_dir(self):
@@ -806,7 +807,7 @@ class Train():
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
             self.rear_curr_prev_sigpoint,
-            self.reverse_shooting_point_port[0],
+            self.init_pointport[0],
             obv=True)
 
     @property
@@ -892,8 +893,7 @@ class Train():
                 0, self.curr_routing_path_segment)
             # record the time of entering the system, serving train generation's
             # time separation
-            self.enter_time = self.system.sys_time
-            self.system.last_train_init_time = self.enter_time
+            self.init_time = self.system.sys_time
 
         elif not initiate and not terminate:
             assert len(self.curr_sig.permit_track.train) == 0
@@ -1071,7 +1071,7 @@ class Train():
         # for any train that is not the last one:
         if not self.curr_track or not self.rear_curr_track:
             return False    # not passable when not fully entered yet
-        if not (self.max_speed < self.trn_follow_behind.max_speed):
+        if not (self.max_spd < self.trn_follow_behind.max_spd):
             return False    # not passable if not slower than the one behind
         if self.rank - self.train_idx >= max_passes:
             return False    # not passable if has already been passed by once
@@ -1081,7 +1081,7 @@ class Train():
             if self.stopped and any([not t.stopped for t in _rest_trains]):
                 return True # during the pass, hold the stopped train from move
             if all([trk.train for trk in self.curr_track.yard.tracks]):
-                if abs(self.max_speed) == min([abs(trn.max_speed) 
+                if abs(self.max_spd) == min([abs(trn.max_spd) 
                         for trn in self.curr_track.yard.all_trains]):
                     return True
             if self.curr_track.yard.available_tracks >= 1 and self.dist_to_trn_behind <= 10:
@@ -1098,7 +1098,7 @@ class Train():
     def __lt__(self, other):
         '''
             implement __lt__ to sort trains based on their current MilePost.
-            If MilePosts are the same, compare max_speed.
+            If MilePosts are the same, compare max_spd.
             TODO: implement better algorithms to compare train priority.'''
         if not self.terminated:
             if self.curr_MP > other.curr_MP:
@@ -1107,9 +1107,9 @@ class Train():
                 return False if self.downtrain else True
             # when MP is the same, compare max speed as a priority indicator
             elif self.curr_MP == other.curr_MP:
-                if self.max_speed > other.max_speed:
+                if self.max_spd > other.max_spd:
                     return True if self.downtrain else False
-                elif self.max_speed < other.max_speed:
+                elif self.max_spd < other.max_spd:
                     return False if self.downtrain else True
         if self.terminated and other.terminated:
             _self_term_time = max([time for [time,_] in self.time_pos_list])
