@@ -260,7 +260,7 @@ class Signal(Observable, Observer):
             HomeSignal")
 
     @abstractproperty
-    def following_controlpoints(self):
+    def following_CtrlPoints(self):
         raise NotImplementedError(  "Needed to be implemented in AutoSignal or \
             HomeSignal")
 
@@ -334,17 +334,19 @@ class Signal(Observable, Observer):
 class AutoSignal(Signal):
     def __init__(self, port_idx, sigpoint, MP=None):
         super().__init__(port_idx, sigpoint, MP)
-        self.type = 'abs'
+        self.type = 'auto'
 
     def __repr__(self):
-        return 'AutoSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
+        return 'AutoSig port:{} of {}'\
+            .format(str(self.port_idx).rjust(2, ' '), 
+                    self.sigpoint,)
 
     @property
     def bblks_to_enter(self):
         return [self.sigpoint.bigblock]
 
     @property
-    def following_controlpoints(self):
+    def following_CtrlPoints(self):
         if self.downwards:
             return [self.sigpoint.bigblock.R_point]
         if self.upwards:
@@ -357,7 +359,9 @@ class HomeSignal(Signal):
         self.type = 'home'
 
     def __repr__(self):
-        return 'HomeSignal of {}, port: {}'.format(self.sigpoint, self.port_idx)
+        return 'HomeSig port:{} of {}'\
+            .format(str(self.port_idx).rjust(2, ' '), 
+                    self.sigpoint,)
 
     @property
     def bblks_to_enter(self):
@@ -365,7 +369,7 @@ class HomeSignal(Signal):
                 for p in self.sigpoint.available_ports_by_port[self.port_idx]]
 
     @property
-    def following_controlpoints(self):
+    def following_CtrlPoints(self):
         _cps = []
         for bblk in self.bblks_to_enter:
             for p in [bblk.L_point, bblk.R_point]:
@@ -388,7 +392,6 @@ class InterlockingPoint(Observable, Observer):
         self.idx = idx
         self.ports = []
         self.available_ports_by_port = defaultdict(list)
-        self.all_valid_routes = []
         self.non_mutex_routes_by_route = defaultdict(list)
         self.ban_ports_by_port = defaultdict(list)
 
@@ -398,8 +401,10 @@ class InterlockingPoint(Observable, Observer):
         self._curr_train_with_route = {}
 
     @abstractproperty
-    def current_routes(self):
-        pass
+    def all_valid_routes(self): pass
+
+    @abstractproperty
+    def current_routes(self): pass
 
     @property
     def current_route_by_port(self):
@@ -457,7 +462,7 @@ class InterlockingPoint(Observable, Observer):
     @abstractproperty
     def banned_paths(self):
         raise NotImplementedError("Needed to be implemented in AutoPoint or \
-            ControlPoint")
+            CtrlPoint")
 
 
 class AutoPoint(InterlockingPoint):
@@ -468,7 +473,6 @@ class AutoPoint(InterlockingPoint):
         self.available_ports_by_port = {0: [1], 1: [0]}  # define legal routes
         self.non_mutex_routes_by_route = {}
         self.ban_ports_by_port = {0: [0], 1: [1]}
-        self.all_valid_routes = [(0, 1), (1, 0)]
         # build up signals
         self.signal_by_port = { 0: AutoSignal(0, self, MP=self.MP),
                                 1: AutoSignal(1, self, MP=self.MP)}
@@ -478,11 +482,15 @@ class AutoPoint(InterlockingPoint):
             sig.system = self.system
 
     def __repr__(self):
-        return 'AutoPoint{}'.format(self.idx)
+        return 'AutoPnt{}'.format(
+            str(self.idx).rjust(2, ' '),)
 
     @property
     def bigblock(self):
         return [t.bigblock for _,t in self.track_by_port.items()][0]
+
+    @property
+    def all_valid_routes(self): return [(0, 1), (1, 0)]
 
     @property
     def current_routes(self):
@@ -510,7 +518,7 @@ class AutoPoint(InterlockingPoint):
             if p != port:
                 return p
 
-class ControlPoint(InterlockingPoint):
+class CtrlPoint(InterlockingPoint):
     def __init__(self,
                  system,
                  idx,
@@ -535,23 +543,15 @@ class ControlPoint(InterlockingPoint):
         self.signal_by_port = {}  # build up signals
         for i in self.ports:
             self.signal_by_port[i] = HomeSignal(i, self, MP)
-
-        # available options for routes, list of routes
-        self.all_valid_routes = []
-        for p, plist in self.available_ports_by_port.items():
-            for rp in plist:
-                if (p, rp) not in self.all_valid_routes:
-                    self.all_valid_routes.append((p, rp))
-                if (rp, p) not in self.all_valid_routes:
-                    self.all_valid_routes.append((rp, p))
-
+        
         for _, sig in self.signal_by_port.items(
         ):  # add the ownership of signals
             sig.sigpoint = self
             sig.system = self.system
 
     def __repr__(self):
-        return 'ControlPoint{}'.format(self.idx)
+        return 'CtrlPnt{}'.format(
+            str(self.idx).rjust(2, ' '),)
 
     @property
     def vertex(self):
@@ -559,6 +559,18 @@ class ControlPoint(InterlockingPoint):
             if not self.track_by_port.get(i):
                 return True
         return False
+
+    @property
+    def all_valid_routes(self):
+        # available options for routes, list of routes
+        _all_valid_routes = []
+        for p, plist in self.available_ports_by_port.items():
+            for rp in plist:
+                if (p, rp) not in _all_valid_routes:
+                    _all_valid_routes.append((p, rp))
+                if (rp, p) not in _all_valid_routes:
+                    _all_valid_routes.append((rp, p))
+        return _all_valid_routes
 
     @property
     def current_routes(self):
@@ -632,9 +644,9 @@ class ControlPoint(InterlockingPoint):
                           format(conflict_routes, route))
                 # if conflicting with bigblock routing, don't open route
                 self.current_routes.append(route)
-                self.set_bigblock_routing_by_controlpoint_route(route)
+                self.set_bigblock_routing_by_CtrlPoint_route(route)
                 print('\troute {} of {} is opened'.format(route, self))
-                # ControlPoint port traffic routing: route[0] -> route[1]
+                # CtrlPoint port traffic routing: route[0] -> route[1]
                 # BigBlock routing:
                 #   (somewhere, someport) -> (self, route[0]) and
                 #   (self, route[1]) to (somewhere, someport)
@@ -681,7 +693,7 @@ class ControlPoint(InterlockingPoint):
                     continue
             return (port, _candidate_ports[0])
 
-    def set_bigblock_routing_by_controlpoint_route(self, route):
+    def set_bigblock_routing_by_CtrlPoint_route(self, route):
         assert route
         (x, y) = route
         _in_port, _in_bblk = x, self.bigblock_by_port.get(x)
@@ -717,7 +729,7 @@ class ControlPoint(InterlockingPoint):
     def update_signal(self, all_routes):
         pass
         return
-        '''update the signals in a ControlPoint according to current routes'''
+        '''update the signals in a CtrlPoint according to current routes'''
         for (p1, p2) in self.all_valid_routes:
             self.signal_by_port[p1].close()
             self.signal_by_port[p2].close()

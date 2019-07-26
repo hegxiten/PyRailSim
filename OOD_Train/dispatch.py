@@ -38,9 +38,9 @@ class Dispatcher():
             
 
     def get_route(self, src, srcport, tgt, tgtport, path=None, mainline=True):
-        src = src if src.__class__.__name__ == 'ControlPoint' \
+        src = src if src.__class__.__name__ == 'CtrlPoint' \
             else self.cp_leading_to(src, srcport)
-        tgt = tgt if tgt.__class__.__name__ == 'ControlPoint' \
+        tgt = tgt if tgt.__class__.__name__ == 'CtrlPoint' \
             else self.cp_leading_to(tgt, tgtport)
         route = []
         cp_path = path
@@ -77,9 +77,9 @@ class Dispatcher():
         return route
 
     def get_all_routes(self, src, srcport, tgt, tgtport):
-        src = src if src.__class__.__name__ == 'ControlPoint' \
+        src = src if src.__class__.__name__ == 'CtrlPoint' \
             else self.cp_leading_to(src, srcport)
-        tgt = tgt if tgt.__class__.__name__ == 'ControlPoint' \
+        tgt = tgt if tgt.__class__.__name__ == 'CtrlPoint' \
             else self.cp_leading_to(tgt, tgtport)
         route_list = []
         cp_paths = list(all_simple_paths(self.system.G_skeleton, 

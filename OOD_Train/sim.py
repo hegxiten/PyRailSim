@@ -13,7 +13,7 @@ import numpy as np
 from matplotlib import style
 
 from infrastructure import BigBlock, Track, Yard
-from signaling import Aspect, AutoPoint, AutoSignal, ControlPoint, HomeSignal
+from signaling import Aspect, AutoPoint, AutoSignal, CtrlPoint, HomeSignal
 from system import System
 from train import Train
 

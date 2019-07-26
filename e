@@ -10,28 +10,28 @@ The file will have its original line endings in your working directory.
     "metadata": {},[m
     "outputs": [],[m
     "source": [[m
-[31m-    "_node = {  0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \\\n",[m
+[31m-    "_node = {  0:CtrlPoint(idx=0, ports=[0,1], MP=0.0), \\\n",[m
 [31m-    "                    1:AutoPoint(1), \\\n",[m
 [31m-    "                    2:AutoPoint(2), \\\n",[m
-[31m-    "                    3:ControlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \\\n",[m
-[31m-    "                    4:ControlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \\\n",[m
+[31m-    "                    3:CtrlPoint(idx=3, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \\\n",[m
+[31m-    "                    4:CtrlPoint(idx=4, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \\\n",[m
 [31m-    "                    5:AutoPoint(5), \\\n",[m
-[31m-    "                    6:ControlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \\\n",[m
-[31m-    "                    7:ControlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \\\n",[m
+[31m-    "                    6:CtrlPoint(idx=6, ports=[0,1,3], ban_routes={1:[3],3:[1]}), \\\n",[m
+[31m-    "                    7:CtrlPoint(idx=7, ports=[0,2,1], ban_routes={0:[2],2:[0]}), \\\n",[m
 [31m-    "                    8:AutoPoint(8), \\\n",[m
 [31m-    "                    9:AutoPoint(9), \\\n",[m
-[31m-    "                    10:ControlPoint(idx=10, ports=[0,1])}       \n",[m
-[32m+[m[32m    "_node = { 0:ControlPoint(idx=0, ports=[0,1], MP=0.0), \\\n",[m
+[31m-    "                    10:CtrlPoint(idx=10, ports=[0,1])}       \n",[m
+[32m+[m[32m    "_node = { 0:CtrlPoint(idx=0, ports=[0,1], MP=0.0), \\\n",[m
 [32m+[m[32m    "            1:AutoPoint(1), \\\n",[m
 [32m+[m[32m    "            2:AutoPoint(2), \\\n",[m
-[32m+[m[32m    "            3:ControlPoint(idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \\\n",[m
-[32m+[m[32m    "            4:ControlPoint(idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \\\n",[m
+[32m+[m[32m    "            3:CtrlPoint(idx=3, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \\\n",[m
+[32m+[m[32m    "            4:CtrlPoint(idx=4, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \\\n",[m
 [32m+[m[32m    "            5:AutoPoint(5), \\\n",[m
-[32m+[m[32m    "            6:ControlPoint(idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \\\n",[m
-[32m+[m[32m    "            7:ControlPoint(idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \\\n",[m
+[32m+[m[32m    "            6:CtrlPoint(idx=6, ports=[0,1,3], ban_ports_by_port={1:[3],3:[1]}), \\\n",[m
+[32m+[m[32m    "            7:CtrlPoint(idx=7, ports=[0,2,1], ban_ports_by_port={0:[2],2:[0]}), \\\n",[m
 [32m+[m[32m    "            8:AutoPoint(8), \\\n",[m
 [32m+[m[32m    "            9:AutoPoint(9), \\\n",[m
-[32m+[m[32m    "            10:ControlPoint(idx=10, ports=[0,1])}       \n",[m
+[32m+[m[32m    "            10:CtrlPoint(idx=10, ports=[0,1])}       \n",[m
      "nbunch = [_node[i] for i in range(len(_node))]\n",[m
      "\n",[m
      "_track = [  Track(nbunch[0], 1, nbunch[1], 0), Track(nbunch[1], 1, nbunch[2], 0), Track(nbunch[2], 1, nbunch[3], 0),\\\n",[m
@@ -84,26 +84,26 @@ The file will have its original line endings in your working directory.
 [32m+[m[32m    {[m
 [32m+[m[32m     "data": {[m
 [32m+[m[32m      "text/plain": [[m
-[32m+[m[32m       "{'attr': {'_observers': [AutoPoint2, ControlPoint4],\n",[m
+[32m+[m[32m       "{'attr': {'_observers': [AutoPoint2, CtrlPoint4],\n",[m
 [32m+[m[32m       "  'idx': 3,\n",[m
 [32m+[m[32m       "  'type': 'cp',\n",[m
 [32m+[m[32m       "  'MP': 15.0,\n",[m
 [32m+[m[32m       "  'ports': [0, 1, 3],\n",[m
 [32m+[m[32m       "  'signal_by_port': defaultdict(list,\n",[m
-[32m+[m[32m       "              {0: HomeSignal of ControlPoint3, port: 0,\n",[m
-[32m+[m[32m       "               1: HomeSignal of ControlPoint3, port: 1,\n",[m
-[32m+[m[32m       "               3: HomeSignal of ControlPoint3, port: 3}),\n",[m
+[32m+[m[32m       "              {0: HomeSignal of CtrlPoint3, port: 0,\n",[m
+[32m+[m[32m       "               1: HomeSignal of CtrlPoint3, port: 1,\n",[m
+[32m+[m[32m       "               3: HomeSignal of CtrlPoint3, port: 3}),\n",[m
 [32m+[m[32m       "  'available_ports_by_port': defaultdict(list, {0: [1, 3], 1: [0], 3: [0]}),\n",[m
 [32m+[m[32m       "  'non_mutex_routes_by_route_by_route': defaultdict(list, {}),\n",[m
 [32m+[m[32m       "  'track_by_port': defaultdict(int,\n",[m
 [32m+[m[32m       "              {0: Track MP: 10.0 to MP: 15.0 idx: 0,\n",[m
 [32m+[m[32m       "               1: Track MP: 15.0 to MP: 20.0 idx: 0,\n",[m
 [32m+[m[32m       "               3: Track MP: 15.0 to MP: 20.0 idx: 1}),\n",[m
-[32m+[m[32m       "  'neighbors': [AutoPoint2, ControlPoint4],\n",[m
+[32m+[m[32m       "  'neighbors': [AutoPoint2, CtrlPoint4],\n",[m
 [32m+[m[32m       "  '_current_routes': [],\n",[m
 [32m+[m[32m       "  'all_valid_routes': [],\n",[m
 [32m+[m[32m       "  'ban_ports_by_port': {1: [3], 3: [1]}},\n",[m
-[32m+[m[32m       " 'instance': ControlPoint3}"[m
+[32m+[m[32m       " 'instance': CtrlPoint3}"[m
 [32m+[m[32m      ][m
 [32m+[m[32m     },[m
 [32m+[m[32m     "execution_count": 7,[m
@@ -164,14 +164,14 @@ The file will have its original line endings in your working directory.
 [32m+[m[32m    {[m
 [32m+[m[32m     "data": {[m
 [32m+[m[32m      "text/plain": [[m
-[32m+[m[32m       "{'attr': {'_observers': [AutoPoint2, ControlPoint4],\n",[m
+[32m+[m[32m       "{'attr': {'_observers': [AutoPoint2, CtrlPoint4],\n",[m
 [32m+[m[32m       "  'idx': 3,\n",[m
 [32m+[m[32m       "  'type': 'cp',\n",[m
 [32m+[m[32m       "  'MP': 15.0,\n",[m
 [32m+[m[32m       "  'ports': [0, 1, 3],\n",[m
 [32m+[m[32m       "  'signal_by_port': defaultdict(list,\n",[m
-[32m+[m[32m       "              {0: HomeSignal of ControlPoint3, port: 0,\n",[m
-[32m+[m[32m       "               1: HomeSignal of ControlPoint3, port: 1,\n",[m
-[32m+[m[32m       "               3: HomeSignal of ControlPoint3, port: 3}),\n",[m
+[32m+[m[32m       "              {0: HomeSignal of CtrlPoint3, port: 0,\n",[m
+[32m+[m[32m       "               1: HomeSignal of CtrlPoint3, port: 1,\n",[m
+[32m+[m[32m       "               3: HomeSignal of CtrlPoint3, port: 3}),\n",[m
 [32m+[m[32m       "  'available_ports_by_port': defaultdict(list, {0: [1, 3], 1: [0], 3: [0]}),\n",[m
 [32m+[m[32m       

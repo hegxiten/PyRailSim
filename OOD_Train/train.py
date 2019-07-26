@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from signaling import AutoPoint, AutoSignal, ControlPoint, HomeSignal
+from signaling import AutoPoint, AutoSignal, CtrlPoint, HomeSignal
 
 
 class TrainList(MutableSequence):
@@ -199,8 +199,9 @@ class Train():
                 self.curr_track.train.append(self)
 
     def __repr__(self):
-        return 'train index {}, current occupation: {}, head MP: {}, rear MP {}'\
-            .format(self.train_idx, self.curr_occupying_routing_path,
+        return 'train idx:{} occupying:{} head MP:{} rear MP:{}'\
+            .format(str(self.train_idx).rjust(2,' '),
+                    self.curr_occupying_routing_path,
                     str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
                     str("%.2f" % round(self.rear_curr_MP, 2)).rjust(5, ' '))
     @property
@@ -400,16 +401,16 @@ class Train():
         return self.curr_occupying_routing_path[-1][0][1]
 
     @property
-    def curr_control_point(self):
+    def curr_ctrl_point(self):
         '''
-            The closest ControlPoint instance the train head is moving towards.'''
+            The closest CtrlPoint instance the train head is moving towards.'''
         return self.curr_track.bigblock.shooting_point(sign_MP=self.sign_MP(self.curr_routing_path_segment))\
             if self.curr_track else self.curr_sigpoint
 
     @property
-    def curr_control_pointport(self):
+    def curr_ctrl_pointport(self):
         '''
-            The port of curr_control_point the train head is moving towards.'''
+            The port of curr_ctrl_point the train head is moving towards.'''
         return self.curr_track.bigblock.shooting_port(sign_MP=self.sign_MP(self.curr_routing_path_segment))\
             if self.curr_track else self.curr_sigport
 
@@ -417,8 +418,8 @@ class Train():
     def curr_home_sig(self):
         '''
             The closest HomeSignal instance the train head is moving towards.'''
-        return self.curr_control_point.signal_by_port[self.curr_control_pointport]\
-            if self.curr_control_point\
+        return self.curr_ctrl_point.signal_by_port[self.curr_ctrl_pointport]\
+            if self.curr_ctrl_point\
             else None
 
     @property
@@ -472,7 +473,7 @@ class Train():
                     self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                     # if entering a separate MP Track, interpolate distance at MP changing point
             else:
-                # 1.2 the train head is initiating, crossing the entry SignalPoint (ControlPoint)
+                # 1.2 the train head is initiating, crossing the entry SignalPoint (CtrlPoint)
                 _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[
                     self.curr_sig.route[1]].MP
                 _curr_sig_MP = self.curr_sigpoint.signal_by_port[
@@ -531,7 +532,7 @@ class Train():
                             (new_rear_MP - _rear_curr_sig_MP)
                         # if entering a separate MP Track, interpolate distance at MP changing point
                 else:
-                    # 2.2 initiating, train rear is going to cross the entry ControlPoint
+                    # 2.2 initiating, train rear is going to cross the entry CtrlPoint
                     assert len(self.curr_occupying_routing_path) >= 2
                     if (new_rear_MP - self.rear_curr_sig.MP) * (
                             self._rear_curr_MP - self.rear_curr_sig.MP) < 0:
@@ -551,12 +552,14 @@ class Train():
                             (new_rear_MP - _rear_curr_sig_MP)
                         # interpolate distance at the MP changing point
                     else:
-                        # 2.2.2 not crossing the entry ControlPoint; train rear not in the system yet
+                        # 2.2.2 not crossing the entry CtrlPoint; train rear not in the system yet
                         self._rear_curr_MP += _delta_s
             else:
                 raise ValueError(
-                    'Setting Undefined rear MP: rear MP: {}, new rear MP: {}, rear track: {}'
-                    .format(self._rear_curr_MP, new_rear_MP,
+                    'Setting Undefined rear MP: original:{0}, new:{1}, \
+                        rear track:{2}'
+                    .format(self._rear_curr_MP, 
+                            new_rear_MP,
                             self.rear_curr_track))
         self.rear_time_pos_list.append(
             [self.system.sys_time, self.rear_curr_MP])
@@ -615,8 +618,8 @@ class Train():
             self._curr_speed = 0
         else:
             raise ValueError(
-                'Undefined speed value {} to set for old speed {}'.format(
-                    new_speed, _old_speed))
+                'Setting Undefined speed value: original:{0}, new:{1}'
+                .format(_old_speed, new_speed))
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction (after newly set speed value) to find bugs
@@ -818,27 +821,27 @@ class Train():
     def pending_route(self):
         '''
             Status property shows if the train is pending a route at its current
-            ControlPoint for further proceeding.
+            CtrlPoint for further proceeding.
             @return: True of False'''
         if not self.curr_sigpoint:
             return False
-        elif self.curr_sigpoint == self.curr_control_point:
+        elif self.curr_sigpoint == self.curr_ctrl_point:
             if not self.curr_sig.route:
                 return True
         elif not self.system.get_trains_between_points(
-                self.curr_sigpoint, self.curr_control_point, obv=True):
-            if not self.curr_control_point.signal_by_port[
-                    self.curr_control_pointport].route:
+                self.curr_sigpoint, self.curr_ctrl_point, obv=True):
+            if not self.curr_ctrl_point.signal_by_port[
+                    self.curr_ctrl_pointport].route:
                 return True
         return False
 
     @property
     def all_rest_cps_enterable(self):
-        for n in self.system.control_points:
-            if (n.MP - self.curr_control_point.MP) * self.sign_MP(
+        for n in self.system.ctrl_points:
+            if (n.MP - self.curr_ctrl_point.MP) * self.sign_MP(
                     self.curr_routing_path_segment) > 0:
                 if not self.system.capacity_enterable(
-                        self.curr_control_point, n):
+                        self.curr_ctrl_point, n):
                     return False
         return True
 
@@ -871,9 +874,10 @@ class Train():
         # self.time_pos_list.append([timestamp, self.curr_sig.MP])
 
         if initiate:
-            assert isinstance(sigpoint, ControlPoint)
+            assert isinstance(sigpoint, CtrlPoint)
             assert len(self.curr_sig.permit_track.train) == 0
-            print('train idx: {0} initiated, entering into {1}'.format(self.train_idx, _permit_track))
+            print('train {0} initiated, entering into {1}'
+                    .format(self, _permit_track))
             self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             self.curr_sig.permit_track.train.append(
                 self)  # occupy the track to enter
@@ -898,8 +902,8 @@ class Train():
                 self)  # occupy the track to enter
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
-            # only close the route of ControlPoint along the way
-            if isinstance(sigpoint, ControlPoint):
+            # only close the route of CtrlPoint along the way
+            if isinstance(sigpoint, CtrlPoint):
                 # AutoPoints have no method to close route
                 sigpoint.close_route(_route)
             self.curr_routing_path_segment = \
@@ -910,7 +914,7 @@ class Train():
 
         elif terminate:
             # no track to occupy because of terminating
-            assert isinstance(sigpoint, ControlPoint)
+            assert isinstance(sigpoint, CtrlPoint)
             self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
@@ -922,9 +926,8 @@ class Train():
                 0, self.curr_routing_path_segment)
 
         else:
-            raise ValueError(
-                'train {} crossing signalpoint {} failed unexpectedly'.format(
-                    self, sigpoint))
+            raise Exception('{} crossing {} failed unexpectedly'
+                            .format(self, sigpoint))
 
     def rear_cross_sigpoint(self, sigpoint, rear_curr_MP, new_rear_MP):
         '''
@@ -1024,36 +1027,30 @@ class Train():
 
     def request_routing(self):
         '''
-            Method of the train to call the closest ControlPoint to clear a route. 
+            Method of the train to call the closest CtrlPoint to clear a route. 
             Serve the myopic dispatch logic where trains only calls the cloest CPs.
             @return: None'''
         if self.pending_route and self.all_rest_cps_enterable:
             _pending_route_to_open = \
-                self.curr_control_point.find_route_for_port(
-                    self.curr_control_pointport)
+                self.curr_ctrl_point.find_route_for_port(
+                    self.curr_ctrl_pointport)
             if _pending_route_to_open is None:
                 return
-            if _pending_route_to_open not in self.curr_control_point.current_invalid_routes:
+            if _pending_route_to_open not in self.curr_ctrl_point.current_invalid_routes:
                 if not self.curr_track or not self.curr_track.yard:
-                    print(
-                        'train idx: {}, MP: {} requested {} at CP: {}'.
-                        format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                _pending_route_to_open,
-                                self.curr_control_point.MP))
-                    self.curr_control_point.open_route(
-                        _pending_route_to_open)
+                    print('{}, requested {} at {}'
+                    .format(self, _pending_route_to_open, 
+                            self.curr_ctrl_point.MP))
+                    self.curr_ctrl_point.open_route(_pending_route_to_open)
                 elif self.curr_track.yard:
                     if not self.currently_passable(max_passes=1):
-                        print(
-                            'train idx: {}, MP: {} requested {} at CP: {}'
-                            .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                    _pending_route_to_open,
-                                    self.curr_control_point.MP))
-                        self.curr_control_point.open_route(
-                            _pending_route_to_open)
+                        print('{}, requested {} at {}'
+                        .format(self, _pending_route_to_open,
+                                self.curr_ctrl_point.MP))
+                        self.curr_ctrl_point.open_route(_pending_route_to_open)
                     elif self.currently_passable(max_passes=1):
                         # no actions of its current CP (no route to open)
-                        for cp in self.system.control_points:
+                        for cp in self.system.ctrl_points:
                             for (p1,p2) in cp.current_routes:
                                 if cp.bigblock_by_port.get(p2):
                                     if self in cp.bigblock_by_port[p2].train:

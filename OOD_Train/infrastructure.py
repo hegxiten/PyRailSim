@@ -84,8 +84,14 @@ class Track(Observable):
         self.__curr_routing_path = None
 
     def __repr__(self):
-        return 'Track MP: {} to MP: {} idx: {}'.format(self.MP[0], self.MP[1],
-                                                       self.edge_key)
+        return 'Track MP:<{0} {1}> <{2} port:{3}--{4} port:{5}> key:{6}'\
+            .format(str("%.1f" % round(self.MP[0], 1)).rjust(5, ' '), 
+                    str("%.1f" % round(self.MP[1], 1)).rjust(5, ' '), 
+                    self.L_point,
+                    str(self.L_point_port).rjust(2, ' '),
+                    self.R_point, 
+                    str(self.R_point_port).rjust(2, ' '),
+                    str(self.edge_key).rjust(2, ' '),)
 
     @property
     def MP(self):
@@ -208,8 +214,14 @@ class BigBlock(Track):
         self.add_observer(R_cp)
 
     def __repr__(self):
-        return 'BigBlock MP: {} to MP: {} idx: {}'.format(
-            self.MP[0], self.MP[1], self.edge_key)
+        return 'BgBlk MP:<{0} {1}> <{2} port:{3}--{4} port:{5}> key:{6}'\
+            .format(str("%.1f" % round(self.MP[0], 1)).rjust(5, ' '), 
+                    str("%.1f" % round(self.MP[1], 1)).rjust(5, ' '), 
+                    self.L_point,
+                    str(self.L_point_port).rjust(2, ' '),
+                    self.R_point, 
+                    str(self.R_point_port).rjust(2, ' '),
+                    str(self.edge_key).rjust(2, ' '),)
 
     @property
     def train(self):
@@ -238,7 +250,7 @@ class BigBlock(Track):
                     assert _curr_shooting_cp == new_routing[0][0]
                     # if the bigblock is set with a reversed routing,
                     # close any signal routes leading into its old routing
-                    # at the ControlPoint the old bigblock routing is shooting to.
+                    # at the CtrlPoint the old bigblock routing is shooting to.
                     for r in _curr_shooting_cp.current_routes:
                         if _curr_shooting_port == r[0]:
                             _curr_shooting_cp.close_route(r)

@@ -12,7 +12,7 @@ import numpy as np
 
 from rail_networkx import all_simple_paths, shortest_path
 from infrastructure import BigBlock, Track, Yard
-from signaling import Aspect, AutoPoint, AutoSignal, ControlPoint, HomeSignal
+from signaling import Aspect, AutoPoint, AutoSignal, CtrlPoint, HomeSignal
 from train import Train, TrainList
 
 
@@ -56,12 +56,12 @@ class System():
         self.G_skeleton = self.graph_extractor(self.G_origin)
 
         self.signal_points = list(self.G_origin.nodes())
-        # list of all SignalPoints, including AutoPoints and ControlPoints
-        self.control_points = list(self.G_skeleton.nodes())
-        # list of all ControlPoints. Indices are different from signal_points.
-        self.vertex_points = [cp for cp in self.control_points 
+        # list of all SignalPoints, including AutoPoints and CtrlPoints
+        self.ctrl_points = list(self.G_skeleton.nodes())
+        # list of all CtrlPoints. Indices are different from signal_points.
+        self.vertex_points = [cp for cp in self.ctrl_points 
             if cp.vertex == True]
-        # list of all vertex ControlPoints where trains can initiate/terminate.
+        # list of all vertex CtrlPoints where trains can initiate/terminate.
         self.tracks = [data['instance']
             for (u, v, data) in list(self.G_origin.edges(data=True))]
         # list of all Tracks.
@@ -163,7 +163,7 @@ class System():
         def add_cleared_routing_external_virtual_bblk():
             '''
                 Add routing of initiating/terminalting routing path without a 
-                materialized bigblock outside the vertex ControlPoints.'''
+                materialized bigblock outside the vertex CtrlPoints.'''
             for cp in self.vertex_points:
                 if cp.current_routes:
                     for r in cp.current_routes:
@@ -193,9 +193,9 @@ class System():
         for rp in self.curr_routing_paths:
             _cp_rp = []
             for ((p1, port1), (p2, port2)) in rp:
-                if p1 is None or isinstance(p1, ControlPoint):
+                if p1 is None or isinstance(p1, CtrlPoint):
                     _cp_rp.append([(p1, port1),None])
-                if p2 is None or isinstance(p2, ControlPoint):
+                if p2 is None or isinstance(p2, CtrlPoint):
                     _cp_rp[-1][1] = (p2, port2)
                     _cp_rp[-1] = tuple(_cp_rp[-1])
             _routing_paths_cp.append(_cp_rp)
@@ -229,17 +229,17 @@ class System():
         # TODO: to be achieved in network_constructor.py
         TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self)]
 
-        TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
+        TEST_NODE = {   0: CtrlPoint( self, idx=0, ports=[0, 1], MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
                         2: AutoPoint(    self, idx=2, MP=10.0),
-                        3: ControlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
-                        4: ControlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
+                        3: CtrlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
+                        4: CtrlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
                         5: AutoPoint(    self, idx=5, MP=25.0),
-                        6: ControlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
-                        7: ControlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
+                        6: CtrlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
+                        7: CtrlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
                         8: AutoPoint(    self, idx=8, MP=40.0),
                         9: AutoPoint(    self, idx=9, MP=45.0),
-                        10: ControlPoint(self, idx=10, ports=[0, 1], MP=50.0)
+                        10: CtrlPoint(self, idx=10, ports=[0, 1], MP=50.0)
         }   # yapf: disable
 
         TEST_TRACK = [
@@ -259,23 +259,23 @@ class System():
 
         TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
 
-        TEST_NODE = {   0: ControlPoint( self, idx=0, ports=[0, 1], MP=0.0),
+        TEST_NODE = {   0: CtrlPoint( self, idx=0, ports=[0, 1], ban_ports_by_port={0: [0], 1: [1]}, MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
-                        2: ControlPoint( self, idx=2, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=10.0),
-                        3: ControlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=15.0),
-                        4: ControlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=20.0),
-                        5: ControlPoint( self, idx=5, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=25.0),
-                        6: ControlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=30.0),
-                        7: ControlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=35.0),
-                        8: ControlPoint( self, idx=8, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=40.0),
+                        2: CtrlPoint( self, idx=2, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=10.0),
+                        3: CtrlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=15.0),
+                        4: CtrlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=20.0),
+                        5: CtrlPoint( self, idx=5, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=25.0),
+                        6: CtrlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=30.0),
+                        7: CtrlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=35.0),
+                        8: CtrlPoint( self, idx=8, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=40.0),
                         9: AutoPoint(    self, idx=9, MP=45.0),
-                        10: ControlPoint(self, idx=10, ports=[0, 1], MP=50.0),
+                        10: CtrlPoint(self, idx=10, ports=[0, 1], ban_ports_by_port={0: [0], 1: [1]}, MP=50.0),
                         11: AutoPoint(   self, idx=11, MP=30.0),
                         12: AutoPoint(   self, idx=12, MP=35.0),
-                        13: ControlPoint(self, idx=13, ports=[0, 1], MP=20.0),
-                        14: ControlPoint(self, idx=14, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=5.0),
+                        13: CtrlPoint(self, idx=13, ports=[0, 1], ban_ports_by_port={0: [0], 1: [1]}, MP=20.0),
+                        14: CtrlPoint(self, idx=14, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=5.0),
                         15: AutoPoint(   self, idx=15, MP=10.0),
-                        16: ControlPoint(self, idx=16, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=15.0),
+                        16: CtrlPoint(self, idx=16, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=15.0),
         }   # yapf: disable
 
         TEST_TRACK = [
@@ -336,7 +336,7 @@ class System():
 
     def graph_extractor(self, G):
         '''
-        Extract the skeletion MultiGraph with only ControlPoints and Bigblocks
+        Extract the skeletion MultiGraph with only CtrlPoints and Bigblocks
         ----------
         Parameter:
             G: MultiGraph instance of the raw network with Track as edges.
@@ -633,8 +633,8 @@ class System():
 
     def update_blk_right(self, i):
         '''
-        logics of overpassing, manipulating controlpoints
-        TODO: translate the operations below into ControlPoint manipulations'''
+        logics of overpassing, manipulating CtrlPoints
+        TODO: translate the operations below into CtrlPoint manipulations'''
         # 只管变化（若满足条件更新CP 路径，否则无操作）
         # for track in self.blocks[i].tracks:
         #     if self.dos_period[0] <= self.sys_time <= self.dos_period[1] and i == self.dos_pos:
