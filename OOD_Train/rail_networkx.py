@@ -12,6 +12,7 @@ from functools import wraps
 
 import networkx as nx
 
+
 def no_banned_rail_paths_on_cp(func):
 
     if func.__name__ == 'all_simple_paths':
@@ -35,15 +36,19 @@ def no_banned_rail_paths_on_cp(func):
         @wraps(func)
         def filter_banned_cp_path_shortest(G, source, target, weight=None):
             raw_shortest = func(G, source, target, weight=weight)
-            if len(raw_shortest) <= 2:
+            if len(list(all_simple_paths(G, source, target))) == 1:
+                return raw_shortest
+            elif len(raw_shortest) <= 2:
                 return raw_shortest
             elif all([
                     True if (p1, p2, p3) not in p2.banned_paths else False 
                     for p1, p2, p3 in zip(raw_shortest[0:], raw_shortest[1:],
                                   raw_shortest[2:])
-            ]):
+                    ]):
                 return raw_shortest
-
+            else:
+                raise Exception("Cannot Find a shortest Path Between {} and {}!"
+                                .format(source, target))
         return filter_banned_cp_path_shortest
 
 

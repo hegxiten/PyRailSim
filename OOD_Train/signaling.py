@@ -662,8 +662,16 @@ class CtrlPoint(InterlockingPoint):
             for p in self.ports:
                 self.cancel_bigblock_routing_by_port(p)
 
-    def find_route_for_port(self, port, destport=None):
-        _candidate_ports = [i for i in self.available_ports_by_port[port]]
+    def find_route_for_port(self, port, dest_pointport=None):
+        if not dest_pointport:
+            _candidate_ports = [i for i in self.available_ports_by_port[port]]
+        if dest_pointport:
+            if self == dest_pointport[0]:
+                _candidate_ports = [i for i in self.available_ports_by_port[port]]
+            else:
+                all_routes = self.system.dispatcher.get_all_rouets(self, port, 
+                                        dest_pointport[0], dest_pointport[1])
+                _candidate_ports = [r[1][0][1] for r in all_routes]
         tn = [len(self.bigblock_by_port[p].train) if self.bigblock_by_port.get(p) else 0 for p in _candidate_ports]
         for p in self.available_ports_by_port[port]:
             _candi_bblk = self.bigblock_by_port.get(p)

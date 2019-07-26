@@ -89,7 +89,7 @@ class System():
             for i in self.dcc_container]
         self.refresh_time = 1 if kwargs.get('refresh_time') is None \
             else kwargs.get('refresh_time')
-
+        self.dispatcher = None
         # self.register(self.blocks)
         # register method links the observation relationships
 
@@ -497,7 +497,6 @@ class System():
     def capacity_enterable(self, init_point, dest_point):
         '''
             Determines if a train could cross init_point towards dest_point.'''
-        print(init_point, dest_point)
         _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
         _outbound_trains = self.get_trains_between_points(from_point=init_point,
                                                           to_point=dest_point,
@@ -511,26 +510,24 @@ class System():
             <= _parallel_tracks - _occupied_parallel_tracks else False
 
     def num_parallel_tracks(self, init_point, dest_point):
-        _mainline_section = shortest_path(self.G_origin, init_point,
-                                             dest_point)
-        _start_point = _mainline_section.pop(0)
+        _mainline_path = shortest_path(self.G_origin, source=init_point, 
+                                target=dest_point, weight='weight_mainline')
+        _head = _mainline_path.pop(0)
         count = 0
         _traversed = []
-        while _mainline_section:
+        while _mainline_path:
             for t in _traversed:
-                if t in _mainline_section:
-                    _mainline_section.remove(t)
-            for p in _mainline_section:
-                if len(list(all_simple_paths(self.G_origin, _start_point,
-                                                p))) == 1:
+                if t in _mainline_path:
+                    _mainline_path.remove(t)
+            for p in _mainline_path:
+                if len(list(all_simple_paths(self.G_origin, _head, p))) == 1:
                     _traversed.append(p)
                     continue
                 else:
-                    count += len(
-                        list(all_simple_paths(self.G_origin, _start_point,
-                                                 p))) - 1
+                    count += len(list(all_simple_paths(self.G_origin, 
+                                                        _head, p))) - 1
                     _traversed.append(p)
-                    _start_point = p
+                    _head = p
                     break
         return count
 

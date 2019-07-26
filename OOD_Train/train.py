@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from signaling import AutoPoint, AutoSignal, CtrlPoint, HomeSignal
+from rail_networkx import all_simple_paths, shortest_path
 
 
 class TrainList(MutableSequence):
@@ -150,23 +151,16 @@ class Train():
 
     def __init__(self, system, init_segment, dest_segment,
                     max_spd, max_acc, max_dcc, **kwargs):
-        ((_curr_prev_sigpoint, _prev_sigport), (_curr_sigpoint,
-                                                _prev_sigport)) = init_segment
         self.system = system
-        self.length = 1 \
-            if kwargs.get('length') is None else kwargs.get('length')
+        self.init_segment , self.dest_segment = init_segment, dest_segment
+        self.init_pointport = init_segment[1]
+        self.dest_pointport = dest_segment[0]
         self.max_spd = max_spd
         self.max_acc = max_acc
         self.max_dcc = max_dcc
         
-        self.init_segment = init_segment
-        self.dest_segment = dest_segment
-        self.dest_pointport = (self.system.signal_points[0], 0) \
-            if self.sign_MP(self.init_segment) == -1 else (self.system.signal_points[-1], 1)
-        self.init_pointport = (self.system.signal_points[0], 0) \
-            if self.sign_MP(self.init_segment) == 1 else (self.system.signal_points[-1], 1)
-        self.dest_segment = (self.dest_pointport, (None, None)) \
-            if kwargs.get('dest_segment') is None else kwargs.get('dest_segment')
+        self.length = 1 \
+            if kwargs.get('length') is None else kwargs.get('length')
 
         self._curr_routing_path_segment = self.init_segment
         self._curr_occupying_routing_path = [self._curr_routing_path_segment]
@@ -345,6 +339,16 @@ class Train():
             Once set, the direction of the train & occupied track are confined.'''
         assert isinstance(new_segment, tuple) and len(new_segment) == 2
         self._curr_routing_path_segment = new_segment
+
+    @property
+    def all_paths_ahead(self):
+        return list(all_simple_paths(self.system.G_origin, 
+            self.curr_sigpoint, self.dest_pointport[0]))
+
+    @property
+    def all_routes_ahead(self):
+        return self.system.dispatcher.get_all_routes(self.curr_sigpoint, 
+            self.curr_sigport, self.dest_pointport[0], self.dest_pointport[1])
 
     @property
     def curr_sigpoint(self):
@@ -837,14 +841,13 @@ class Train():
         return False
 
     @property
-    def all_rest_cps_enterable(self):
-        for n in self.system.ctrl_points:
-            if (n.MP - self.curr_ctrl_point.MP) * self.sign_MP(
-                    self.curr_routing_path_segment) > 0:
-                if not self.system.capacity_enterable(
-                        self.curr_ctrl_point, n):
-                    return False
-        return True
+    def any_paths_ahead_enterable(self):
+        for p in self.all_paths_ahead:
+            if all([True 
+                    if self.system.capacity_enterable(self.curr_ctrl_point, n) 
+                    else False for n in p]):
+                return True
+        return False
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         '''
@@ -1030,7 +1033,7 @@ class Train():
             Method of the train to call the closest CtrlPoint to clear a route. 
             Serve the myopic dispatch logic where trains only calls the cloest CPs.
             @return: None'''
-        if self.pending_route and self.all_rest_cps_enterable:
+        if self.pending_route and self.any_paths_ahead_enterable:
             _pending_route_to_open = \
                 self.curr_ctrl_point.find_route_for_port(
                     self.curr_ctrl_pointport)
