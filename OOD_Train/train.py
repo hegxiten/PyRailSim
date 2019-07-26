@@ -347,8 +347,8 @@ class Train():
 
     @property
     def all_routes_ahead(self):
-        return self.system.dispatcher.get_all_routes(self.curr_sigpoint, 
-            self.curr_sigport, self.dest_pointport[0], self.dest_pointport[1])
+        return list(self.system.dispatcher.all_routes_generator(self.curr_sigpoint, 
+            self.curr_sigport, self.dest_pointport[0], self.dest_pointport[1]))
 
     @property
     def curr_sigpoint(self):
@@ -1036,7 +1036,8 @@ class Train():
         if self.pending_route and self.any_paths_ahead_enterable:
             _pending_route_to_open = \
                 self.curr_ctrl_point.find_route_for_port(
-                    self.curr_ctrl_pointport)
+                                            port=self.curr_ctrl_pointport,
+                                            dest_pointport=self.dest_pointport)
             if _pending_route_to_open is None:
                 return
             if _pending_route_to_open not in self.curr_ctrl_point.current_invalid_routes:
@@ -1057,7 +1058,10 @@ class Train():
                             for (p1,p2) in cp.current_routes:
                                 if cp.bigblock_by_port.get(p2):
                                     if self in cp.bigblock_by_port[p2].train:
-                                        _route_to_change = cp.find_route_for_port(p1)
+                                        _route_to_change = \
+                                            cp.find_route_for_port(
+                                                port=p1, 
+                                                dest_pointport=self.dest_pointport)
                                         cp.open_route(_route_to_change)
 
     def currently_passable(self, max_passes=1):

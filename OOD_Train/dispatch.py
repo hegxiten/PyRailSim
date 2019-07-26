@@ -20,12 +20,12 @@ from rail_networkx import all_simple_paths, shortest_path
 
 class Dispatcher():
     @staticmethod
-    def cp_leading_to(autopoint, port):
+    def cp_port_leading_to(autopoint, port):
         assert autopoint.__class__.__name__ == 'AutoPoint'
         if autopoint.signal_by_port[port].upwards:
-            return autopoint.bigblock.L_point
+            return autopoint.bigblock.L_point, autopoint.bigblock.L_point_port
         if autopoint.signal_by_port[port].downwards:
-            return autopoint.bigblock.R_point
+            return autopoint.bigblock.R_point, autopoint.bigblock.R_point_port
     
     def __init__(self, sys):
         self.system = sys
@@ -38,10 +38,11 @@ class Dispatcher():
             
 
     def get_route(self, src, srcport, tgt, tgtport, path=None, mainline=True):
-        src = src if src.__class__.__name__ == 'CtrlPoint' \
-            else self.cp_leading_to(src, srcport)
-        tgt = tgt if tgt.__class__.__name__ == 'CtrlPoint' \
-            else self.cp_leading_to(tgt, tgtport)
+        src, srcport, tgt, tgtport = src, srcport, tgt, tgtport 
+        if src.__class__.__name__ == 'AutoPoint':
+            src, srcport = self.cp_port_leading_to(src, srcport)
+        if tgt.__class__.__name__ == 'AutoPoint':
+            tgt, tgtport = self.cp_port_leading_to(tgt, tgtport)
         route = []
         cp_path = path
         if cp_path is None:
@@ -76,22 +77,23 @@ class Dispatcher():
             route.append(((tgt, tgtport),(_p,_port)))
         return route
 
-    def get_all_routes(self, src, srcport, tgt, tgtport):
-        src = src if src.__class__.__name__ == 'CtrlPoint' \
-            else self.cp_leading_to(src, srcport)
-        tgt = tgt if tgt.__class__.__name__ == 'CtrlPoint' \
-            else self.cp_leading_to(tgt, tgtport)
-        route_list = []
+    def all_routes_generator(self, src, srcport, tgt, tgtport):
+        src, srcport, tgt, tgtport = src, srcport, tgt, tgtport 
+        if src.__class__.__name__ == 'AutoPoint':
+            src, srcport = self.cp_port_leading_to(src, srcport)
+        if tgt.__class__.__name__ == 'AutoPoint':
+            tgt, tgtport = self.cp_port_leading_to(tgt, tgtport)
         cp_paths = list(all_simple_paths(self.system.G_skeleton, 
                                             source=src, target=tgt))
+        _route_list = []
         while cp_paths:
             _single_cp_route = cp_paths[0]
             _single_route = self.get_route(src, srcport, tgt, tgtport, 
                                         path=_single_cp_route, mainline=False)
-            if _single_route not in route_list:
+            if _single_route not in _route_list:
                 cp_paths.pop(0)
-                route_list.append(_single_route)
-        return route_list
+                _route_list.append(_single_route)
+                yield _single_route
 
     def max_MA_limit(self, route):
         pass

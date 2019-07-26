@@ -19,6 +19,8 @@ def no_banned_rail_paths_on_cp(func):
 
         @wraps(func)
         def filter_banned_paths_all(G, source, target, cutoff=None):
+            if source == target:
+                yield [source]
             raw_simple_path_gen = func(G, source, target, cutoff=None)
             for path in raw_simple_path_gen:
                 if len(path) <= 2:
@@ -55,7 +57,6 @@ def no_banned_rail_paths_on_cp(func):
 @no_banned_rail_paths_on_cp
 def all_simple_paths(G, source, target, cutoff=None):
     return nx.all_simple_paths(G, source, target, cutoff=None)
-
 
 @no_banned_rail_paths_on_cp
 def shortest_path(G, source, target, weight=None):

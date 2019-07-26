@@ -663,17 +663,25 @@ class CtrlPoint(InterlockingPoint):
                 self.cancel_bigblock_routing_by_port(p)
 
     def find_route_for_port(self, port, dest_pointport=None):
-        if not dest_pointport:
-            _candidate_ports = [i for i in self.available_ports_by_port[port]]
-        if dest_pointport:
-            if self == dest_pointport[0]:
-                _candidate_ports = [i for i in self.available_ports_by_port[port]]
-            else:
-                all_routes = self.system.dispatcher.get_all_rouets(self, port, 
-                                        dest_pointport[0], dest_pointport[1])
-                _candidate_ports = [r[1][0][1] for r in all_routes]
-        tn = [len(self.bigblock_by_port[p].train) if self.bigblock_by_port.get(p) else 0 for p in _candidate_ports]
-        for p in self.available_ports_by_port[port]:
+        def candidate_ports(port, dest_pointport=None):
+            if not dest_pointport:
+                return [i for i in self.available_ports_by_port[port]]
+            if dest_pointport:
+                all_routes = self.system.dispatcher.all_routes_generator(self, 
+                                    port, dest_pointport[0], dest_pointport[1])
+                _candi_ports = []
+                for r in all_routes:
+                    if set(_candi_ports) == set(self.available_ports_by_port[port]):
+                        return _candi_ports
+                    if r[1][0][1] not in _candi_ports:
+                        _candi_ports.append(r[1][0][1])
+                return _candi_ports
+        _candidate_ports = candidate_ports(port, dest_pointport)
+        trns = [len(self.bigblock_by_port[p].train) 
+                if self.bigblock_by_port.get(p) else 0 
+                for p in _candidate_ports]
+        final_selection = [p for p in _candidate_ports]
+        for p in _candidate_ports:
             _candi_bblk = self.bigblock_by_port.get(p)
             _candi_track = self.track_by_port.get(p)
             if not _candi_bblk or not _candi_track:
@@ -683,23 +691,24 @@ class CtrlPoint(InterlockingPoint):
             elif _candi_bblk.routing != ((self, p), (_candi_bblk.shooting_point(
                     point=self), _candi_bblk.shooting_port(port=p))):
                 if _candi_bblk.train:
-                    _candidate_ports.remove(p)
+                    final_selection.remove(p)
                     continue
             elif _candi_bblk.routing == ((self, p), (_candi_bblk.shooting_point(
                     point=self), _candi_bblk.shooting_port(port=p))):
-                if len(_candi_bblk.train) != min(tn):
-                    _candidate_ports.remove(p)
+                if len(_candi_bblk.train) != min(trns):
+                    final_selection.remove(p)
                     continue
-        if not _candidate_ports:
+        
+        if not final_selection:
             return None
         else:
-            for p in _candidate_ports:
+            for p in final_selection:
                 try:
-                    if len(self.bigblock_by_port[p].train) == min(tn):
+                    if len(self.bigblock_by_port[p].train) == min(trns):
                         return (port, p)
                 except:
                     continue
-            return (port, _candidate_ports[0])
+            return (port, final_selection[0])
 
     def set_bigblock_routing_by_CtrlPoint_route(self, route):
         assert route
