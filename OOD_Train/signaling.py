@@ -297,39 +297,25 @@ class Signal(Observable, Observer):
             return reachable_track(other)
         return False
 
-    #--------------------------#
+    #----------------deprecated----------------#
     def update(self, observable, update_message):
-        raise NotImplementedError("Old update function to be cleaned")
-        assert observable.type in ['abs', 'home', 'block', 'bigblock']
+        raise NotImplementedError("Old update function to be refactored")
         # print("{} signal {} is observing {} signal {}".format(self.port_idx, self.pos, observable.port_idx, observable.pos))
         # print("Because {} signal {} changed from {} to {}:".format(observable.port_idx, str(observable.pos), update_message['old'].color, update_message['new'].color))
-        if observable.type == 'bigblock' and observable.direction != self.port_idx:
+        if observable.type == 'bigblock':
             self.change_color_to('r', False)
         elif observable.type == 'track':
             self.change_color_to('r', False)
         elif observable.type == 'home' and observable.port_idx != self.port_idx:
             if update_message.color != 'r':
                 self.change_color_to('r', False)
-        else:
-            if update_message.color == 'yy':  # observable:        g -> yy
-                # observer:            -> g
-                self.change_color_to('g', True)
-            elif update_message.color == 'y':  # observable:     g/yy -> y
-                # observer:            -> yy
-                self.change_color_to('yy', True)
-            elif update_message.color == 'r':  # observable: g/yy/y/r -> r
-                # observer:            -> g
-                self.change_color_to('y', True)
+        else: pass
 
     def change_color_to(self, color, isNotified=True):
-        raise NotImplementedError("Old change_color_to function to be cleaned")
-        new_aspect = Aspect(color)
-        print("\t {} signal changed from {} to {}".format(
-            self.port_idx, self.aspect.color, color))
+        raise NotImplementedError("Old change_color_to function to be refactored")
         self.aspect = new_aspect
         if isNotified:
             self.listener_updates(obj=self.aspect)
-
 
 class AutoSignal(Signal):
     def __init__(self, port_idx, sigpoint, MP=None):
@@ -442,14 +428,15 @@ class InterlockingPoint(Observable, Observer):
         # collect all mutex routes according to currently openned routes
         for r in self.current_routes:
             for vr in self.all_valid_routes:
-                if vr not in self.non_mutex_routes_by_route[
-                        r] and vr not in _current_invalid_routes:
+                if vr not in self.non_mutex_routes_by_route[r] \
+                    and vr not in _current_invalid_routes:
                     _current_invalid_routes.append(vr)
+        # collect all routes currently under trains
         for r in self.locked_routes_due_to_train:
             if r not in _current_invalid_routes:
                 _current_invalid_routes.append(r)
         return _current_invalid_routes
-    
+
     @property
     def locked_routes_due_to_train(self):
         _locked_routes = []
@@ -494,7 +481,6 @@ class AutoPoint(InterlockingPoint):
 
     @property
     def current_routes(self):
-        self._current_routes = []
         for p, t in self.track_by_port.items():
             # only AutoPoints can assign current routes like this because
             # AutoPoints have only 0,1 as their ports
@@ -575,9 +561,10 @@ class CtrlPoint(InterlockingPoint):
     @property
     def current_routes(self):
         for r1, r2 in permutations(self._current_routes, 2):
+            assert r1 not in self.mutex_routes_by_route[r2]
             assert r2 not in self.mutex_routes_by_route[r1]
-            assert r1[1] not in self.ban_ports_by_port[
-                r1[0]] and r2[1] not in self.ban_ports_by_port[r2[0]]
+            assert r1[1] not in self.ban_ports_by_port[r1[0]]
+            assert r2[1] not in self.ban_ports_by_port[r2[0]]
         return self._current_routes
 
     @current_routes.setter
@@ -619,48 +606,64 @@ class CtrlPoint(InterlockingPoint):
         return _banned_path
     
     def open_route(self, route):
-        assert len(route) == 2
-        assert isinstance(route, tuple)
-        if route in self.current_routes:  # do nothing when trying to open an existing route
-            print('\troute {} for {} already opened'.format(route, self))
-        elif route not in self.current_routes:
+        if route not in self.current_routes:
             # if not in all_valid routes, the route to open is banned
             if route not in self.all_valid_routes:
-                raise ValueError(
-                    'illegal route for {}: banned/non-existing routes'.format(
-                        self))
+                raise Exception(
+                    'illegal route for {}: banned/non-existing routes'
+                    .format(self))
             elif route in self.all_valid_routes:
-                # being in all_valid_routes means the route to open is not banned
-                # the route to open is only possible to be conflicting with 
+                # in all_valid_routes: the route to open is not banned;
+                # the route-to-open is still possible to conflict with 
                 # existing routes
-                conflict_routes = []
-                if route in self.current_invalid_routes:
+                if route not in self.current_invalid_routes:
+                    self.current_routes.append(route)
+                    self.set_bigblock_routing_by_CtrlPoint_route(route)
+                    print('\troute {} of {} is opened'.format(route, self))
+                else:
+                    # try to close conflicting routes if possible
+                    conflict_routes_of_route_to_open = []
                     for cr in self.current_routes:
                         if route not in self.non_mutex_routes_by_route[cr]:
-                            conflict_routes.append(cr)
-                    for cr in conflict_routes:
-                        self.close_route(cr)
-                    print('\tconflicting routes {} are closed for {} to open'.
-                          format(conflict_routes, route))
-                # if conflicting with bigblock routing, don't open route
-                self.current_routes.append(route)
-                self.set_bigblock_routing_by_CtrlPoint_route(route)
-                print('\troute {} of {} is opened'.format(route, self))
+                            conflict_routes_of_route_to_open.append(cr)
+                    try:
+                        for cr in conflict_routes_of_route_to_open:
+                            self.close_route(cr)
+                        self.current_routes.append(route)
+                        self.set_bigblock_routing_by_CtrlPoint_route(route)
+                        print('\troute {} of {} is opened'.format(route, self))
+                    except:
+                        print('\troute {} of {} failed to open because \
+                                conflicting routes are protected')
+                    finally:
+                        pass
                 # CtrlPoint port traffic routing: route[0] -> route[1]
                 # BigBlock routing:
                 #   (somewhere, someport) -> (self, route[0]) and
                 #   (self, route[1]) to (somewhere, someport)
 
     def close_route(self, route=None):
+        def close_single_route(route):
+            assert route in self.current_routes
+            _impacted_bblk = self.bigblock_by_port.get(route[0])
+            _impacted_trns = [] if not _impacted_bblk \
+                else [  t for t in _impacted_bblk.train
+                        if t not in self.curr_train_with_route]
+            if not _impacted_trns or \
+                all([t.curr_route_cancelable for t in _impacted_trns]):
+                self.current_routes.remove(route)
+                if self.bigblock_by_port.get(route[0]):
+                    if not self.bigblock_by_port.get(route[0]).train:
+                        self.cancel_bigblock_routing_by_port(route[0])
+                print('\troute {} of {} is closed'.format(route, self))
+            else:
+                raise Exception('\troute {} of {} protected: failed to close'.
+                                format(route, self))
         if route:
-            assert route in self._current_routes
-            print('\troute {} of {} is closed'.format(route, self))
-            self.current_routes.remove(route)
+            close_single_route(route)
         else:
-            print('\tall routes fof {} are closed'.format(self))
-            self.current_routes = []
-            for p in self.ports:
-                self.cancel_bigblock_routing_by_port(p)
+            for r in self.current_routes:
+                close_single_route(r)
 
     def find_route_for_port(self, port, dest_pointport=None):
         def candidate_ports(port, dest_pointport=None):
@@ -699,15 +702,12 @@ class CtrlPoint(InterlockingPoint):
                     final_selection.remove(p)
                     continue
         
-        if not final_selection:
-            return None
+        if not final_selection: return None
         else:
             for p in final_selection:
-                try:
-                    if len(self.bigblock_by_port[p].train) == min(trns):
-                        return (port, p)
-                except:
-                    continue
+                if not self.bigblock_by_port.get(p): return (port, p)
+                if len(self.bigblock_by_port[p].train) == min(trns): 
+                    return (port, p)
             return (port, final_selection[0])
 
     def set_bigblock_routing_by_CtrlPoint_route(self, route):
@@ -743,18 +743,6 @@ class CtrlPoint(InterlockingPoint):
             if p != port:
                 return p
 
-    def update_signal(self, all_routes):
-        pass
-        return
-        '''update the signals in a CtrlPoint according to current routes'''
-        for (p1, p2) in self.all_valid_routes:
-            self.signal_by_port[p1].close()
-            self.signal_by_port[p2].close()
-        for (p1, p2) in self.current_routes:
-            self.signal_by_port[p2].close()
-            self.signal_by_port[p1].clear()
-
 
 if __name__ == '__main__':
-    a = Aspect('r')
-    print(Aspect.COLOR_SPD_DICT)
+    pass

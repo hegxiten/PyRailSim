@@ -428,6 +428,13 @@ class Train():
             else None
 
     @property
+    def curr_route_cancelable(self):
+        if not self.curr_home_sig: return True
+        if not self.curr_home_sig.route: return True
+        if self.curr_target_spd_abs == 0: return True
+        return False
+
+    @property
     def curr_sig(self):
         '''
             The Signal instance the train head is moving towards.'''
