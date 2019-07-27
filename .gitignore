@@ -11,10 +11,11 @@
 
 # vscode configs
 .vscode/
+.vscode/settings.json
 
 # pytest cache files
 .pytest_cache/
-.vscode/settings.json
+
 
 *.pyc
 *.pdf
@@ -25,4 +26,3 @@ venv/
 /Document/
 __pycache__/
 DES/test.py
-

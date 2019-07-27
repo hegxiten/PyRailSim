@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\wangz\\AppData\\Local\\Continuum\\anaconda3\\python.exe",
+    "python.pythonPath": "C:\\Users\\Hegxiten\\Anaconda3\\python.exe",
     "python.linting.pylintEnabled": true,
     "editor.rulers": [80,120],
     "workbench.colorCustomizations": {
