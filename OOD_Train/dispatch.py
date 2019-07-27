@@ -30,15 +30,25 @@ class Dispatcher():
     def __init__(self, sys):
         self.system = sys
         setattr(self.system, 'dispatcher', self)
+    
+    def cp_segment_to_node(self, cp_seg):
+        cp1,prt1,cp2,prt2 = cp_seg[0][0],cp_seg[0][1],cp_seg[1][0],cp_seg[1][1]
+        assert cp1.__class__.__name__ == cp2.__class__.__name__ == 'CtrlPoint'
 
-    def get_path(self, route):
-        return
-        _path = []
-        
+
+    def get_path(self, route, raw=True):
+        assert len(route) >=2
+        cp_path = [rp_seg[0][0] for rp_seg in route[1:]]
+        if raw is False:
+            return cp_path
+        if raw is True:
             
 
-    def get_route(self, src, srcport, tgt, tgtport, path=None, mainline=True):
-        src, srcport, tgt, tgtport = src, srcport, tgt, tgtport 
+
+    def get_route(self, src=None, srcport=None, tgt=None, tgtport=None, 
+                        path=None, mainline=True):
+        if src == tgt == path == None:
+            raise Exception("Need to specify either a path or pair of points!")
         if src.__class__.__name__ == 'AutoPoint':
             src, srcport = self.cp_port_leading_to(src, srcport)
         if tgt.__class__.__name__ == 'AutoPoint':
@@ -94,6 +104,10 @@ class Dispatcher():
                 cp_paths.pop(0)
                 _route_list.append(_single_route)
                 yield _single_route
+
+    def get_all_routes(self, src, srcport, tgt, tgtport):
+        return list(self.all_routes_generator(src, srcport, tgt, tgtport))
+
 
     def max_MA_limit(self, route):
         pass
