@@ -1,9 +1,0 @@
-{
-    "python.pythonPath": "C:\\Users\\Hegxiten\\Anaconda3\\python.exe",
-    "python.linting.pylintEnabled": true,
-    "editor.rulers": [80,120],
-    "workbench.colorCustomizations": {
-        "editorRuler.foreground": "#ff4081"
-    },
-    "files.autoSave": "onFocusChange",
-}
