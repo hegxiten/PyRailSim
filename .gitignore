@@ -9,6 +9,9 @@
 *.swo
 *.swp
 
+# vscode configs
+.vscode/
+
 # pytest cache files
 .pytest_cache/
 
