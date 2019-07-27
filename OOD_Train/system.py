@@ -623,7 +623,7 @@ class System():
     def refresh(self):
         '''
             TODO: Combine dispatcher actions; routing update actions.'''
-        self.generate_train()
+        # self.generate_train()
         self.update_routing()
         for t in self.trains.all_trains:
             t.update_acc()

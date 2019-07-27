@@ -68,25 +68,16 @@ class TrainList(MutableSequence):
             del self._downtrains[_idx]
             
     def __setitem__(self, ii, trn):
-        _to_set = self.all_trains[ii]
-        if _to_set in self._uptrains:
-            _idx = self._uptrains.index(_to_del)
-            self._uptrains[_idx] = trn
-        if _to_set in self._downtrains:
-            _idx = self._downtrains.index(_to_del)
-            self._downtrains[_idx] = trn
+        raise Exception("Cannot Set Directly in ")
 
     def insert(self, trn):
         if trn.uptrain:
             self._uptrains.append(trn)
         if trn.downtrain:
             self._downtrains.append(trn)
-        
-    def append(self, new_train):
-        if new_train.uptrain:
-            self._uptrains.append(new_train)
-        if new_train.downtrain:
-            self._downtrains.append(new_train)
+    
+    append = insert
+
 
 class Train():
     """
