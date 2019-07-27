@@ -42,7 +42,7 @@ class Dispatcher():
         if raw is False:
             return cp_path
         if raw is True:
-            
+            pass
 
 
     def get_route(self, src=None, srcport=None, tgt=None, tgtport=None, 
