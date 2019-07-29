@@ -16,6 +16,8 @@
 # pytest cache files
 .pytest_cache/
 
+# yapf config file
+.style.yapf
 
 *.pyc
 *.pdf
