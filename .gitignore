@@ -2,6 +2,8 @@
 .idea/
 
 # eclipse configs
+.settings/
+.settings/*
 *.project
 *.pydevproject
 
