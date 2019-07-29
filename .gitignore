@@ -24,6 +24,8 @@
 *.DS_Store
 *.gpickle
 
+e
+
 venv/
 /Document/
 __pycache__/
