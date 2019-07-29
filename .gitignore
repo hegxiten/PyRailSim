@@ -11,9 +11,11 @@
 
 # vscode configs
 .vscode/
+.vscode/settings.json
 
 # pytest cache files
 .pytest_cache/
+
 
 *.pyc
 *.pdf

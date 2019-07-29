@@ -96,7 +96,7 @@ class Siding(TrackNode):
     def diverge(self, train):
         pass
         
-class ControlPoint(TrackNode):
+class CtrlPoint(TrackNode):
     def stop(self, train):
         pass
     def approach(self, train):
@@ -104,7 +104,7 @@ class ControlPoint(TrackNode):
     def clear(self, train):
         pass
     
-class Switch(ControlPoint):
+class Switch(CtrlPoint):
     def arrive(self, train):
         print("  switching tracks")
         return self.delay

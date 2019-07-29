@@ -179,7 +179,7 @@ class single_train:
         self.one_schedule = {}  # we get a new self.one_schedule after each refresh
         self.one_detail = {}
         
-        self.max_speed = {}
+        self.max_spd = {}
         self.max_acc = {}
         
         self.curr_spd = {}
@@ -369,9 +369,9 @@ class single_train:
             if self.curr_spd[tn] < 0:
                 self.curr_mp[tn] = self.blk_interval[blk_idx][0]
             if self.curr_spd[tn] == 0:
-                if self.max_speed > 0:
+                if self.max_spd > 0:
                     self.curr_mp[tn] = self.blk_interval[blk_idx][1]
-                if self.max_speed < 0:
+                if self.max_spd < 0:
                     self.curr_mp[tn] = self.blk_interval[blk_idx][0]
             print 'DoS Reaching End Done', tn, self.curr_mp[tn], blk_idx
             
@@ -448,7 +448,7 @@ class single_train:
                 spd_seed = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0) 
                 while spd_seed <= 0:
                     spd_seed = np.random.normal(self.mph_exp/60.0, self.mph_dev/60.0)    
-                self.max_speed[self.number] = spd_seed
+                self.max_spd[self.number] = spd_seed
                 self.curr_spd[self.number] = spd_seed                                          # speed in miles per minute
                 self.init_moment[self.number] = self.clock_time + hdw_stpwatch * 60
                 self.curr_duration[self.number] = hdw_stpwatch * 60                         # in seconds because of the ticks are in seconds
@@ -488,12 +488,12 @@ class single_train:
                     # self.curr_duration[tn] is the duration for a train has been traveling in seconds, concurrent life of time for train 'tn'
                     # so self.clock_time is the current global time. Notice that time is a dictionary, with keys as integer train identifiers.
                     if self.clock_time < self.DoS_strt_t_ticks or self.clock_time > self.DoS_stop_t_ticks:
-                        self.curr_spd[tn] = self.max_speed[tn]
+                        self.curr_spd[tn] = self.max_spd[tn]
                         self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
                 
                     else:
                         if approach_block(tn, self.DoS_block) or in_block(tn, self.DoS_block) or leaving_block(tn, self.DoS_block):
-                            self.curr_spd[tn] = self.max_speed[tn]
+                            self.curr_spd[tn] = self.max_spd[tn]
                             self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
                             
                         elif enter_block(tn, self.DoS_block):

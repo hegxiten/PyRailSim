@@ -1,5 +1,22 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+"""
+    PyRailSim
+    Copyright (C) 2019  Zezhou Wang
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
 import os
 import random
 import sys
@@ -11,7 +28,8 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from signaling import AutoPoint, AutoSignal, ControlPoint, HomeSignal
+from signaling import AutoPoint, AutoSignal, CtrlPoint, HomeSignal
+from rail_networkx import all_simple_paths, shortest_path
 
 
 class TrainList(MutableSequence):
@@ -67,25 +85,16 @@ class TrainList(MutableSequence):
             del self._downtrains[_idx]
             
     def __setitem__(self, ii, trn):
-        _to_set = self.all_trains[ii]
-        if _to_set in self._uptrains:
-            _idx = self._uptrains.index(_to_del)
-            self._uptrains[_idx] = trn
-        if _to_set in self._downtrains:
-            _idx = self._downtrains.index(_to_del)
-            self._downtrains[_idx] = trn
+        raise Exception("Cannot Set Directly in ")
 
     def insert(self, trn):
         if trn.uptrain:
             self._uptrains.append(trn)
         if trn.downtrain:
             self._downtrains.append(trn)
-        
-    def append(self, new_train):
-        if new_train.uptrain:
-            self._uptrains.append(new_train)
-        if new_train.downtrain:
-            self._downtrains.append(new_train)
+    
+    append = insert
+
 
 class Train():
     """
@@ -148,21 +157,18 @@ class Train():
             else:
                 raise ValueError('Undefined MP direction')
 
-    def __init__(self, system, init_time, init_segment, max_sp, max_acc,
-                 max_dcc, **kwargs):
-        ((_curr_prev_sigpoint, _prev_sigport), (_curr_sigpoint,
-                                                _prev_sigport)) = init_segment
+    def __init__(self, system, init_segment, dest_segment,
+                    max_spd, max_acc, max_dcc, **kwargs):
         self.system = system
+        self.init_segment , self.dest_segment = init_segment, dest_segment
+        self.init_pointport = init_segment[1]
+        self.dest_pointport = dest_segment[0]
+        self.max_spd = max_spd
+        self.max_acc = max_acc
+        self.max_dcc = max_dcc
+        
         self.length = 1 \
             if kwargs.get('length') is None else kwargs.get('length')
-
-        self.init_segment = init_segment
-        self.shooting_point_port = (self.system.signal_points[0], 0) \
-            if self.sign_MP(self.init_segment) == -1 else (self.system.signal_points[-1], 1)
-        self.reverse_shooting_point_port = (self.system.signal_points[0], 0) \
-            if self.sign_MP(self.init_segment) == 1 else (self.system.signal_points[-1], 1)
-        self.dest_segment = (self.shooting_point_port, (None, None)) \
-            if kwargs.get('dest_segment') is None else kwargs.get('dest_segment')
 
         self._curr_routing_path_segment = self.init_segment
         self._curr_occupying_routing_path = [self._curr_routing_path_segment]
@@ -173,9 +179,6 @@ class Train():
         self.symbol = 2 * self.train_idx \
             if self.uptrain else 2 * self.train_idx + 1
         self.system.trains.append(self)
-        self.max_speed = max_sp
-        self.max_acc = max_acc
-        self.max_dcc = max_dcc
 
         self._curr_speed = 0
         self._curr_acc = 0
@@ -197,10 +200,12 @@ class Train():
                         '\t Train initialization Warning: adding new train to a track already occupied!'
                     )
                 self.curr_track.train.append(self)
+        self.system.last_train_init_time = self.system.sys_time
 
     def __repr__(self):
-        return 'train index {}, current occupation: {}, head MP: {}, rear MP {}'\
-            .format(self.train_idx, self.curr_occupying_routing_path,
+        return 'train idx:{} occupying:{} head MP:{} rear MP:{}'\
+            .format(str(self.train_idx).rjust(2,' '),
+                    self.curr_occupying_routing_path,
                     str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
                     str("%.2f" % round(self.rear_curr_MP, 2)).rjust(5, ' '))
     @property
@@ -345,6 +350,16 @@ class Train():
         self._curr_routing_path_segment = new_segment
 
     @property
+    def all_paths_ahead(self):
+        return list(all_simple_paths(self.system.G_origin, 
+            self.curr_sigpoint, self.dest_pointport[0]))
+
+    @property
+    def all_routes_ahead(self):
+        return list(self.system.dispatcher.all_routes_generator(self.curr_sigpoint, 
+            self.curr_sigport, self.dest_pointport[0], self.dest_pointport[1]))
+
+    @property
     def curr_sigpoint(self):
         '''
             The SignalPoint instance the train head is moving towards currently.'''
@@ -400,16 +415,16 @@ class Train():
         return self.curr_occupying_routing_path[-1][0][1]
 
     @property
-    def curr_control_point(self):
+    def curr_ctrl_point(self):
         '''
-            The closest ControlPoint instance the train head is moving towards.'''
+            The closest CtrlPoint instance the train head is moving towards.'''
         return self.curr_track.bigblock.shooting_point(sign_MP=self.sign_MP(self.curr_routing_path_segment))\
             if self.curr_track else self.curr_sigpoint
 
     @property
-    def curr_control_pointport(self):
+    def curr_ctrl_pointport(self):
         '''
-            The port of curr_control_point the train head is moving towards.'''
+            The port of curr_ctrl_point the train head is moving towards.'''
         return self.curr_track.bigblock.shooting_port(sign_MP=self.sign_MP(self.curr_routing_path_segment))\
             if self.curr_track else self.curr_sigport
 
@@ -417,9 +432,16 @@ class Train():
     def curr_home_sig(self):
         '''
             The closest HomeSignal instance the train head is moving towards.'''
-        return self.curr_control_point.signal_by_port[self.curr_control_pointport]\
-            if self.curr_control_point\
+        return self.curr_ctrl_point.signal_by_port[self.curr_ctrl_pointport]\
+            if self.curr_ctrl_point\
             else None
+
+    @property
+    def curr_route_cancelable(self):
+        if not self.curr_home_sig: return True
+        if not self.curr_home_sig.route: return True
+        if self.curr_target_spd_abs == 0: return True
+        return False
 
     @property
     def curr_sig(self):
@@ -472,7 +494,7 @@ class Train():
                     self._curr_MP = _new_prev_sig_MP + (new_MP - _curr_sig_MP)
                     # if entering a separate MP Track, interpolate distance at MP changing point
             else:
-                # 1.2 the train head is initiating, crossing the entry SignalPoint (ControlPoint)
+                # 1.2 the train head is initiating, crossing the entry SignalPoint (CtrlPoint)
                 _new_prev_sig_MP = self.curr_sigpoint.signal_by_port[
                     self.curr_sig.route[1]].MP
                 _curr_sig_MP = self.curr_sigpoint.signal_by_port[
@@ -531,7 +553,7 @@ class Train():
                             (new_rear_MP - _rear_curr_sig_MP)
                         # if entering a separate MP Track, interpolate distance at MP changing point
                 else:
-                    # 2.2 initiating, train rear is going to cross the entry ControlPoint
+                    # 2.2 initiating, train rear is going to cross the entry CtrlPoint
                     assert len(self.curr_occupying_routing_path) >= 2
                     if (new_rear_MP - self.rear_curr_sig.MP) * (
                             self._rear_curr_MP - self.rear_curr_sig.MP) < 0:
@@ -551,12 +573,14 @@ class Train():
                             (new_rear_MP - _rear_curr_sig_MP)
                         # interpolate distance at the MP changing point
                     else:
-                        # 2.2.2 not crossing the entry ControlPoint; train rear not in the system yet
+                        # 2.2.2 not crossing the entry CtrlPoint; train rear not in the system yet
                         self._rear_curr_MP += _delta_s
             else:
                 raise ValueError(
-                    'Setting Undefined rear MP: rear MP: {}, new rear MP: {}, rear track: {}'
-                    .format(self._rear_curr_MP, new_rear_MP,
+                    'Setting Undefined rear MP: original:{0}, new:{1}, \
+                        rear track:{2}'
+                    .format(self._rear_curr_MP, 
+                            new_rear_MP,
                             self.rear_curr_track))
         self.rear_time_pos_list.append(
             [self.system.sys_time, self.rear_curr_MP])
@@ -615,8 +639,8 @@ class Train():
             self._curr_speed = 0
         else:
             raise ValueError(
-                'Undefined speed value {} to set for old speed {}'.format(
-                    new_speed, _old_speed))
+                'Setting Undefined speed value: original:{0}, new:{1}'
+                .format(_old_speed, new_speed))
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction (after newly set speed value) to find bugs
@@ -776,7 +800,7 @@ class Train():
             A list of other trains ahead of the train with the same direction. 
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
-            self.curr_sigpoint, self.shooting_point_port[0], obv=True)
+            self.curr_sigpoint, self.dest_pointport[0], obv=True)
 
     @property
     def trains_behind_same_dir(self):
@@ -785,7 +809,7 @@ class Train():
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
             self.rear_curr_prev_sigpoint,
-            self.reverse_shooting_point_port[0],
+            self.init_pointport[0],
             rev=True)
 
     @property
@@ -794,7 +818,7 @@ class Train():
             A list of other trains ahead of the train with the opposite direction. 
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
-            self.curr_sigpoint, self.shooting_point_port[0], rev=True)
+            self.curr_sigpoint, self.dest_pointport[0], rev=True)
 
     @property
     def trains_behind_oppo_dir(self):
@@ -803,7 +827,7 @@ class Train():
             The lower the list index, the closer with the train.'''
         return self.system.get_trains_between_points(
             self.rear_curr_prev_sigpoint,
-            self.reverse_shooting_point_port[0],
+            self.init_pointport[0],
             obv=True)
 
     @property
@@ -818,29 +842,28 @@ class Train():
     def pending_route(self):
         '''
             Status property shows if the train is pending a route at its current
-            ControlPoint for further proceeding.
+            CtrlPoint for further proceeding.
             @return: True of False'''
         if not self.curr_sigpoint:
             return False
-        elif self.curr_sigpoint == self.curr_control_point:
+        elif self.curr_sigpoint == self.curr_ctrl_point:
             if not self.curr_sig.route:
                 return True
         elif not self.system.get_trains_between_points(
-                self.curr_sigpoint, self.curr_control_point, obv=True):
-            if not self.curr_control_point.signal_by_port[
-                    self.curr_control_pointport].route:
+                self.curr_sigpoint, self.curr_ctrl_point, obv=True):
+            if not self.curr_ctrl_point.signal_by_port[
+                    self.curr_ctrl_pointport].route:
                 return True
         return False
 
     @property
-    def all_rest_cps_enterable(self):
-        for n in self.system.control_points:
-            if (n.MP - self.curr_control_point.MP) * self.sign_MP(
-                    self.curr_routing_path_segment) > 0:
-                if not self.system.capacity_enterable(
-                        self.curr_control_point, n):
-                    return False
-        return True
+    def any_paths_ahead_enterable(self):
+        for p in self.all_paths_ahead:
+            if all([True 
+                    if self.system.capacity_enterable(self.curr_ctrl_point, n) 
+                    else False for n in p]):
+                return True
+        return False
 
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         '''
@@ -871,9 +894,10 @@ class Train():
         # self.time_pos_list.append([timestamp, self.curr_sig.MP])
 
         if initiate:
-            assert isinstance(sigpoint, ControlPoint)
+            assert isinstance(sigpoint, CtrlPoint)
             assert len(self.curr_sig.permit_track.train) == 0
-            print('train idx: {0} initiated, entering into {1}'.format(self.train_idx, _permit_track))
+            print('train {0} initiated, entering into {1}'
+                    .format(self, _permit_track))
             self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             self.curr_sig.permit_track.train.append(
                 self)  # occupy the track to enter
@@ -888,8 +912,7 @@ class Train():
                 0, self.curr_routing_path_segment)
             # record the time of entering the system, serving train generation's
             # time separation
-            self.enter_time = self.system.sys_time
-            self.system.last_train_init_time = self.enter_time
+            self.init_time = self.system.sys_time
 
         elif not initiate and not terminate:
             assert len(self.curr_sig.permit_track.train) == 0
@@ -898,8 +921,8 @@ class Train():
                 self)  # occupy the track to enter
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
-            # only close the route of ControlPoint along the way
-            if isinstance(sigpoint, ControlPoint):
+            # only close the route of CtrlPoint along the way
+            if isinstance(sigpoint, CtrlPoint):
                 # AutoPoints have no method to close route
                 sigpoint.close_route(_route)
             self.curr_routing_path_segment = \
@@ -910,7 +933,7 @@ class Train():
 
         elif terminate:
             # no track to occupy because of terminating
-            assert isinstance(sigpoint, ControlPoint)
+            assert isinstance(sigpoint, CtrlPoint)
             self.curr_spd_lmt_abs = self.curr_target_spd_abs  # update current speed limit
             # occupy the route of interlocking point
             sigpoint.curr_train_with_route[self] = _route
@@ -922,9 +945,8 @@ class Train():
                 0, self.curr_routing_path_segment)
 
         else:
-            raise ValueError(
-                'train {} crossing signalpoint {} failed unexpectedly'.format(
-                    self, sigpoint))
+            raise Exception('{} crossing {} failed unexpectedly'
+                            .format(self, sigpoint))
 
     def rear_cross_sigpoint(self, sigpoint, rear_curr_MP, new_rear_MP):
         '''
@@ -1024,40 +1046,38 @@ class Train():
 
     def request_routing(self):
         '''
-            Method of the train to call the closest ControlPoint to clear a route. 
+            Method of the train to call the closest CtrlPoint to clear a route. 
             Serve the myopic dispatch logic where trains only calls the cloest CPs.
             @return: None'''
-        if self.pending_route and self.all_rest_cps_enterable:
+        if self.pending_route and self.any_paths_ahead_enterable:
             _pending_route_to_open = \
-                self.curr_control_point.find_route_for_port(
-                    self.curr_control_pointport)
+                self.curr_ctrl_point.find_route_for_port(
+                                            port=self.curr_ctrl_pointport,
+                                            dest_pointport=self.dest_pointport)
             if _pending_route_to_open is None:
                 return
-            if _pending_route_to_open not in self.curr_control_point.current_invalid_routes:
+            if _pending_route_to_open not in self.curr_ctrl_point.current_invalid_routes:
                 if not self.curr_track or not self.curr_track.yard:
-                    print(
-                        'train idx: {}, MP: {} requested {} at CP: {}'.
-                        format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                _pending_route_to_open,
-                                self.curr_control_point.MP))
-                    self.curr_control_point.open_route(
-                        _pending_route_to_open)
+                    print('{}, requested {} at {}'
+                    .format(self, _pending_route_to_open, 
+                            self.curr_ctrl_point.MP))
+                    self.curr_ctrl_point.open_route(_pending_route_to_open)
                 elif self.curr_track.yard:
                     if not self.currently_passable(max_passes=1):
-                        print(
-                            'train idx: {}, MP: {} requested {} at CP: {}'
-                            .format(self.train_idx, str("%.2f" % round(self.curr_MP, 2)).rjust(5, ' '),
-                                    _pending_route_to_open,
-                                    self.curr_control_point.MP))
-                        self.curr_control_point.open_route(
-                            _pending_route_to_open)
+                        print('{}, requested {} at {}'
+                        .format(self, _pending_route_to_open,
+                                self.curr_ctrl_point.MP))
+                        self.curr_ctrl_point.open_route(_pending_route_to_open)
                     elif self.currently_passable(max_passes=1):
                         # no actions of its current CP (no route to open)
-                        for cp in self.system.control_points:
+                        for cp in self.system.ctrl_points:
                             for (p1,p2) in cp.current_routes:
                                 if cp.bigblock_by_port.get(p2):
                                     if self in cp.bigblock_by_port[p2].train:
-                                        _route_to_change = cp.find_route_for_port(p1)
+                                        _route_to_change = \
+                                            cp.find_route_for_port(
+                                                port=p1, 
+                                                dest_pointport=self.dest_pointport)
                                         cp.open_route(_route_to_change)
 
     def currently_passable(self, max_passes=1):
@@ -1074,7 +1094,7 @@ class Train():
         # for any train that is not the last one:
         if not self.curr_track or not self.rear_curr_track:
             return False    # not passable when not fully entered yet
-        if not (self.max_speed < self.trn_follow_behind.max_speed):
+        if not (self.max_spd < self.trn_follow_behind.max_spd):
             return False    # not passable if not slower than the one behind
         if self.rank - self.train_idx >= max_passes:
             return False    # not passable if has already been passed by once
@@ -1084,7 +1104,7 @@ class Train():
             if self.stopped and any([not t.stopped for t in _rest_trains]):
                 return True # during the pass, hold the stopped train from move
             if all([trk.train for trk in self.curr_track.yard.tracks]):
-                if abs(self.max_speed) == min([abs(trn.max_speed) 
+                if abs(self.max_spd) == min([abs(trn.max_spd) 
                         for trn in self.curr_track.yard.all_trains]):
                     return True
             if self.curr_track.yard.available_tracks >= 1 and self.dist_to_trn_behind <= 10:
@@ -1101,7 +1121,7 @@ class Train():
     def __lt__(self, other):
         '''
             implement __lt__ to sort trains based on their current MilePost.
-            If MilePosts are the same, compare max_speed.
+            If MilePosts are the same, compare max_spd.
             TODO: implement better algorithms to compare train priority.'''
         if not self.terminated:
             if self.curr_MP > other.curr_MP:
@@ -1110,9 +1130,9 @@ class Train():
                 return False if self.downtrain else True
             # when MP is the same, compare max speed as a priority indicator
             elif self.curr_MP == other.curr_MP:
-                if self.max_speed > other.max_speed:
+                if self.max_spd > other.max_spd:
                     return True if self.downtrain else False
-                elif self.max_speed < other.max_speed:
+                elif self.max_spd < other.max_spd:
                     return False if self.downtrain else True
         if self.terminated and other.terminated:
             _self_term_time = max([time for [time,_] in self.time_pos_list])
