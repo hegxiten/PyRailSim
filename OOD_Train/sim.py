@@ -162,14 +162,14 @@ def launch(sys, downtrain=True):
             if downtrain:
                 if not sys.signal_points[0].curr_train_with_route.keys():
                     if all([t.curr_routing_path_segment != ((None,None),(sys.signal_points[0],0)) for t in sys.trains]):
-                        if not sys.signal_points[0].track_by_port[1].train:
+                        if not sys.signal_points[0].track_by_port[1].trains:
                             t = sys.generate_train( sys.signal_points[0],0,
                                                     sys.signal_points[10],1,
                                                     length=1)
             else:
                 if not sys.signal_points[10].curr_train_with_route.keys():
                     if all([t.curr_routing_path_segment != ((None,None),(sys.signal_points[10],1)) for t in sys.trains]):
-                        if not sys.signal_points[10].track_by_port[0].train:
+                        if not sys.signal_points[10].track_by_port[0].trains:
                             t = sys.generate_train( sys.signal_points[10],1,
                                                     sys.signal_points[0],0,
                                                     length=1)

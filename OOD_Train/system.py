@@ -53,7 +53,7 @@ class System():
             Tuple of MPs to be attacked by DoS. (None,None) by default (no DoS).
         :refresh_time: int (**kw), seconds
             Seconds between two consecutive traverse calculations of the simulation.
-        :sp_containter: list (**kw), mph
+        :spd_container: list (**kw), mph
             A list of randomized speed values for trains to initialize by. 
         :acc_container: list (**kw), miles/(sec)^2
             A list of randomized acceleration values for trains to initialize by. 
@@ -119,7 +119,7 @@ class System():
             scenarios. When violated, the program will throw AssertionErrors at 
             braking distance/speed limit check.'''
         _signal_speeds = sorted(
-            [spd for _, spd in Aspect.COLOR_SPD_DICT.items()])
+            [spd for _, spd in Aspect.COLOR_SPD_MAP.items()])
         _speed_diff_pairs = [(_signal_speeds[i], _signal_speeds[i + 1])
                              for i in range(len(_signal_speeds) - 1)]
         _max_diff_square_of_spd = max(
@@ -189,7 +189,7 @@ class System():
                         if cp.track_by_port.get(r[1]):
                             _routing_list.append([((None, None), (cp, r[0]))])
 
-        _routing_list = [i for i in [getattr(_bblk, 'self_routing_path') 
+        _routing_list = [i for i in [getattr(_bblk, 'individual_routing_paths_list') 
             for _bblk in self.bigblocks]if i]
         add_cleared_routing_external_virtual_bblk()
         _traversed = []
@@ -249,11 +249,11 @@ class System():
         TEST_NODE = {   0: CtrlPoint( self, idx=0, ports=[0, 1], MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
                         2: AutoPoint(    self, idx=2, MP=10.0),
-                        3: CtrlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=15.0),
-                        4: CtrlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=20.0),
+                        3: CtrlPoint( self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: [0], 1: [1, 3], 3: [3, 1]}, MP=15.0),
+                        4: CtrlPoint( self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0], 1:[1]}, MP=20.0),
                         5: AutoPoint(    self, idx=5, MP=25.0),
-                        6: CtrlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [3], 3: [1]}, MP=30.0),
-                        7: CtrlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [2], 2: [0]}, MP=35.0),
+                        6: CtrlPoint( self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: [0], 1: [1, 3], 3: [3, 1]}, MP=30.0),
+                        7: CtrlPoint( self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0], 1:[1]}, MP=35.0),
                         8: AutoPoint(    self, idx=8, MP=40.0),
                         9: AutoPoint(    self, idx=9, MP=45.0),
                         10: CtrlPoint(self, idx=10, ports=[0, 1], MP=50.0)
@@ -276,23 +276,23 @@ class System():
 
         TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
 
-        TEST_NODE = {   0: CtrlPoint( self, idx=0, ports=[0, 1], ban_ports_by_port={0: [0], 1: [1]}, MP=0.0),
+        TEST_NODE = {   0: CtrlPoint( self, idx=0, ports=[0, 1], banned_ports_by_port={0: [0], 1: [1]}, MP=0.0),
                         1: AutoPoint(    self, idx=1, MP=5.0),
-                        2: CtrlPoint( self, idx=2, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=10.0),
-                        3: CtrlPoint( self, idx=3, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=15.0),
-                        4: CtrlPoint( self, idx=4, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=20.0),
-                        5: CtrlPoint( self, idx=5, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=25.0),
-                        6: CtrlPoint( self, idx=6, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=30.0),
-                        7: CtrlPoint( self, idx=7, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=35.0),
-                        8: CtrlPoint( self, idx=8, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=40.0),
+                        2: CtrlPoint( self, idx=2, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=10.0),
+                        3: CtrlPoint( self, idx=3, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=15.0),
+                        4: CtrlPoint( self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=20.0),
+                        5: CtrlPoint( self, idx=5, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=25.0),
+                        6: CtrlPoint( self, idx=6, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=30.0),
+                        7: CtrlPoint( self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=35.0),
+                        8: CtrlPoint( self, idx=8, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=40.0),
                         9: AutoPoint(    self, idx=9, MP=45.0),
-                        10: CtrlPoint(self, idx=10, ports=[0, 1], ban_ports_by_port={0: [0], 1: [1]}, MP=50.0),
+                        10: CtrlPoint(self, idx=10, ports=[0, 1], banned_ports_by_port={0: [0], 1: [1]}, MP=50.0),
                         11: AutoPoint(   self, idx=11, MP=30.0),
                         12: AutoPoint(   self, idx=12, MP=35.0),
-                        13: CtrlPoint(self, idx=13, ports=[0, 1], ban_ports_by_port={0: [0], 1: [1]}, MP=20.0),
-                        14: CtrlPoint(self, idx=14, ports=[0, 1, 3], ban_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=5.0),
+                        13: CtrlPoint(self, idx=13, ports=[0, 1], banned_ports_by_port={0: [0], 1: [1]}, MP=20.0),
+                        14: CtrlPoint(self, idx=14, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=5.0),
                         15: AutoPoint(   self, idx=15, MP=10.0),
-                        16: CtrlPoint(self, idx=16, ports=[0, 2, 1], ban_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=15.0),
+                        16: CtrlPoint(self, idx=16, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=15.0),
         }   # yapf: disable
 
         TEST_TRACK = [
@@ -453,16 +453,16 @@ class System():
             init_segment = ((None, None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port)\
                 else (( init_point.track_by_port[init_port]
-                        .shooting_point(point=init_point),
+                        .get_shooting_point(point=init_point),
                         init_point.track_by_port[init_port]
-                        .shooting_port(point=init_point)),
+                        .get_shooting_port(point=init_point)),
                       (init_point, init_port))
             dest_segment = ((dest_point, dest_port), (None, None)) \
                 if not dest_point.track_by_port.get(dest_port)\
                 else (( dest_point.track_by_port[dest_port]
-                        .shooting_point(point=dest_point),
+                        .get_shooting_point(point=dest_point),
                         dest_point.track_by_port[dest_port]
-                        .shooting_port(point=dest_point)),
+                        .get_shooting_port(point=dest_point)),
                       (dest_point, dest_port))
             init_track = self.get_track_by_point_port_pairs(
                 init_segment[0][0], init_segment[0][1], 
@@ -476,7 +476,7 @@ class System():
                     max_acc=random.choice(self.acc_container),
                     max_dcc=random.choice(self.dcc_container),
                     length=length)
-            elif init_track.is_Occupied:
+            elif init_track.is_occupied:
                 print('\tWarning: cannot generate train: track is occupied. \
                     Hold new train for track availablity.')
             elif not init_track.routing:
@@ -579,7 +579,7 @@ class System():
         for p in all_paths:
             for i in range(len(p) - 1):
                 for k in list(self.G_origin[p[i]][p[i + 1]]):
-                    for t in self.G_origin[p[i]][p[i + 1]][k]['instance'].train:
+                    for t in self.G_origin[p[i]][p[i + 1]][k]['instance'].trains:
                         if t.curr_routing_path_segment[0][0] in (p[i], p[i+1]) \
                         and t.curr_routing_path_segment[1][0] in (p[i], p[i+1]):
                             if t not in _trains_all:
@@ -616,7 +616,7 @@ class System():
                         if all([t.curr_routing_path_segment != 
                                 ((None,None),(self.signal_points[0],0)) 
                                 for t in self.trains.all_trains]):
-                            if not self.tracks[0].train:
+                            if not self.tracks[0].trains:
                                 t = self.generate_train(self.signal_points[0],
                                                         0, 
                                                         self.signal_points[10], 

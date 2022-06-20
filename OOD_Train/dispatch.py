@@ -93,15 +93,15 @@ class Dispatcher():
             route.insert(0, ((None,None),(src, srcport)))
         if src.bigblock_by_port.get(srcport):
             init_bblk = src.bigblock_by_port.get(srcport)
-            _p = init_bblk.shooting_point(point=src, port=srcport)
-            _port = init_bblk.shooting_port(point=src, port=srcport)
+            _p = init_bblk.get_shooting_point(point=src, port=srcport)
+            _port = init_bblk.get_shooting_port(point=src, port=srcport)
             route.insert(0, ((_p,_port),(src, srcport)))
         if not tgt.bigblock_by_port.get(tgtport):
             route.append(((tgt, tgtport),(None,None)))
         if tgt.bigblock_by_port.get(tgtport):
             final_bblk = tgt.bigblock_by_port.get(tgtport)
-            _p = final_bblk.shooting_point(point=tgt, port=tgtport)
-            _port = final_bblk.shooting_port(point=tgt, port=tgtport)
+            _p = final_bblk.get_shooting_point(point=tgt, port=tgtport)
+            _port = final_bblk.get_shooting_port(point=tgt, port=tgtport)
             route.append(((tgt, tgtport),(_p,_port)))
         return route
 

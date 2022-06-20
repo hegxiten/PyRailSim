@@ -350,7 +350,7 @@ if __name__ == '__main__':
                                       "%Y-%m-%d %H:%M:%S")
     sim_term_time = datetime.strptime('2018-01-10 15:30:00',
                                       "%Y-%m-%d %H:%M:%S")
-    sp_container = [random.uniform(0.01, 0.02) for i in range(20)]
+    spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
     acc_container = [
         random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
     ]
@@ -358,8 +358,8 @@ if __name__ == '__main__':
         random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
     ]
     headway = 200 * random.random() + 400
-    sys = System(sim_init_time,
-                 sp_container,
+    world = System(sim_init_time,
+                 spd_container,
                  acc_container,
                  dcc_container,
                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
@@ -377,34 +377,34 @@ if __name__ == '__main__':
     #                   max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)])
 
     T166 = Train(
-        idx=sys.train_num,
-        rank=sys.train_num,
-        system=sys,
-        init_time=sys.sys_time,
-        init_segment=((None, None), (sys.signal_points[10], 1)),
-        max_sp=sys.sp_container[sys.train_num % len(sys.sp_container)],
-        max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)],
-        max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
+        idx=world.train_num,
+        rank=world.train_num,
+        system=world,
+        init_time=world.sys_time,
+        init_segment=((None, None), (world.signal_points[10], 1)),
+        max_sp=world.spd_container[world.train_num % len(world.spd_container)],
+        max_acc=world.acc_container[world.train_num % len(world.acc_container)],
+        max_dcc=world.dcc_container[world.train_num % len(world.dcc_container)],
         length=1)
 
     T165 = Train(
-        idx=sys.train_num,
-        rank=sys.train_num,
-        system=sys,
-        init_time=sys.sys_time,
-        init_segment=((None, None), (sys.signal_points[0], 0)),
+        idx=world.train_num,
+        rank=world.train_num,
+        system=world,
+        init_time=world.sys_time,
+        init_segment=((None, None), (world.signal_points[0], 0)),
         max_sp=T166.max_spd * 1.6,
-        max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)],
-        max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)],
+        max_acc=world.acc_container[world.train_num % len(world.acc_container)],
+        max_dcc=world.dcc_container[world.train_num % len(world.dcc_container)],
         length=1)
 
-    sys.signal_points[10].open_route((1, 0))
-    sys.signal_points[7].open_route((1, 0))
-    sys.signal_points[6].open_route((1, 0))
-    sys.signal_points[4].open_route((1, 0))
+    world.signal_points[10].open_route((1, 0))
+    world.signal_points[7].open_route((1, 0))
+    world.signal_points[6].open_route((1, 0))
+    world.signal_points[4].open_route((1, 0))
 
     for n in range(360):
         T166.update_acc()
         T165.update_acc()
-        sys.sys_time += sys.refresh_time
-    run_with_string_diagram(sys, sim_init_time, sim_term_time)
+        world.sys_time += world.refresh_time
+    run_with_string_diagram(world, sim_init_time, sim_term_time)
