@@ -15,6 +15,8 @@ from system import System
 from train import Train
 
 
+
+
 def run_with_string_diagram(sys, sys_dos, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains. 
     '''

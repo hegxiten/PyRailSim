@@ -34,6 +34,7 @@ from train import Train, TrainList
 
 
 class CorridorState():
+
     def __init__(self, sys):
         self.sys = sys
 
