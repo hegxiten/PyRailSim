@@ -2,19 +2,14 @@
 # -*- coding: utf-8 -*-
 import random
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import numpy as np
 
-from infrastructure import *
-from signaling import Signal
-from system import System
-from train import Train
-
-
+from simulation_core.network.System.system import System
+from simulation_core.train.train import Train
 
 
 def run_with_string_diagram(sys, sys_dos, start_time, end_time):
@@ -339,11 +334,11 @@ def main():
     delay_avg = cal_delay_avg(delay)
     print("Test case 1, delay_avg = {}".format(delay_avg))
 
-    print("Slowest Train Speed = {} mph".format(min(sp_container) * 3600))
-    print("Fastest Train Speed = {} mph".format(max(sp_container) * 3600))
-    print("Minimum Train Acc = {} mph/min".format(
+    print("Slowest train Speed = {} mph".format(min(sp_container) * 3600))
+    print("Fastest train Speed = {} mph".format(max(sp_container) * 3600))
+    print("Minimum train Acc = {} mph/min".format(
         min(acc_container) * 3600 * 60))
-    print("Maximum Train Acc = {} mph/min".format(
+    print("Maximum train Acc = {} mph/min".format(
         max(acc_container) * 3600 * 60))
 
 
@@ -369,7 +364,7 @@ if __name__ == '__main__':
                  headway=headway,
                  refresh_time=10)
 
-    # K166 = Train(idx=sys.train_num,
+    # K166 = train(idx=sys.train_num,
     #                   rank=sys.train_num,
     #                   system=sys,
     #                   init_time=sys.sys_time,

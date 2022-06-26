@@ -56,7 +56,7 @@ class train_delay_one_dirc:
         delay_schedule = {}
         n = 1
         ticks = DoS_ticks + (self.X + self.Y) * 60 * 60
-        print 'Delay happens from Train ' + str(num_first_delay) + '\nSchedule:'
+        print 'Delay happens from train ' + str(num_first_delay) + '\nSchedule:'
 
         while 1:
             delay_value = {}

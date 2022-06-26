@@ -18,23 +18,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import os
 import random
-import sys
 
-sys.path.append(
-    'D:\\Users\\Hegxiten\\workspace\\Rutgers_Railway_security_research\\OOD_Train'
-)
-
-from collections.abc import MutableSequence
-from datetime import datetime, timedelta
-from itertools import combinations, permutations
-
-import networkx as nx
-import numpy as np
-
-from rail_networkx import all_simple_paths, shortest_path
-
+from simulation_core.network.network_utils import all_simple_paths, shortest_path
 
 class Dispatcher():
     @staticmethod

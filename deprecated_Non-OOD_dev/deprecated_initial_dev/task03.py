@@ -98,8 +98,8 @@ while n < 50:
     if task_num != 1:
         train_time = time.strftime("%Y.%m.%d %H:%M", time.localtime(ticks))
         with open("/Users/guokai/Desktop/entry_task.txt", 'a') as f:
-            print >> f, 'Train', n, train_time, train_direction(next_direction), int(weight[n]), 'Tons', 'time_buffer:', variance[n]
-            print 'Train', n, train_time, train_direction(next_direction), int(weight[n]), 'Tons', 'time_buffer:', int(variance[n])
+            print >> f, 'train', n, train_time, train_direction(next_direction), int(weight[n]), 'Tons', 'time_buffer:', variance[n]
+            print 'train', n, train_time, train_direction(next_direction), int(weight[n]), 'Tons', 'time_buffer:', int(variance[n])
             f.close()
 
 

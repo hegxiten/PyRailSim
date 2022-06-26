@@ -74,7 +74,7 @@ class generate_train_one_dirc:
             dic_value['Dos_time'] = 'null'
             dic_value['max_delay'] = 'null'
             self.dic[n + 1] = dic_value
-            #self.schedule = self.schedule + 'Train ' + str(self.dic[n][0]) + ' ' + str(self.dic[n][1]) + ' ' + self.dic[n][2] + ' ' + str(self.dic[n][3]) + ' ' + 'Tons' + '\n'
+            #self.schedule = self.schedule + 'train ' + str(self.dic[n][0]) + ' ' + str(self.dic[n][1]) + ' ' + self.dic[n][2] + ' ' + str(self.dic[n][3]) + ' ' + 'Tons' + '\n'
             n += 1
         # for i in range(len(self.dic)):
         #     print self.dic[i+2]

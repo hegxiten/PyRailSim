@@ -98,7 +98,7 @@ while n < 50:
             print ('\nThere is a 2 hours break because of cyber attack.\n')
     if task_num != 1:
         train_time = time.strftime("%Y.%m.%d %H:%M", time.localtime(ticks))
-        print 'Train', n, train_time, train_direction(next_direction), int(weight[n]), 'Tons'
+        print 'train', n, train_time, train_direction(next_direction), int(weight[n]), 'Tons'
 
 
 if task_num == 1 or task_num == 3:

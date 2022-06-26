@@ -1,6 +1,6 @@
 import pandas as pd
 
-# important: the header of csv is [Train, Time, Direction, Weight, headway]
+# important: the header of csv is [train, Time, Direction, Weight, headway]
 # Its input data come from Class: generate_train.generate_schedule
 # the tyoe of input is "dictionary"
 class write_csv:
@@ -21,7 +21,7 @@ class write_csv:
             self.dataframe = pd.DataFrame({'train': self.In[n]['index'], 'time_arrival': self.In[n]['time_arrival'], 'time_departure': self.In[n]['time_departure'], 'direction': self.In[n]['direction'], 'weight(tons)': self.In[n]['total_weight'], 'headway(mins)': self.In[n]['headway_next'], 'delay(mins)': self.In[n]['delay'], 'X+Y(hours)': self.In[n]['X+Y']}, index=[0])
             self.dataframe.to_csv("/Users/guokai/Desktop/git/Rutgers_Railway_security_research/Cyber_Risk_Research/orig_schedule.csv", index=0, sep=',', mode='a', header=0, columns=columns)
             n += 1
-        print '\nNote: train_schedule.csv has been created, and the sequence of header is [Train, Time, Direction, Weight, headway]'
+        print '\nNote: train_schedule.csv has been created, and the sequence of header is [train, Time, Direction, Weight, headway]'
 
 
 # Code in main class:

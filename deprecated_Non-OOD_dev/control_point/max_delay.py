@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-# important: the header of csv is [Train, Time, Direction, Weight, headway]
+# important: the header of csv is [train, Time, Direction, Weight, headway]
 # Its input data come from Class: generate_train.generate_schedule
 # the tyoe of input is "dictionary"
 class max_delay:
@@ -17,7 +17,7 @@ class max_delay:
             self.dataframe = pd.DataFrame({'X+Y': self.In[n]['X+Y'], 'delay_num': self.In[n]['delay_num']}, index=[0])
             self.dataframe.to_csv("/Users/guokai/Desktop/git/Rutgers_Railway_security_research/Cyber_Risk_Research/max_delay.csv", index=0, sep=',', mode='a', header=0, columns=columns)
             n += 1
-        print '\nNote: train_schedule.csv has been created, and the sequence of header is [Train, Time, Direction, Weight, headway]'
+        print '\nNote: train_schedule.csv has been created, and the sequence of header is [train, Time, Direction, Weight, headway]'
 
 
 # Code in main class:

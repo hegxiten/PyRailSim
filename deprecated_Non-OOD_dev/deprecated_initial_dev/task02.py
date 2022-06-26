@@ -59,5 +59,5 @@ while n <= 50:
     n += 1
 
     train_time = time.strftime("%Y-%m-%d %H:%M", time.localtime(ticks))
-    print 'Train', n-1, train_time, train_direction(next_direction), int(weight[n]), 'Tons'
+    print 'train', n-1, train_time, train_direction(next_direction), int(weight[n]), 'Tons'
 

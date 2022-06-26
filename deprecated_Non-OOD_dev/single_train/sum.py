@@ -434,7 +434,7 @@ class single_train:
             float problem when printing the events.  
             '''
             #===================================================================
-            #===========================Generate Train==========================
+            #===========================Generate train==========================
             # headway in minutes, local variable, randomize every loop in the while True body
             headway = np.random.normal(self.hdw_exp_min, self.hdw_dev_min)
             while headway <= 0:
@@ -507,7 +507,7 @@ class single_train:
                             self.curr_spd[tn] = 0
                         elif self.curr_spd[tn] == 0:
                             self.curr_mp[tn] += self.curr_spd[tn] * self.refresh
-                            print 'Train: ',tn, 'curr spd: ', self.curr_spd[tn], ' MP:', self.curr_mp[tn], self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.clock_time))                            
+                            print 'train: ',tn, 'curr spd: ', self.curr_spd[tn], ' MP:', self.curr_mp[tn], self.T.strftime("%Y-%m-%d %H:%M:%S", self.T.localtime(self.clock_time))
                     self.curr_duration[tn] += self.refresh * 60
                     get_curr_block(tn)
                 else:

@@ -1,48 +1,17 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-"""
-    PyRailSim
-    Copyright (C) 2019  Zezhou Wang
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-import copy
 import logging
 import random
-from collections.abc import MutableSequence
-from datetime import datetime, timedelta
-from itertools import combinations, permutations
-
 import networkx as nx
-import numpy as np
+from datetime import datetime
 
-from rail_networkx import all_simple_paths, shortest_path
-from infrastructure import BigBlock, Track, Yard
-from signaling import Aspect, AutoPoint, AutoSignal, CtrlPoint, HomeSignal
-from train import Train, TrainList
-
-
-class CorridorState():
-
-    def __init__(self, sys):
-        self.sys = sys
-
-    def meetings(self, ):
-        pass
-
-    def passings(self, ):
-        pass
+from simulation_core.infrastructure.Track.BigBlock import BigBlock
+from simulation_core.infrastructure.Track.Track import Track
+from simulation_core.infrastructure.Yard.Yard import Yard
+from simulation_core.network.network_utils import shortest_path, all_simple_paths
+from simulation_core.signaling.InterlockingPoint.AutoPoint import AutoPoint
+from simulation_core.signaling.InterlockingPoint.CtrlPoint import CtrlPoint
+from simulation_core.signaling.Signal.Aspect import Aspect
+from simulation_core.train.TrainList import TrainList
+from simulation_core.train.train import Train
 
 class System():
     """
@@ -55,9 +24,9 @@ class System():
         :refresh_time: int (**kw), seconds
             Seconds between two consecutive traverse calculations of the simulation.
         :spd_container: list (**kw), mph
-            A list of randomized speed values for trains to initialize by. 
+            A list of randomized speed values for trains to initialize by.
         :acc_container: list (**kw), miles/(sec)^2
-            A list of randomized acceleration values for trains to initialize by. 
+            A list of randomized acceleration values for trains to initialize by.
         :dcc_container: list (**kw), miles/(sec)^2
             A list of randomized deceleration values for trains to brake by."""
 
@@ -77,8 +46,8 @@ class System():
         # list of all SignalPoints, including AutoPoints and CtrlPoints
         self.ctrl_points = list(self.G_skeleton.nodes())
         # list of all CtrlPoints. Indices are different from signal_points.
-        self.vertex_points = [cp for cp in self.ctrl_points 
-            if cp.vertex == True]
+        self.vertex_points = [cp for cp in self.ctrl_points
+                              if cp.is_vertex == True]
         # list of all vertex CtrlPoints where trains can initiate/terminate.
         self.tracks = [data['instance']
             for (u, v, data) in list(self.G_origin.edges(data=True))]
@@ -116,8 +85,8 @@ class System():
         '''
             Absolute value, minimum brake acceleration of all trains required by
             the system setup. If train's maximum braking deceleration is smaller
-            than this value, it may violate some signal/speed limits at extreme 
-            scenarios. When violated, the program will throw AssertionErrors at 
+            than this value, it may violate some signal/speed limits at extreme
+            scenarios. When violated, the program will throw AssertionErrors at
             braking distance/speed limit check.'''
         _signal_speeds = sorted(
             [spd for _, spd in Aspect.COLOR_SPD_MAP.items()])
@@ -162,7 +131,7 @@ class System():
 
         def connectable(rp1, rp2):
             '''
-                local function to determine if two lists of routing paths can be 
+                local function to determine if two lists of routing paths can be
                 connected together: linking two joint movement authorities.'''
             if rp1 and rp2:
                 rp1_head, rp1_tail = rp1[0][0][0], rp1[-1][-1][0]
@@ -180,7 +149,7 @@ class System():
 
         def add_cleared_routing_external_virtual_bblk():
             '''
-                Add routing of initiating/terminalting routing path without a 
+                Add routing of initiating/terminalting routing path without a
                 materialized bigblock outside the vertex CtrlPoints.'''
             for cp in self.vertex_points:
                 if cp.current_routes:
@@ -190,7 +159,7 @@ class System():
                         if cp.track_by_port.get(r[1]):
                             _routing_list.append([((None, None), (cp, r[0]))])
 
-        _routing_list = [i for i in [getattr(_bblk, 'individual_routing_paths_list') 
+        _routing_list = [i for i in [getattr(_bblk, 'individual_routing_paths_list')
             for _bblk in self.bigblocks]if i]
         add_cleared_routing_external_virtual_bblk()
         _traversed = []
@@ -240,7 +209,7 @@ class System():
         return None
 
     def graph_constructor(self, node={}, track={}):
-        '''Initialize the MultiGraph object with railroad components 
+        '''Initialize the MultiGraph object with railroad components
         (CP, AT as nodes, Tracks as edges)'''
         # TODO: construct the nbunch and ebunch list for Graph in network_constructor.py
         # TODO: automation of port connecting and index assignment
@@ -399,12 +368,12 @@ class System():
                 if len(old_L_trk.tracks) == 1 and old_L_trk in old_L_trk.tracks:
                     new_track.tracks.append(old_L_trk)
                 else:
-                    new_track.tracks.extend([t for t in old_L_trk.tracks 
+                    new_track.tracks.extend([t for t in old_L_trk.tracks
                                                 if t not in new_track.tracks])
                 if len(old_R_trk.tracks) == 1 and old_R_trk in old_R_trk.tracks:
                     new_track.tracks.append(old_R_trk)
                 else:
-                    new_track.tracks.extend([t for t in old_R_trk.tracks 
+                    new_track.tracks.extend([t for t in old_R_trk.tracks
                                                 if t not in new_track.tracks])
                 F.remove_node(i)
                 F.add_edge(new_L_point,
@@ -433,16 +402,16 @@ class System():
                 t.bigblock = big_block_instance
                 if t not in big_block_instance.tracks:
                     big_block_instance.tracks.append(t)
-            # get the list of track unit components of a bigblock, 
+            # get the list of track unit components of a bigblock,
             # and record in the instance
             for t in big_block_instance.tracks:
                 t.bigblock = big_block_instance
-            big_block_instance.mainline = True if all([t.mainline 
+            big_block_instance.mainline = True if all([t.mainline
                     for t in big_block_instance.tracks]) else False
             F[u][v][k]['attr'] = big_block_instance.__dict__
             F[u][v][k]['instance'] = big_block_instance
             F[u][v][k]['weight_mainline'] = big_block_instance.mainline_weight
-            
+
         return F
 
     def generate_train(self, init_point, init_port, dest_point, dest_port, **kwargs):
@@ -466,7 +435,7 @@ class System():
                         .get_shooting_port(point=dest_point)),
                       (dest_point, dest_port))
             init_track = self.get_track_by_point_port_pairs(
-                init_segment[0][0], init_segment[0][1], 
+                init_segment[0][0], init_segment[0][1],
                 init_segment[1][0], init_segment[1][1])
             if not init_track:
                 _new_train = Train(
@@ -523,7 +492,7 @@ class System():
             <= _parallel_tracks - _occupied_parallel_tracks else False
 
     def num_parallel_tracks(self, init_point, dest_point):
-        _mainline_path = shortest_path(self.G_origin, source=init_point, 
+        _mainline_path = shortest_path(self.G_origin, source=init_point,
                                 target=dest_point, weight='weight_mainline')
         _head = _mainline_path.pop(0)
         count = 0
@@ -537,7 +506,7 @@ class System():
                     _traversed.append(p)
                     continue
                 else:
-                    count += len(list(all_simple_paths(self.G_origin, 
+                    count += len(list(all_simple_paths(self.G_origin,
                                                         _head, p))) - 1
                     _traversed.append(p)
                     _head = p
@@ -569,9 +538,9 @@ class System():
                                   obv=False,
                                   rev=False):
         '''
-            Given a pair of O-D in the system, return all trains running between 
+            Given a pair of O-D in the system, return all trains running between
             this pair of O-D nodes.
-            @option: filter trains running at the obversed/reversed direction 
+            @option: filter trains running at the obversed/reversed direction
             compared with the from-to path.'''
         all_paths = list(all_simple_paths(self.G_origin, from_point, to_point))
         _trains_all = []
@@ -614,14 +583,14 @@ class System():
                 if self.sys_time+self.refresh_time - self.last_train_init_time \
                         >= self.headway:
                     if not self.signal_points[0].curr_train_with_route.keys():
-                        if all([t.curr_routing_path_segment != 
-                                ((None,None),(self.signal_points[0],0)) 
+                        if all([t.curr_routing_path_segment !=
+                                ((None,None),(self.signal_points[0],0))
                                 for t in self.trains.all_trains]):
                             if not self.tracks[0].trains:
                                 t = self.generate_train(self.signal_points[0],
-                                                        0, 
-                                                        self.signal_points[10], 
-                                                        1, 
+                                                        0,
+                                                        self.signal_points[10],
+                                                        1,
                                                         length=1)
             self.sys_time += self.refresh_time
         logging.info("Thread %s: finishing", 'simulator')
@@ -650,18 +619,17 @@ class System():
         self.sys_time += self.refresh_time
 
 
-if __name__ == '__main__':
-    sim_init_time = datetime.strptime('2018-01-10 10:00:00',"%Y-%m-%d %H:%M:%S")
-    sim_term_time = datetime.strptime('2018-01-10 15:30:00',"%Y-%m-%d %H:%M:%S")
-    spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
-    acc_container = [0.5*random.uniform(2.78e-05*0.85, 2.78e-05*1.15) 
-                        for i in range(20)]
-    dcc_container = [0.2*random.uniform(2.78e-05*0.85, 2.78e-05*1.15) 
-                        for i in range(20)]
-    headway = 300 + random.random() * 400
-    sys = System(sim_init_time, spd_container, acc_container, dcc_container,
-                term_time=sim_term_time,
-                dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],  
-                dos_pos=(15,20),
-                headway=headway, 
-                refresh_time=50)
+sim_init_time = datetime.strptime('2018-01-10 10:00:00',"%Y-%m-%d %H:%M:%S")
+sim_term_time = datetime.strptime('2018-01-10 15:30:00',"%Y-%m-%d %H:%M:%S")
+spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
+acc_container = [0.5*random.uniform(2.78e-05*0.85, 2.78e-05*1.15)
+                    for i in range(20)]
+dcc_container = [0.2*random.uniform(2.78e-05*0.85, 2.78e-05*1.15)
+                    for i in range(20)]
+headway = 300 + random.random() * 400
+sys = System(sim_init_time, spd_container, acc_container, dcc_container,
+            term_time=sim_term_time,
+            dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
+            dos_pos=(15,20),
+            headway=headway,
+            refresh_time=50)

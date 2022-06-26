@@ -78,7 +78,7 @@ class train_delay_two_dirc:
 
         n = 1
         ticks = DoS_ticks + (self.X + self.Y) * 60 * 60
-        print 'Delay happens from Train ' + str(num_first_delay) + '\nSchedule:'
+        print 'Delay happens from train ' + str(num_first_delay) + '\nSchedule:'
 
         cur_direction = no_delay_schedule[1]['direction']
         while 1:

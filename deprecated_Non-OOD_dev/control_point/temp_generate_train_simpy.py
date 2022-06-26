@@ -20,7 +20,7 @@ def source(env, number, interval, counter):
 def customer(env, name, counter, time_in_station):
     """Customer arrives, is served and leaves."""
     arrive = env.now
-    print('Train%s arrive %7.4f' % (name, arrive))
+    print('train%s arrive %7.4f' % (name, arrive))
 
     with counter.request() as req:
         # patience = random.uniform(MIN_PATIENCE, MAX_PATIENCE)
@@ -29,11 +29,11 @@ def customer(env, name, counter, time_in_station):
 
         wait = env.now - arrive
 
-        print('Train%s waited %7.4f in station' % (name, wait))
+        print('train%s waited %7.4f in station' % (name, wait))
 
         tib = random.expovariate(1.0 / time_in_station)
         yield env.timeout(tib)
-        print('Train%s depart %7.4f' % (name, env.now))
+        print('train%s depart %7.4f' % (name, env.now))
 
 # Setup and start the simulation
 print('Station renege')

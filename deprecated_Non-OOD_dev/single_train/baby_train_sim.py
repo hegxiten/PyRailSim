@@ -32,8 +32,8 @@ def timeTo(acc_const, max_spd, dist):
 
 class Train(Process):
     def __init__(self, name, sim, accel=1.0, max_spd=50.0, passengers=0, maxPassengers=400):
-        # Initialize Train instance with inheriting Process
-        super(Train, self).__init__(name, sim)  # Train instance inherits Process instance (as superclass) with modification to name and sim parameters
+        # Initialize train instance with inheriting Process
+        super(Train, self).__init__(name, sim)  # train instance inherits Process instance (as superclass) with modification to name and sim parameters
         self.accel = accel
         self.max_spd  = max_spd
         self.p     = passengers
@@ -43,7 +43,7 @@ class Train(Process):
         pass
     
     def roll(self, route):
-        # A Train action traveling along provided route, route as an iterator 
+        # A train action traveling along provided route, route as an iterator
         curr_node = route.next()     
         # starting node, route iterates the instances of TrackNode class
         for dest in route:

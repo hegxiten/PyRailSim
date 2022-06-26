@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-# important: the header of csv is [Train, Time, Direction, Weight, headway]
+# important: the header of csv is [train, Time, Direction, Weight, headway]
 # Its input data come from Class: generate_train.generate_schedule
 # the tyoe of input is "dictionary"
 class XY_delay:
@@ -17,7 +17,7 @@ class XY_delay:
             self.dataframe = pd.DataFrame({'time_departure': self.In[n]['time_departure'], 'delay(mins)': self.In[n]['delay'], 'X+Y(hours)': self.In[n]['X+Y'], 'Dos_time': self.In[n]['Dos_time']}, index=[0])
             self.dataframe.to_csv("XY_delay.csv", index=0, sep=',', mode='a', header=0, columns=columns)
             n += 1
-        print '\nNote: train_schedule.csv has been created, and the sequence of header is [Train, Time, Direction, Weight, headway]'
+        print '\nNote: train_schedule.csv has been created, and the sequence of header is [train, Time, Direction, Weight, headway]'
 
 
 # Code in main class:
