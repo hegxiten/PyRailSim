@@ -28,23 +28,22 @@ from simulation_core.signaling.InterlockingPoint.InterlockingPoint import Interl
 
 
 class Signal(Observable, Observer, ABC):
-    '''
-    Base class of a Signal object.
-    '''
+    """
+        Base class of a Signal object.
+    """
 
-    def __init__(self, port_idx, sigpoint, MP=None):
+    def __init__(self, port_idx, signal_point, MP=None):
         super().__init__()
         self.system = None
-        self.sigpoint = sigpoint
+        self.signal_point = signal_point
         self._MP = MP
         self.port_idx = port_idx
-        self._aspect = Aspect('r', route=self.route)  # Default aspect is red/r
-
+        self._aspect = Aspect('r', self.route)  # Default aspect is red/r
         self._next_enroute_sigpoint = None
 
     @property
     def governed_track(self):
-        '''
+        """
             Concept of "Governed Track" for a signal:
               o-                  o- (<-This signal)   o-
             0:P:1===============0:P:1================0:P:1============
@@ -53,12 +52,12 @@ class Signal(Observable, Observer, ABC):
             "0:P:1" - port_0:SigPnt:port_1
             @return:
                 The track object governed by this signal.
-        '''
-        return self.sigpoint.track_by_port.get(self.port_idx)
+        """
+        return self.signal_point.track_by_port.get(self.port_idx)
 
     @property
     def permitted_track(self):
-        '''
+        """
             Concept of "Permitted Track" for a signal:
               o-                    o- (<-This signal, Aspect 'g')     o-
             0:P:1=================0:P:1==============================0:P:1============
@@ -70,12 +69,12 @@ class Signal(Observable, Observer, ABC):
             this signal permits movement authority.
             @return:
                 The Track object to which the current route of the signal permits.
-        '''
-        return self.sigpoint.track_by_port.get(self.route[1]) if self.route else None
+        """
+        return self.signal_point.track_by_port.get(self.route[1]) if self.route else None
 
     @property
     def facing_MP_direction_sign(self):
-        '''
+        """
             Concept of "Direction" for a signal:
               o-                  o- (<-This signal)   o-
             0:P:1===============0:P:1================0:P:1============
@@ -86,7 +85,7 @@ class Signal(Observable, Observer, ABC):
             "0:P:1" - port_0:SigPnt:port_1
             @return:
                 The sign (+1/-1) of the direction w.r.t. the milepost ascending/descending
-        '''
+        """
         if self.governed_track:
             # The signal has a track segment to govern: infer from track milepost
             if max(self.governed_track.MP) == self.MP:
@@ -99,13 +98,13 @@ class Signal(Observable, Observer, ABC):
             # The signal has NO track segment to govern
             # (still has a neighbor signal point)
             # infer from the neighbor signal point on the other side
-            return -self.sigpoint.signal_by_port[
-                self.sigpoint.opposite_port(self.port_idx)
+            return -self.signal_point.signal_by_port[
+                self.signal_point.opposite_port(self.port_idx)
             ].facing_MP_direction_sign
 
     @property
     def upwards(self):
-        '''
+        """
             Concept of "upward traffic stream" for a signal:
              o-                o- (<-This signal) o-
             0:P:1===============0:P:1================0:P:1============
@@ -117,12 +116,12 @@ class Signal(Observable, Observer, ABC):
             Trains bounding for MP-0 are considered "up-bounding trains".
             @return:
                 The sign (+1/-1) of the direction w.r.t. the milepost ascending/descending
-        '''
+        """
         return True if self.facing_MP_direction_sign == -1 else False
 
     @property
     def downwards(self):
-        '''
+        """
             Concept of "downward traffic stream" for a signal:
              o-                o-                 o-
             0:P:1===============0:P:1================0:P:1============
@@ -134,17 +133,17 @@ class Signal(Observable, Observer, ABC):
             Trains bounding for MP-∞ are considered "down-bounding trains".
             @return:
                 The sign (+1/-1) of the direction w.r.t. the milepost ascending/descending
-        '''
+        """
         return True if self.facing_MP_direction_sign == 1 else False
 
     @property
     def route(self):
-        return self.sigpoint.current_route_by_port.get(self.port_idx)
+        return self.signal_point.current_route_by_port.get(self.port_idx)
 
     @property
     def MP(self):
         if not self._MP:
-            self._MP = self.sigpoint.MP
+            self._MP = self.signal_point.MP
         return self._MP
 
     @MP.setter
@@ -156,44 +155,45 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def aspect(self):
-        '''
-        TODO: Refactoring Under Devo
-        '''
-        # print('\tcall aspect of {} route {}'.format(self.sigpoint,self.route))
-        self._aspect.route = self.route
+        """
+            TODO: Refactoring Under Devo
+        """
+        # if current routing of the signal isn't set, display red/r aspect
         if not self.route:
             self._aspect.color = 'r'
-        elif self.is_cleared_signal_to_exit_system:  # exiting the system
-            self._aspect.color = 'g'
+        # if current routing of the signal has been set, whereas a route is available:
         else:
-            if self.number_of_blocks_cleared_ahead == 0:
-                self._aspect.color = 'r'
-            elif self.number_of_blocks_cleared_ahead == 1:
-                if self.next_enroute_signal.is_cleared_signal_to_exit_system:
-                    self._aspect.color = 'g'
-                else:
-                    self._aspect.color = 'y'
-            elif self.number_of_blocks_cleared_ahead == 2:
-                if self.next_enroute_signal.next_enroute_signal.is_cleared_signal_to_exit_system:
-                    self._aspect.color = 'g'
-                else:
-                    self._aspect.color = 'yy'
-            elif self.number_of_blocks_cleared_ahead >= 3:
+            # if exiting the system
+            if self.is_cleared_signal_to_exit_system:
                 self._aspect.color = 'g'
+            # if not exiting the system
             else:
-                raise ValueError(
-                    'signal aspect of {}, port: {} not defined ready'.format(
-                        self.sigpoint, self.port_idx))
+                if self.number_of_blocks_cleared_ahead == 0:
+                    self._aspect.color = 'r'
+                elif self.number_of_blocks_cleared_ahead == 1:
+                    if self.next_enroute_signal.is_cleared_signal_to_exit_system:
+                        self._aspect.color = 'g'
+                    else:
+                        self._aspect.color = 'y'
+                elif self.number_of_blocks_cleared_ahead == 2:
+                    if self.next_enroute_signal.next_enroute_signal.is_cleared_signal_to_exit_system:
+                        self._aspect.color = 'g'
+                    else:
+                        self._aspect.color = 'yy'
+                elif self.number_of_blocks_cleared_ahead >= 3:
+                    self._aspect.color = 'g'
+                else:
+                    raise ValueError('signal aspect of {}, port: {} not defined ready'.format(self.signal_point, self.port_idx))
         return self._aspect
 
     @property
     def next_enroute_sigpoint(self):
         '''
             @return:
-                The next sigpoint object of this signal to which
+                The next signal_point object of this signal to which
                 its current route is leading.
         '''
-        return self.permitted_track.get_shooting_point(self.sigpoint) \
+        return self.permitted_track.get_shooting_point(self.signal_point) \
             if self.permitted_track else None
 
     @property
@@ -210,10 +210,10 @@ class Signal(Observable, Observer, ABC):
     def next_enroute_sigpoint_port(self):
         '''
             @return:
-                The next signal port of the sigpoint object to which
+                The next signal port of the signal_point object to which
                 its current route is leading.
         '''
-        return self.permitted_track.get_shooting_port(point=self.sigpoint) \
+        return self.permitted_track.get_shooting_port(point=self.signal_point) \
             if self.permitted_track else None
 
     @property
@@ -233,7 +233,7 @@ class Signal(Observable, Observer, ABC):
         elif self.governed_track:
             _track_rp = self.governed_track.curr_routing_paths
             # Signal has to be permissive to have an active routing path
-            if self.governed_track.routing[1][0] == self.sigpoint:
+            if self.governed_track.routing[1][0] == self.signal_point:
                 return _track_rp
         return _track_rp
 
@@ -251,17 +251,18 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def number_of_blocks_cleared_ahead(self):
-        '''
+        """
             @return:
                 The number of empty/unoccupied track segments that ahead of this signal,
                 along the given current routing path.
-        '''
+        """
         _number = 0
         if self.curr_enroute_tracks:
             if self.governed_track:
                 _governed_trk_idx = self.curr_routing_paths.index(self.governed_track.routing)
             else:
-                _governed_trk_idx = 0
+                _governed_trk_idx = -1
+
             _tracks_ahead = self.curr_enroute_tracks[_governed_trk_idx + 1:]
             for i in range(len(_tracks_ahead)):
                 if _tracks_ahead[i]:
@@ -274,13 +275,13 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def tracks_to_enter(self):
-        '''
+        """
             @return:
                 The number of track segments diverging from this Signal that
                 are available for a train to enter.
-        '''
-        return [self.sigpoint.track_by_port[p]
-                for p in self.sigpoint.available_ports_by_port[self.port_idx]]
+        """
+        return [self.signal_point.track_by_port[p]
+                for p in self.signal_point.available_ports_by_port[self.port_idx]]
 
     @property
     def following_sigpoints(self):
@@ -291,7 +292,7 @@ class Signal(Observable, Observer, ABC):
         _sigpoints = []
         for t in self.tracks_to_enter:
             for p in [t.L_point, t.R_point]:
-                if p != self.sigpoint:
+                if p != self.signal_point:
                     _sigpoints.append(p)
         return _sigpoints
 
@@ -306,7 +307,7 @@ class Signal(Observable, Observer, ABC):
         '''
 
         def reachable_sigpoint(p):
-            path_generator = all_simple_paths(self.system.G_origin, self.sigpoint, p)
+            path_generator = all_simple_paths(self.system.G_origin, self.signal_point, p)
             while True:
                 try:
                     if next(path_generator)[1] in self.following_sigpoints:
@@ -316,10 +317,10 @@ class Signal(Observable, Observer, ABC):
             return False
 
         def reachable_track(t):
-            if self.sigpoint in (t.L_point, t.R_point):
+            if self.signal_point in (t.L_point, t.R_point):
                 if self.governed_track == t: return False
-                for p in self.sigpoint.available_ports_by_port[self.port_idx]:
-                    if t == self.sigpoint.track_by_port[p]: return True
+                for p in self.signal_point.available_ports_by_port[self.port_idx]:
+                    if t == self.signal_point.track_by_port[p]: return True
             # include AutoPoint's bigblock instance entirely covering the signal
             for p in (t.L_point, t.R_point):
                 if reachable_sigpoint(p) is True: return True
@@ -328,12 +329,12 @@ class Signal(Observable, Observer, ABC):
         if isinstance(other, InterlockingPoint):
             return reachable_sigpoint(other)
         if isinstance(other, Signal):
-            if other.sigpoint != self.sigpoint:
-                return reachable_sigpoint(other.sigpoint)
+            if other.signal_point != self.signal_point:
+                return reachable_sigpoint(other.signal_point)
             else:
                 return True \
                     if other.port_idx in \
-                       self.sigpoint.available_ports_by_port[self.port_idx] \
+                       self.signal_point.available_ports_by_port[self.port_idx] \
                     else False
         if isinstance(other, simulation_core.Infrastructure.Track.Track.Track) \
                 or isinstance(other, simulation_core.Infrastructure.Track.BigBlock.BigBlock):

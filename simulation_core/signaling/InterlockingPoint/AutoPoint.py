@@ -16,7 +16,7 @@ class AutoPoint(InterlockingPoint):
                                1: AutoSignal(1, self, MP=self.MP)}
         # register the AutoPoint's ownership over the signals
         for _, sig in self.signal_by_port.items():
-            sig.sigpoint = self
+            sig.signal_point = self
             sig.system = self.system
 
     def __repr__(self):

@@ -22,8 +22,8 @@ from simulation_core.signaling.Signal.Signal import Signal
 
 
 class HomeSignal(Signal):
-    def __init__(self, port_idx, sigpoint, MP=None):
-        super().__init__(port_idx, sigpoint, MP)
+    def __init__(self, port_idx, signal_point, MP=None):
+        super().__init__(port_idx, signal_point, MP)
         self.sigpoint = None
         self.type = 'home'
 

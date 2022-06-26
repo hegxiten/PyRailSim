@@ -174,8 +174,9 @@ class Train():
 
     @property
     def curr_track(self):
-        '''
-            The current Track instance the head of the train is moving upon'''
+        """
+            The current Track instance the head of the train is moving upon
+        """
         return self.system.get_track_by_point_port_pairs(
             self.curr_prev_sigpoint, self.curr_prev_sigport, self.curr_sigpoint,
             self.curr_sigport)

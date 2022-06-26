@@ -29,8 +29,8 @@ class AutoSignal(Signal):
     Not used for granting movement authorities.
     '''
 
-    def __init__(self, port_idx, sigpoint, MP=None):
-        super().__init__(port_idx, sigpoint, MP)
+    def __init__(self, port_idx, signal_point, MP=None):
+        super().__init__(port_idx, signal_point, MP)
         self.type = 'auto'
 
         self._bblks_to_enter = None
@@ -39,21 +39,21 @@ class AutoSignal(Signal):
     def __repr__(self):
         return 'AutoSig port:{} of {}'.format(
             str(self.port_idx).rjust(2, ' '),
-            self.sigpoint)
+            self.signal_point)
 
     @property
     def bblks_to_enter(self):
         if self._bblks_to_enter is None:
-            self._bblks_to_enter = [self.sigpoint.bigblock]
+            self._bblks_to_enter = [self.signal_point.bigblock]
         return self._bblks_to_enter
 
     @property
     def ctrl_pnts_to_reach(self):
         if self._ctrl_pnts_to_reach is None:
             if self.downwards:
-                self._ctrl_pnts_to_reach = [self.sigpoint.bigblock.R_point]
+                self._ctrl_pnts_to_reach = [self.signal_point.bigblock.R_point]
             elif self.upwards:
-                self._ctrl_pnts_to_reach = [self.sigpoint.bigblock.L_point]
+                self._ctrl_pnts_to_reach = [self.signal_point.bigblock.L_point]
             else:
                 raise Exception("Cannot specify the signal milepost direction: \n\t{}".format(self.__repr__))
         return self._ctrl_pnts_to_reach

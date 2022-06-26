@@ -201,12 +201,7 @@ class System():
         pass
 
     def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
-        for t in self.tracks:
-            if p1 in (t.L_point, t.R_point) and p2 in (t.L_point, t.R_point):
-                if p1_port in (t.L_point_port, t.R_point_port) \
-                        and p2_port in (t.L_point_port, t.R_point_port):
-                    return t
-        return None
+        return p1.track_by_port.get(p1_port, None) if p1 and p2 else None
 
     def graph_constructor(self, node={}, track={}):
         '''Initialize the MultiGraph object with railroad components
@@ -415,8 +410,9 @@ class System():
         return F
 
     def generate_train(self, init_point, init_port, dest_point, dest_port, **kwargs):
-        '''
-            Generate train only.'''
+        """
+            Generate train only.
+        """
         _new_train = None
         length = 1 if kwargs.get('length') is None else kwargs.get('length')
         if self.capacity_enterable(init_point, dest_point):
@@ -436,7 +432,8 @@ class System():
                       (dest_point, dest_port))
             init_track = self.get_track_by_point_port_pairs(
                 init_segment[0][0], init_segment[0][1],
-                init_segment[1][0], init_segment[1][1])
+                init_segment[1][0], init_segment[1][1]
+            )
             if not init_track:
                 _new_train = Train(
                     system=self,

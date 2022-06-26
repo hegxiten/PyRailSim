@@ -31,7 +31,7 @@ class Aspect():
         'g': 72 / 3600
     }
 
-    def __init__(self, color, route=None):
+    def __init__(self, color: object, route: object = None) -> None:
         self.color = color
         self.route = route
 
