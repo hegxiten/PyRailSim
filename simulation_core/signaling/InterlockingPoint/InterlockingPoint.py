@@ -5,9 +5,9 @@ from simulation_core.observation_model.observe import Observable, Observer
 
 
 class InterlockingPoint(Observable, Observer, ABC):
-    '''
-    Base Class, a.k.a SignalPoint/Sigpoint
-    '''
+    """
+        Base Class, a.k.a SignalPoint/Sigpoint
+    """
 
     def __init__(self, system, idx, MP=None):
         super().__init__()

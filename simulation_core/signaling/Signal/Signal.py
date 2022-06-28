@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 # -*- coding: utf-8 -*-
 import simulation_core.infrastructure.Track.BigBlock
 import simulation_core.infrastructure.Track.Track
+from simulation_core.network.network_utils import all_simple_paths, shortest_path
 
 """
     PyRailSim
@@ -285,10 +286,10 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def following_sigpoints(self):
-        '''
+        """
             @return:
                 A list of signal points this signal can potentially permit (reach) to.
-        '''
+        """
         _sigpoints = []
         for t in self.tracks_to_enter:
             for p in [t.L_point, t.R_point]:
@@ -296,17 +297,14 @@ class Signal(Observable, Observer, ABC):
                     _sigpoints.append(p)
         return _sigpoints
 
-    def reachable(self, other):
-        '''
-            ########################################################
-            TODO: Refactoring Under Devo
-            ########################################################
+    def reachable_to(self, other):
+        """
             Determine if another signal point/Signal/Track segment is reachable from this signal.
             @return:
                 True/False
-        '''
+        """
 
-        def reachable_sigpoint(p):
+        def _reachable_sigpoint(p):
             path_generator = all_simple_paths(self.system.G_origin, self.signal_point, p)
             while True:
                 try:
@@ -316,29 +314,30 @@ class Signal(Observable, Observer, ABC):
                     break
             return False
 
-        def reachable_track(t):
+        def _reachable_signal(s):
+            if s.signal_point != self.signal_point:
+                return _reachable_sigpoint(s.signal_point)
+            else:
+                return True if s.port_idx in self.signal_point.available_ports_by_port[self.port_idx] else False
+
+        def _reachable_track(t):
             if self.signal_point in (t.L_point, t.R_point):
                 if self.governed_track == t: return False
                 for p in self.signal_point.available_ports_by_port[self.port_idx]:
                     if t == self.signal_point.track_by_port[p]: return True
             # include AutoPoint's bigblock instance entirely covering the signal
             for p in (t.L_point, t.R_point):
-                if reachable_sigpoint(p) is True: return True
+                if _reachable_sigpoint(p) is True: return True
             return False
 
         if isinstance(other, InterlockingPoint):
-            return reachable_sigpoint(other)
+            return _reachable_sigpoint(other)
         if isinstance(other, Signal):
-            if other.signal_point != self.signal_point:
-                return reachable_sigpoint(other.signal_point)
-            else:
-                return True \
-                    if other.port_idx in \
-                       self.signal_point.available_ports_by_port[self.port_idx] \
-                    else False
-        if isinstance(other, simulation_core.Infrastructure.Track.Track.Track) \
-                or isinstance(other, simulation_core.Infrastructure.Track.BigBlock.BigBlock):
-            return reachable_track(other)
+            return _reachable_signal(other)
+        if isinstance(other, simulation_core.Infrastructure.Track.Track.Track):
+            return _reachable_track(other)
+        if isinstance(other, simulation_core.Infrastructure.Track.BigBlock.BigBlock):
+            return _reachable_track(other)
         return False
 
     @property

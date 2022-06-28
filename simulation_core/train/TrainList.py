@@ -25,7 +25,8 @@ class TrainList(MutableSequence):
     """
         A list-like container for train instances within a simulation system.
         TODO: implement customized attributes of TrainList: 
-            append, insert, __getitem__, __setitem__, __delitem__, etc."""
+            append, insert, __getitem__, __setitem__, __delitem__, etc.
+    """
 
     def __init__(self):
         self._uptrains = []

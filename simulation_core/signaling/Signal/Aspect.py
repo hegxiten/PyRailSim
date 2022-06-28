@@ -21,8 +21,8 @@
 
 class Aspect():
     """
-    Aspect shows the meaning of the signals.
-    Could be compared with other aspects with more/less favorable comparison.
+        Aspect shows the meaning of the signals.
+        Could be compared with other aspects with more/less favorable comparison.
     """
     COLOR_SPD_MAP = {
         'r': 0.0,
@@ -49,7 +49,9 @@ class Aspect():
         return self.color != other.color
 
     def __lt__(self, other):
-        '''r < y < yy < g'''
+        """
+            r < y < yy < g
+        """
         if self.color == 'r' and other.color != 'r':
             return True
         elif self.color == 'y' and (other.color == 'yy' or other.color == 'g'):
@@ -60,7 +62,9 @@ class Aspect():
             return False
 
     def __gt__(self, other):
-        '''g > yy > y > r'''
+        """
+            g > yy > y > r
+        """
         if self.color == 'g' and other.color != 'g':
             return True
         elif self.color == 'yy' and (other.color == 'y' or other.color == 'r'):
@@ -71,7 +75,9 @@ class Aspect():
             return False
 
     def __le__(self, other):
-        '''r <= y <= yy <= g'''
+        """
+            r <= y <= yy <= g
+        """
         if self.color == 'r':
             return True
         elif self.color == 'y' and (other.color != 'r'):
@@ -84,9 +90,9 @@ class Aspect():
             return False
 
     def __ge__(self, other):
-        '''
-        g >= yy >= y >= r
-        '''
+        """
+            g >= yy >= y >= r
+        """
         if self.color == 'g':
             return True
         elif self.color == 'yy' and (other.color != 'g'):

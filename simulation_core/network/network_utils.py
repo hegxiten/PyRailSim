@@ -146,7 +146,7 @@ def no_banned_rail_paths_on_cp(func):
 
 @no_banned_rail_paths_on_cp
 def all_simple_paths(G, source, target, cutoff=None):
-    return nx.all_simple_paths(G, source, target, cutoff=None)
+    return nx.all_simple_paths(G, source, target, cutoff=cutoff)
 
 @no_banned_rail_paths_on_cp
 def shortest_path(G, source, target, weight=None):

@@ -11,16 +11,18 @@ class Train():
         :length: (**kw), miles
             train length that can occupy multiple tracks. 0 by default.
         :init_segment: 2-element-tuple: ((Point, Port), (Point, Port))
-            Describes the initial direction and section of track of the train."""
+            Describes the initial direction and section of track of the train.
+    """
 
     @staticmethod
     def abs_brake_distance(curr_spd, tgt_spd, brake_dcc):
-        '''
+        """
             :curr_spd:  Current speed in miles/sec.
             :tgt_spd:   Current target speed in miles/sec.
-            :brake_dcc: Maximum decleration in miles/(sec)^2.
+            :brake_dcc: Maximum deceleration in miles/(sec)^2.
             @return:
-                Absolute value of brake distance in miles at input status.'''
+                Absolute value of brake distance in miles at input status.
+        """
         if brake_dcc == 0:
             return 0
         else:
@@ -30,41 +32,43 @@ class Train():
 
     @staticmethod
     def sign_MP(rp_seg):
-        '''
+        """
             :rp_seg: 2-element-tuple: ((Point, Port),(Point, Port))
                 Routing path segment of a train, describing its direction.
             @return:
-                The sign (+1/-1) of train's direction (speed).'''
+                The sign (+1/-1) of train's direction (speed).
+        """
         if rp_seg[0][0] and rp_seg[1][0]:
-            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > rp_seg[0][
-                0].signal_by_port[rp_seg[0][1]].MP:
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
                 return 1
-            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < rp_seg[0][
-                0].signal_by_port[rp_seg[0][1]].MP:
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
         elif not rp_seg[0][0]:  # initiating
-            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
-                    min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return 1
-            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
-                    max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
         elif not rp_seg[1][0]:  # terminating
-            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
-                    max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return 1
-            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
-                    min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
 
-    def __init__(self, system, init_segment, dest_segment,
-                 max_spd, max_acc, max_dcc, **kwargs):
+    def __init__(self,
+                 system,
+                 init_segment,
+                 dest_segment,
+                 max_spd,
+                 max_acc,
+                 max_dcc,
+                 **kwargs):
+
         self.system = system
         self.init_segment, self.dest_segment = init_segment, dest_segment
         self.init_pointport = init_segment[1]
@@ -73,26 +77,24 @@ class Train():
         self.max_acc = max_acc
         self.max_dcc = max_dcc
 
-        self.length = 1 \
-            if kwargs.get('length') is None else kwargs.get('length')
+        # Default length of train is 1 (mile).
+        self.length = 1 if kwargs.get('length') is None else kwargs.get('length')
 
         self._curr_routing_path_segment = self.init_segment
         self._curr_occupying_routing_path = [self._curr_routing_path_segment]
+        # Spawning head MP is the signal MP. Spawning rear MP is projected by train length.
         self._curr_MP = self.curr_sig.MP
-        self._rear_curr_MP = self.curr_MP - self.length * \
-                             self.sign_MP(self.curr_routing_path_segment)
+        self._rear_curr_MP = self.curr_MP - self.length * self.sign_MP(self.curr_routing_path_segment)
+        # Auto-generated train index.
         self.train_idx = len(self.system.trains)
-        self.symbol = 2 * self.train_idx \
-            if self.uptrain else 2 * self.train_idx + 1
-        self.system.trains.append(self)
-
+        # Auto-generated train symbol.
+        self.symbol = 2 * self.train_idx if self.uptrain else 2 * self.train_idx + 1
+        # Spawning speed and acceleration -> zero
         self._curr_speed = 0
         self._curr_acc = 0
-        # initial speed limit, considering both cases:
-        # with current track and without current tracks
-        # default 20 mph even with both ends restricting. Non-zero value
-        self._curr_spd_lmt_abs = min(20 / 3600, self.curr_track.allow_spd) \
-            if self.curr_track else min(20 / 3600, float('inf'))
+
+        # Spawning speed limit is zero:
+        self._curr_spd_lmt_abs = 0
         self._stopped = True
 
         self.time_pos_list = []
@@ -107,6 +109,9 @@ class Train():
                     )
                 self.curr_track.trains.append(self)
         self.system.last_train_init_time = self.system.sys_time
+
+        # Construction complete. Append self to system.
+        self.system.trains.append(self)
 
     def __repr__(self):
         return 'train idx:{} occupying:{} head MP:{} rear MP:{}' \
@@ -493,9 +498,9 @@ class Train():
                 raise ValueError(
                     'Setting Undefined rear MP: original:{0}, new:{1}, \
                         rear track:{2}'
-                        .format(self._rear_curr_MP,
-                                new_rear_MP,
-                                self.rear_curr_track))
+                    .format(self._rear_curr_MP,
+                            new_rear_MP,
+                            self.rear_curr_track))
         self.rear_time_pos_list.append(
             [self.system.sys_time, self.rear_curr_MP])
 
@@ -554,14 +559,14 @@ class Train():
         else:
             raise ValueError(
                 'Setting Undefined speed value: original:{0}, new:{1}'
-                    .format(_old_speed, new_speed))
+                .format(_old_speed, new_speed))
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction (after newly set speed value) to find bugs
 
     @property
     def curr_acc(self):  # acceleration in miles/(second)^2, with (+/-)
-        '''
+        """
             The current acceleration value of the train, assumed consistant acceleration for its whole length.
             The acceleration value is fully determined by its current status with different conditions:
             ----------
@@ -595,7 +600,7 @@ class Train():
                             accelerate at maximum effort to cross the signal.
                         2.2.2.3 if target speed <= current speed and the target speed < current speed limit,
                             decelerate at maximum effort to cross the signal.
-                        '''
+                        """
         _direction_sign = self.sign_MP(self.curr_routing_path_segment)
         # sign of traveling direction (MP increment)
         _delta_s = self.curr_speed * self.system.refresh_time + \
@@ -676,15 +681,17 @@ class Train():
 
     @property
     def curr_spd_lmt_abs(self):  # in miles/sec, + only
-        '''
-            The current speed limit in absolute value of the train.'''
+        """
+            The current speed limit in absolute value of the train.
+        """
         return self._curr_spd_lmt_abs
 
     @curr_spd_lmt_abs.setter
     def curr_spd_lmt_abs(self, spd_lmt):
-        '''
-            Setter for the current speed limit. Recommended to be called only
-            by the other methods/functions, not manually.'''
+        """
+            Setter for the current speed limit.
+            To be called only by the other methods/functions, not directly.
+        """
         if self.curr_track:
             self._curr_spd_lmt_abs = self.curr_track.allow_spd \
                 if spd_lmt > self.curr_track.allow_spd \
