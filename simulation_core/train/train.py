@@ -46,16 +46,20 @@ class Train():
             else:
                 raise ValueError('Undefined MP direction')
         elif not rp_seg[0][0]:  # initiating
-            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == min(
+                    rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return 1
-            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == max(
+                    rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
         elif not rp_seg[1][0]:  # terminating
-            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+            if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == max(
+                    rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return 1
-            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
+            elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == min(
+                    rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
@@ -79,7 +83,7 @@ class Train():
 
         # Default length of train is 1 (mile).
         self.length = 1 if kwargs.get('length') is None else kwargs.get('length')
-
+        # Spawning routing path configs.
         self._curr_routing_path_segment = self.init_segment
         self._curr_occupying_routing_path = [self._curr_routing_path_segment]
         # Spawning head MP is the signal MP. Spawning rear MP is projected by train length.
@@ -92,25 +96,21 @@ class Train():
         # Spawning speed and acceleration -> zero
         self._curr_speed = 0
         self._curr_acc = 0
-
         # Spawning speed limit is zero:
         self._curr_spd_lmt_abs = 0
         self._stopped = True
+        # Spawning on a track/spawning outside of the system
+        if self.curr_track:
+            if self not in self.curr_track.trains:
+                if self.curr_track.trains:
+                    print('\t Warning: adding new train to a track already occupied!')
+                self.curr_track.trains.append(self)
 
         self.time_pos_list = []
         self.rear_time_pos_list = []
         self.pos_spd_list = []
-
-        if self.curr_track:
-            if self not in self.curr_track.trains:
-                if self.curr_track.trains:
-                    print(
-                        '\t train initialization Warning: adding new train to a track already occupied!'
-                    )
-                self.curr_track.trains.append(self)
+        # Construction complete. Update system properties.
         self.system.last_train_init_time = self.system.sys_time
-
-        # Construction complete. Append self to system.
         self.system.trains.append(self)
 
     def __repr__(self):
@@ -122,17 +122,24 @@ class Train():
 
     @property
     def same_way_trains(self):
+        """
+            @return: The sorted list of trains traveling the same direction as self.
+        """
         if self.uptrain:
             return self.system.trains.uptrains
-        if self.downtrain:
+        elif self.downtrain:
             return self.system.trains.downtrains
+        else:
+            raise ValueError("Unable to get all the same-way-trains.")
 
     @property
     def rank(self):
-        '''
-            rank of the train starting from the first train to the last.
+        """
+            Rank of the train starting from the first train to the last.
             First: 0; Last: len(self.system.trains) - 1
-            TODO: Implement rank for both directions.'''
+            @return: int
+            TODO: Implement rank for both directions.
+        """
         return self.same_way_trains.index(self)
 
     @property
@@ -149,21 +156,23 @@ class Train():
 
     @property
     def terminated(self):
-        '''
-            Status property shows if the train has exited the rail network
+        """
+            Status property shows if the train has exited the rail network.
             @return: True or False
-        '''
-        return True if (not self.curr_routing_path_segment[1][0]
-                        and not self.rear_curr_track) else False
+        """
+        if not self.curr_routing_path_segment[1][0]:  # The head has exited the system (no upcoming ports)
+            if not not self.rear_curr_track:  # The end has exited the system (the rear ran off the tracks)
+                return True
+        return False
 
     @property
     def stopped(self):
-        '''
+        """
             Status property shows if the train is stopped because of:
                 1. terminated out of the system;
                 2. no and awating for signal to clear;
             @return: True or False
-        '''
+        """
         if self.terminated:
             # terminated trains are stopped trains
             self._stopped = True
@@ -180,97 +189,104 @@ class Train():
     @property
     def curr_track(self):
         """
-            The current Track instance the head of the train is moving upon
+            The current Track instance the head of the train is moving upon.
         """
         return self.system.get_track_by_point_port_pairs(
-            self.curr_prev_sigpoint, self.curr_prev_sigport, self.curr_sigpoint,
-            self.curr_sigport)
+            self.curr_prev_sigpoint, self.curr_prev_sigport,
+            self.curr_sigpoint, self.curr_sigport)
 
     @property
     def rear_curr_track(self):
-        '''
-            The current Track instance the rear of the train is moving upon'''
+        """
+            The current Track instance the rear of the train is moving upon.
+        """
         return self.system.get_track_by_point_port_pairs(
             self.rear_curr_prev_sigpoint, self.rear_curr_prev_sigport,
             self.rear_curr_sigpoint, self.rear_curr_sigport)
 
     @property
     def curr_occupying_routing_path(self):
-        '''
+        """
             A list of routing path tuples being occupied by the train.
-            The routing path tuples are in order from train head to rear.'''
-        return self._curr_occupying_routing_path \
-            if self.length != 0 else [self.curr_routing_path_segment]
+            The routing path tuples are in order from train head to rear.
+        """
+        return self._curr_occupying_routing_path if self.length != 0 else [self.curr_routing_path_segment]
 
     @property
     def curr_tracks(self):
-        '''
+        """
             A list of Track instances being occupied by the train.
-            The Track instances are in order from train head to rear.'''
+            The Track instances are in order from train head to rear.
+        """
         _curr_tracks = []
         for r in self.curr_occupying_routing_path:
-            _track = self.system.get_track_by_point_port_pairs(
-                r[0][0], r[0][1], r[1][0], r[1][1])
+            _track = self.system.get_track_by_point_port_pairs(r[0][0], r[0][1], r[1][0], r[1][1])
             if _track:
                 _curr_tracks.append(_track)
         return _curr_tracks
 
     @property
     def curr_bigblock_routing(self):
-        '''
-            The routing tuple of the bigblock where the train head is moving on.'''
+        """
+            The routing tuple of the bigblock where the train head is moving on.
+        """
         return self.curr_track.bigblock.routing
 
     @property
     def curr_routing_paths(self):
-        '''
+        """
             A list of tuples describing the current routing of the train.
             Routing segments tuples include both ahead and behind the train.
             The tuples starts from the head of its movement authority limit
             shooting to the end of the limit.
-            Each tuple is a routing path segment.'''
+            Each tuple is a routing path segment.
+        """
         return self.curr_track.curr_routing_paths if self.curr_track else None
 
     @property
     def curr_routing_path_ahead(self):
-        '''
+        """
             A list of tuples describing the current routing ahead of the train.
             The routing tuples (movement authority limits), even granted behind
-            the train, are ignored because of no effects to itself.'''
-
-        return self.curr_routing_paths[
-               self.curr_routing_paths.index(self.curr_routing_path_segment):] \
+            the train, are ignored because of no effects to itself.
+        """
+        return self.curr_routing_paths[self.curr_routing_paths.index(self.curr_routing_path_segment):] \
             if self.curr_routing_paths else None
 
     @property
     def curr_routing_path_segment(self):
-        '''
+        """
             Return a tuple of the current segment the train head is moving upon;
             expressed in a 2-element-tuple: ((Point1, Port1), (Point2, Port2)).
                 Point2/Port2: SignalPoint/Port the train head is operating to.
                 Point1/Port1: the opposite SignalPoint/Port of the track segment.
             None: undefined SignalPoint/Port in the network.
-                Mostly appears when initialting or terminating.
+                Mostly appears when initialing or terminating.
             When a train exists, it has a True curr_routing_path_segment even if
-            the train is not granted for any routing paths.
-                With no routing paths granted: the tuple describes the position
+                the train is not granted for any routing paths.
+            With no routing paths granted: the tuple describes the position
                 and its potential of movement (moving direction) of the train;
-                With routing paths granted: the tuple describes the position with
-                a valid routing paths.'''
+            With routing paths granted: the tuple describes the position with
+                a valid routing paths.
+        """
         return self._curr_routing_path_segment
 
     @curr_routing_path_segment.setter
     def curr_routing_path_segment(self, new_segment):
-        '''
+        """
             Setter for curr_routing_path_segment.
-            Once set, the direction of the train & occupied track are confined.'''
-        assert isinstance(new_segment, tuple) and len(new_segment) == 2
+            Once set, the direction of the train & occupied track are confined.
+        """
         self._curr_routing_path_segment = new_segment
 
     @property
     def all_paths_ahead(self):
-        return list(all_simple_paths(self.system.G_origin,
-                                     self.curr_sigpoint, self.dest_pointport[0]))
+        """
+            All the simple paths ahead with banned path filtered out, given the current destination point/port tuple.
+            @return:
+                A list of signal points from self.curr_sigpoint to current destination signal point.
+        """
+        return list(all_simple_paths(self.system.G_origin, self.curr_sigpoint, self.dest_pointport[0]))
 
     @property
     def all_routes_ahead(self):
@@ -280,8 +296,9 @@ class Train():
 
     @property
     def curr_sigpoint(self):
-        '''
-            The SignalPoint instance the train head is moving towards currently.'''
+        """
+            The SignalPoint instance the train head is moving towards currently.
+        """
         return self.curr_routing_path_segment[1][0]
 
     @property
