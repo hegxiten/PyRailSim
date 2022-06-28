@@ -474,8 +474,9 @@ class System():
         return _new_train
 
     def capacity_enterable(self, init_point, dest_point):
-        '''
-            Determines if a train could cross init_point towards dest_point.'''
+        """
+            Determines if a train could cross init_point towards dest_point.
+        """
         _parallel_tracks = self.num_parallel_tracks(init_point, dest_point)
         _outbound_trains = self.get_trains_between_points(from_point=init_point,
                                                           to_point=dest_point,
@@ -489,8 +490,20 @@ class System():
             <= _parallel_tracks - _occupied_parallel_tracks else False
 
     def num_parallel_tracks(self, init_point, dest_point):
-        _mainline_path = shortest_path(self.G_origin, source=init_point,
-                                target=dest_point, weight='weight_mainline')
+        _mainline_path = shortest_path(self.G_origin, source=init_point, target=dest_point, weight='weight_mainline')
+
+
+        try:
+            if len(_mainline_path) == 0:
+                return 0
+        except BaseException as e:
+            print(init_point)
+            print(dest_point)
+            print(shortest_path(self.G_origin, source=init_point, target=dest_point, weight='weight_mainline'))
+            print(nx.has_path(self.G_origin, source=init_point, target=dest_point))
+            raise e
+
+
         _head = _mainline_path.pop(0)
         count = 0
         _traversed = []

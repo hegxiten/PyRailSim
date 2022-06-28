@@ -988,11 +988,11 @@ class Train():
             pass
 
     def request_routing(self):
-        '''
+        """
             Method of the train to call the closest CtrlPoint to clear a route.
             Serve the myopic dispatch logic where trains only calls the cloest CPs.
             @return: None
-        '''
+        """
         if self.pending_route and self.any_paths_ahead_enterable:
             _pending_route_to_open = \
                 self.curr_ctrl_point.find_route_for_port(
@@ -1064,10 +1064,11 @@ class Train():
             0] <= self.system.sys_time <= self.system.dos_period[1]
 
     def __lt__(self, other):
-        '''
+        """
             implement __lt__ to sort trains based on their current MilePost.
             If MilePosts are the same, compare max_spd.
-            TODO: implement better algorithms to compare train priority.'''
+            TODO: implement better algorithms to compare train priority.
+        """
         if not self.terminated:
             if self.curr_MP > other.curr_MP:
                 return True if self.downtrain else False

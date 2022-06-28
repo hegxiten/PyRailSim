@@ -121,10 +121,10 @@ def no_banned_rail_paths_on_cp(func):
 
         @wraps(func)
         def filter_banned_cp_path_shortest(G, source, target, weight=None):
-            '''
+            """
                 Find the shortest path that also allowed by individual control points (CPs)
                 (Not in the banned list of any CPs)
-            '''
+            """
             raw_shortest = func(G, source, target, weight=weight) # Calling the wrapped function
             if len(list(all_simple_paths(G, source, target, cutoff=None))) == 1:
                 return raw_shortest
@@ -137,11 +137,14 @@ def no_banned_rail_paths_on_cp(func):
                     ]):
                 return raw_shortest
             else:
-                if raw_shortest != func(G, source, target):
-                    raw_shortest = func(G, source, target)
-                else:
-                    raise Exception("Cannot Find a shortest Path Between \
-                                    {} and {}!".format(source, target))
+                # DEBUG:
+                # TODO: review the weight logics and determine what to return here. 
+                return []
+                # if raw_shortest != func(G, source, target):
+                #     return []
+                # else:
+                #
+                #     raise Exception("Cannot Find a shortest Path Between {} and {}!".format(source, target))
         return filter_banned_cp_path_shortest
 
 @no_banned_rail_paths_on_cp
