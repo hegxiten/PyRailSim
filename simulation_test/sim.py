@@ -23,8 +23,9 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-import simulation_core.network.System.System
-from simulation_core.network.System.System import System
+def timestamper(timestamp):
+    time_str = datetime.strftime(datetime.fromtimestamp(timestamp), "%Y-%m-%d %H:%M:%S")
+    return '[' + time_str + ']'
 
 
 def string_diagram(sys):
@@ -127,54 +128,55 @@ def speed_curve(sys, train, scatter=False):
     pylab.rcParams['figure.figsize'] = (15.0, 8.0)
     plt.pause(0.01)
 
+#
+# def simulation_setup():
+#     sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
+#     sim_term_time = datetime.strptime('2018-01-10 12:30:00', "%Y-%m-%d %H:%M:%S")
+#     spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
+#     acc_container = [0.5 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
+#     dcc_container = [0.2 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
+#     headway = 300 + random.random() * 400
+#     sys = System(sim_init_time, spd_container, acc_container, dcc_container,
+#                  term_time=sim_term_time,
+#                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
+#                  dos_pos=(15, 20),
+#                  headway=headway,
+#                  refresh_time=50)
+#     dp = Dispatcher(sys)
+#     return sys
 
-def simulation_setup():
-    sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
-    sim_term_time = datetime.strptime('2018-01-10 12:30:00', "%Y-%m-%d %H:%M:%S")
-    spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
-    acc_container = [0.5 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
-    dcc_container = [0.2 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
-    headway = 300 + random.random() * 400
-    sys = System(sim_init_time, spd_container, acc_container, dcc_container,
-                 term_time=sim_term_time,
-                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
-                 dos_pos=(15, 20),
-                 headway=headway,
-                 refresh_time=50)
-    dp = Dispatcher(sys)
-    return sys
-
-
-def launch(sys, downtrain=True):
-    while sys.sys_time - sys.init_time <= sys.term_time - sys.init_time:
-        _semaphore_to_return = False
-        for t in sys.trains:
-            sys.dispatcher.request_routing(t)
-            t.move()
-        if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= simulation_core.network.System.system.headway:
-            if downtrain:
-                if not sys.signal_points[0].curr_train_with_route.keys():
-                    if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[0], 0)) for t in
-                            sys.trains]):
-                        if not sys.signal_points[0].track_by_port[1].trains:
-                            t = sys.generate_train(sys.signal_points[0], 0,
-                                                   sys.signal_points[10], 1,
-                                                   length=1)
-            else:
-                if not sys.signal_points[10].curr_train_with_route.keys():
-                    if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[10], 1)) for t in
-                            sys.trains]):
-                        if not sys.signal_points[10].track_by_port[0].trains:
-                            t = sys.generate_train(sys.signal_points[10], 1,
-                                                   sys.signal_points[0], 0,
-                                                   length=1)
-        sys.sys_time += sys.refresh_time
-
+#
+# def launch(sys, downtrain=True):
+#     while sys.sys_time - sys.init_time <= sys.term_time - sys.init_time:
+#         _semaphore_to_return = False
+#         for t in sys.trains:
+#             sys.dispatcher.request_routing(t)
+#             t.move()
+#         if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= simulation_core.network.System.system.headway:
+#             if downtrain:
+#                 if not sys.signal_points[0].curr_train_with_route.keys():
+#                     if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[0], 0)) for t in
+#                             sys.trains]):
+#                         if not sys.signal_points[0].track_by_port[1].trains:
+#                             t = sys.generate_train(sys.signal_points[0], 0,
+#                                                    sys.signal_points[10], 1,
+#                                                    length=1)
+#             else:
+#                 if not sys.signal_points[10].curr_train_with_route.keys():
+#                     if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[10], 1)) for t in
+#                             sys.trains]):
+#                         if not sys.signal_points[10].track_by_port[0].trains:
+#                             t = sys.generate_train(sys.signal_points[10], 1,
+#                                                    sys.signal_points[0], 0,
+#                                                    length=1)
+#         sys.sys_time += sys.refresh_time
+#
 
 if __name__ == "__main__":
-    sys = simulation_setup()
-    launch(sys)
-    string_diagram(sys)
+    pass
+    # sys = simulation_setup()
+    # launch(sys)
+    # string_diagram(sys)
     # format = "%(asctime)s: %(message)s"
     # logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 

@@ -20,7 +20,6 @@
 
 from collections.abc import MutableSequence
 
-
 class TrainList(MutableSequence):
     """
         A list-like container for train instances within a simulation system.

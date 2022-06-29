@@ -37,9 +37,9 @@ class AutoSignal(Signal):
         self._ctrl_pnts_to_reach = None
 
     def __repr__(self):
-        return 'AutoSig port:{} of {}'.format(
-            str(self.port_idx).rjust(2, ' '),
-            self.signal_point)
+        return 'AutoSig port:{} of {}, aspect {}'.format(str(self.port_idx).rjust(2, ' '),
+                                                         self.signal_point,
+                                                         self.aspect)
 
     @property
     def bblks_to_enter(self):

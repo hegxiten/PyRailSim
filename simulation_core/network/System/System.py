@@ -103,6 +103,10 @@ class System():
             List of all trains inside the system.'''
         return self._trains
 
+    @trains.setter
+    def trains(self, other):
+        self._trains = other
+
     @property
     def train_num(self):
         return len(self.trains)
@@ -199,6 +203,10 @@ class System():
     def statelist(self):
         _statelist = []
         pass
+
+    def reset_clock(self):
+        self.sys_time = self.init_time
+        self.last_train_init_time = self.sys_time
 
     def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
         return p1.track_by_port.get(p1_port, None) if p1 and p2 else None

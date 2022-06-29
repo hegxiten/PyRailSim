@@ -22,6 +22,7 @@ import random
 
 from simulation_core.network.network_utils import all_simple_paths, shortest_path
 from simulation_core.train.Train import Train
+from simulation_test.sim import timestamper
 
 
 class Dispatcher():
@@ -57,7 +58,6 @@ class Dispatcher():
             Generate train only.
         """
         _new_train = None
-        length = 1 if kwargs.get('length') is None else kwargs.get('length')
         if self.routing_requestable(init_point, dest_point):
             init_segment = ((None, None), (init_point, init_port)) \
                 if not init_point.track_by_port.get(init_port) \
@@ -77,43 +77,26 @@ class Dispatcher():
                 init_segment[0][0], init_segment[0][1],
                 init_segment[1][0], init_segment[1][1]
             )
+            _new_train = Train(
+                system=self.system,
+                init_segment=init_segment,
+                dest_segment=dest_segment,
+                max_spd=kwargs.get('max_spd',random.choice(self.system.spd_container)),
+                max_acc=kwargs.get('max_acc',random.choice(self.system.acc_container)),
+                max_dcc=kwargs.get('max_dcc',random.choice(self.system.dcc_container)),
+                length=kwargs.get('length', 1))
             if not init_track:
-                _new_train = Train(
-                    system=self.system,
-                    init_segment=init_segment,
-                    dest_segment=dest_segment,
-                    max_spd=random.choice(self.system.spd_container),
-                    max_acc=random.choice(self.system.acc_container),
-                    max_dcc=random.choice(self.system.dcc_container),
-                    length=length)
+                print("{0} [INFO]: new train generated WITHOUT init track.".format(timestamper(self.system.sys_time)))
+                return _new_train
+            # TODO: The logics below are not in use - trains are currently all generated from network vertices.
             elif init_track.is_occupied:
-                print('\tWarning: cannot generate train: track is occupied. \
-                    Hold new train for track availablity.')
+                print('{0} [WARNING]: cannot generate train: track is occupied. Hold new train for track availability.'.format(timestamper(self.system.sys_time)))
             elif not init_track.routing:
-                _new_train = Train(
-                    system=self.system,
-                    init_segment=init_segment,
-                    dest_segment=dest_segment,
-                    max_spd=random.choice(self.system.spd_container),
-                    max_acc=random.choice(self.system.acc_container),
-                    max_dcc=random.choice(self.system.dcc_container),
-                    length=length)
-            elif Train.sign_MP(init_segment) == init_track.sign_routing(
-                    init_track.routing):
-                _new_train = Train(
-                    system=self.system,
-                    init_segment=init_segment,
-                    dest_segment=dest_segment,
-                    max_spd=random.choice(self.system.spd_container),
-                    max_acc=random.choice(self.system.acc_container),
-                    max_dcc=random.choice(self.system.dcc_container),
-                    length=length)
-            else:
-                print('\tWarning: cannot generate train: confliting routing. \
-                    Hold new train for routing availablity.')
-        else:
-            print('\tWarning: cannot generate train: Capacity Maxed-out. \
-                Hold new train for capacity.')
+                print('{0} [INFO]: -------------NOT INIT ROUTING-------------'.format(timestamper(self.system.sys_time)))
+                return _new_train
+            elif Train.sign_MP(init_segment) == init_track.sign_routing(init_track.routing):
+                print('{0} [INFO]: -------------INIT SEGMENT SIGN CONFORMS-------------'.format(timestamper(self.system.sys_time)))
+                return _new_train
         return _new_train
 
     def request_routing(self, train):
@@ -122,28 +105,33 @@ class Dispatcher():
             Serve the myopic dispatch logic where trains only calls the cloest CPs.
             @return: None
         """
-        if train.pending_route and self.determine_paths_enterable_ahead_train(train):
-            _pending_route_to_open = train.curr_ctrl_point.find_route_for_port(port=train.curr_ctrl_pointport,
-                                                                               dest_pointport=train.dest_pointport)
+        if train.is_waiting_route_at_curr_cp and self.determine_paths_enterable_ahead_train(train):
+            _pending_route_to_open = train.curr_ctrl_point.find_route_for_port(port=train.curr_ctrl_pointport, dest_pointport=train.dest_pointport)
             if _pending_route_to_open is None:
-                return
+                return None
             if _pending_route_to_open not in train.curr_ctrl_point.current_invalid_routes:
                 if not train.curr_track or not train.curr_track.yard:
-                    print('{}, requested {} at {}'.format(train, _pending_route_to_open, train.curr_ctrl_point.MP))
+                    print('{0} [INFO]: {1}, \n\trequested {2} at {3}'
+                          .format(timestamper(self.system.sys_time), train, _pending_route_to_open,
+                                  train.curr_ctrl_point.MP))
                     train.curr_ctrl_point.open_route(_pending_route_to_open)
+                    return _pending_route_to_open
                 elif train.curr_track.yard:
-                    if not self.determine_train_hold_for_pass(train, max_passes=1):
-                        print('{}, requested {} at {}'.format(train, _pending_route_to_open, train.curr_ctrl_point.MP))
+                    if not self.determine_if_hold_to_be_passed(train, max_passes=1):
+                        print('{0} [INFO]: {1}, \n\trequested {2} at {3}'
+                              .format(timestamper(self.system.sys_time), train, _pending_route_to_open,
+                                      train.curr_ctrl_point.MP))
                         train.curr_ctrl_point.open_route(_pending_route_to_open)
-                    elif self.determine_train_hold_for_pass(train, max_passes=1):
-                        # no actions of its current CP (no route to open)
-                        for cp in train.system.ctrl_points:
-                            for (p1, p2) in cp.current_routes:
-                                if cp.bigblock_by_port.get(p2):
-                                    if train in cp.bigblock_by_port[p2].trains:
-                                        _route_to_change = cp.find_route_for_port(port=p1,
-                                                                                  dest_pointport=train.dest_pointport)
+                        return _pending_route_to_open
+                    else:
+                        for cp in self.system.ctrl_points:
+                            for (entry_port, exit_port) in cp.current_routes:
+                                if cp.bigblock_by_port.get(exit_port):
+                                    if train in cp.bigblock_by_port[exit_port].trains:
+                                        _route_to_change = cp.find_route_for_port(port=entry_port, dest_pointport=train.dest_pointport)
                                         cp.open_route(_route_to_change)
+                                        return _pending_route_to_open
+        return None
 
     def determine_paths_enterable_ahead_train(self, train):
         for p in train.all_paths_ahead:
@@ -151,7 +139,7 @@ class Dispatcher():
                 return True
         return False
 
-    def determine_train_hold_for_pass(self, train, max_passes=1):
+    def determine_if_hold_to_be_passed(self, train, max_passes=1):
         '''
             determine if the train is slower than the one behind and needs to be
             put on the siding to let the follower pass it.
@@ -176,73 +164,61 @@ class Dispatcher():
             if train.stopped and any([not t.stopped for t in _rest_trains]):
                 return True  # during the pass, hold the stopped train from move
             if all([trk.trains for trk in train.curr_track.yard.tracks]):
-                if abs(train.max_spd) == min([abs(trn.max_spd)
-                                             for trn in train.curr_track.yard.all_trains]):
+                if abs(train.max_spd) == min([abs(trn.max_spd) for trn in train.curr_track.yard.all_trains]):
                     return True
             if train.curr_track.yard.available_tracks >= 1 and train.dist_to_trn_behind <= 10:
                 return True
         return False
 
-    def get_route(self, src=None, srcport=None, tgt=None, tgtport=None,
-                  path=None, mainline=True):
+    def get_routing_path(self, src=None, srcport=None, tgt=None, tgtport=None, path=None, mainline=True):
         if src == tgt == path == None:
             raise Exception("Need to specify either a path or pair of points!")
         if src.__class__.__name__ == 'AutoPoint':
             src, srcport = self.cp_port_leading_to(src, srcport)
         if tgt.__class__.__name__ == 'AutoPoint':
             tgt, tgtport = self.cp_port_leading_to(tgt, tgtport)
-        route = []
+        routing_path = []
         cp_path = path
-        if cp_path is None:
-            cp_path = shortest_path(self.system.G_skeleton, source=src, target=tgt, weight='weight_mainline') \
-                if mainline == True else \
-                next(all_simple_paths(self.system.G_skeleton, source=src, target=tgt))
-        port_by_bblk = lambda bblk, cp: [p for p in cp.ports
-                                         if cp.bigblock_by_port.get(p) == bblk][0]
+        lambda_get_port_by_bblk_and_cp = lambda bblk, cp: [p for p in cp.ports if cp.bigblock_by_port.get(p) == bblk][0]
         for cp1, cp2 in zip(cp_path[0:], cp_path[1:]):
-            _parallel_bblks = [self.system.G_skeleton[cp1][cp2][k]['instance']
-                               for k in self.system.G_skeleton[cp1][cp2].keys()]
-            selected_bblk = min(_parallel_bblks) \
-                if mainline else random.choice(_parallel_bblks)
-            rp_seg = ((cp1, port_by_bblk(selected_bblk, cp1)),
-                      (cp2, port_by_bblk(selected_bblk, cp2)))
-            route.append(rp_seg)
+            _parallel_bblks = [self.system.G_skeleton[cp1][cp2][k]['instance'] for k in self.system.G_skeleton[cp1][cp2].keys()]
+            selected_bblk = min(_parallel_bblks) if mainline else max(_parallel_bblks)
+            rp_seg = ((cp1, lambda_get_port_by_bblk_and_cp(selected_bblk, cp1)),
+                      (cp2, lambda_get_port_by_bblk_and_cp(selected_bblk, cp2)))
+            routing_path.append(rp_seg)
         if not src.bigblock_by_port.get(srcport):
-            route.insert(0, ((None, None), (src, srcport)))
+            routing_path.insert(0, ((None, None), (src, srcport)))
         if src.bigblock_by_port.get(srcport):
             init_bblk = src.bigblock_by_port.get(srcport)
             _p = init_bblk.get_shooting_point(point=src, port=srcport)
             _port = init_bblk.get_shooting_port(point=src, port=srcport)
-            route.insert(0, ((_p, _port), (src, srcport)))
+            routing_path.insert(0, ((_p, _port), (src, srcport)))
         if not tgt.bigblock_by_port.get(tgtport):
-            route.append(((tgt, tgtport), (None, None)))
+            routing_path.append(((tgt, tgtport), (None, None)))
         if tgt.bigblock_by_port.get(tgtport):
             final_bblk = tgt.bigblock_by_port.get(tgtport)
             _p = final_bblk.get_shooting_point(point=tgt, port=tgtport)
             _port = final_bblk.get_shooting_port(point=tgt, port=tgtport)
-            route.append(((tgt, tgtport), (_p, _port)))
-        return route
+            routing_path.append(((tgt, tgtport), (_p, _port)))
+        return routing_path
 
-    def all_routes_generator(self, src, srcport, tgt, tgtport):
+    def all_routing_paths_generator(self, src, srcport, tgt, tgtport, mainline):
         src, srcport, tgt, tgtport = src, srcport, tgt, tgtport
         if src.__class__.__name__ == 'AutoPoint':
             src, srcport = self.cp_port_leading_to(src, srcport)
         if tgt.__class__.__name__ == 'AutoPoint':
             tgt, tgtport = self.cp_port_leading_to(tgt, tgtport)
-        cp_paths = list(all_simple_paths(self.system.G_skeleton,
-                                         source=src, target=tgt))
-        _route_list = []
+        cp_paths = list(all_simple_paths(self.system.G_skeleton, source=src, target=tgt))
+        _routing_path_list = []
         while cp_paths:
             _single_cp_route = cp_paths[0]
-            _single_route = self.get_route(src, srcport, tgt, tgtport,
-                                           path=_single_cp_route, mainline=False)
-            if _single_route not in _route_list:
-                cp_paths.pop(0)
-                _route_list.append(_single_route)
-                yield _single_route
+            _single_routing_path = self.get_routing_path(src, srcport, tgt, tgtport, path=_single_cp_route, mainline=mainline)
+            cp_paths.pop(0)
+            _routing_path_list.append(_single_routing_path)
+            yield _single_routing_path
 
     def get_all_routes(self, src, srcport, tgt, tgtport):
-        return list(self.all_routes_generator(src, srcport, tgt, tgtport))
+        return list(self.all_routing_paths_generator(src, srcport, tgt, tgtport))
 
     """
         Deprecated or placeholder below

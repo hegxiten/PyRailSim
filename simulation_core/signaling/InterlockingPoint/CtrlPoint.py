@@ -4,6 +4,7 @@ from itertools import permutations
 from simulation_core.network.network_utils import collect_banned_paths
 from simulation_core.signaling.InterlockingPoint.InterlockingPoint import InterlockingPoint
 from simulation_core.signaling.Signal.HomeSignal import HomeSignal
+from simulation_test.sim import timestamper
 
 
 class CtrlPoint(InterlockingPoint):
@@ -118,60 +119,47 @@ class CtrlPoint(InterlockingPoint):
         return self._available_ports_by_port
 
     def open_route(self, route):
-        if route not in self.current_routes:
-            # if not in all_valid routes, the route to open is banned
-            if route not in self.all_valid_routes:
-                raise Exception(
-                    'illegal route for {}: banned/non-existing routes'
-                    .format(self))
-            elif route in self.all_valid_routes:
-                # in all_valid_routes: the route to open is not banned;
-                # the route-to-open is still possible to conflict with
-                # existing routes
-                if route not in self.current_invalid_routes:
-                    self.current_routes.append(route)
-                    self.set_bigblock_routing_by_CtrlPoint_route(route)
-                    print('\troute {} of {} is opened'.format(route, self))
-                else:
-                    # try to close conflicting routes if possible
-                    conflict_routes_of_route_to_open = []
-                    for cr in self.current_routes:
-                        if route not in self.non_mutex_routes_by_route[cr]:
-                            conflict_routes_of_route_to_open.append(cr)
-                    try:
-                        for cr in conflict_routes_of_route_to_open:
-                            self.close_route(cr)
-                        self.current_routes.append(route)
-                        self.set_bigblock_routing_by_CtrlPoint_route(route)
-                        print('\troute {} of {} is opened'.format(route, self))
-                    except:
-                        print('\troute {} of {} failed to open because \
-                                conflicting routes are protected')
-                    finally:
-                        pass
-                # CtrlPoint port traffic routing: route[0] -> route[1]
-                # BigBlock routing:
-                #   (somewhere, someport) -> (self, route[0]) and
-                #   (self, route[1]) to (somewhere, someport)
+        # CtrlPoint port traffic routing: route[0] -> route[1]
+        # BigBlock routing:
+        #   (somewhere, someport) -> (self, route[0]) and
+        #   (self, route[1]) to (somewhere, someport)
+        if route in self.current_routes:
+            return
+        # if not in all_valid routes, the route to open is banned
+        if route not in self.all_valid_routes:
+            raise Exception('illegal route for {}: banned/non-existing routes'.format(self))
+        # in all_valid_routes: the route to open is not banned;
+        # the route-to-open is still possible to conflict with existing routes
+        if route in self.current_invalid_routes:
+            conflicting_routes = []
+            for curr_rte in self.current_routes:
+                if route not in self.non_mutex_routes_by_route[curr_rte]:
+                    conflicting_routes.append(curr_rte)
+            for r in conflicting_routes:
+                self.close_route(r)
+        self.current_routes.append(route)
+        self.set_bigblock_routing_by_CtrlPoint_route(route)
+        print('{0} [INFO]: route {1} of {2} is opened'.format(timestamper(self.system.sys_time), route, self))
 
     def close_route(self, route=None):
         def close_single_route(route):
             assert route in self.current_routes
-            _impacted_bblk = self.bigblock_by_port.get(route[0])
-            _impacted_trns = [] if not _impacted_bblk \
-                else [t for t in _impacted_bblk.trains
-                      if t not in self.curr_train_with_route]
-            if not _impacted_trns or \
-                    all([t.curr_route_cancelable for t in _impacted_trns]):
+            entry_port = route[0]
+            _impacted_bblk = self.bigblock_by_port.get(entry_port)
+            _impacted_trns = []
+            if _impacted_bblk:
+                for trn in _impacted_bblk.trains:
+                    if trn not in self.curr_train_with_route:
+                        _impacted_trns.append(trn)
+            if not _impacted_trns or all([trn.curr_route_cancelable for trn in _impacted_trns]):
                 self.current_routes.remove(route)
-                if self.bigblock_by_port.get(route[0]):
-                    if not self.bigblock_by_port.get(route[0]).trains:
-                        self.cancel_bigblock_routing_by_port(route[0])
-                print('\troute {} of {} is closed'.format(route, self))
+                if _impacted_bblk:
+                    if not _impacted_bblk.trains:
+                        self.cancel_bigblock_routing_by_port(entry_port)
+                print('{0} [INFO]: route {1} of {2} is closed'.format(timestamper(self.system.sys_time), route, self))
             else:
                 raise Exception('\troute {} of {} protected: failed to close'.
                                 format(route, self))
-
         if route:
             close_single_route(route)
         else:
@@ -179,24 +167,12 @@ class CtrlPoint(InterlockingPoint):
                 close_single_route(r)
 
     def find_route_for_port(self, port, dest_pointport=None):
-        def candidate_ports(port, dest_pointport=None):
-            if not dest_pointport:
-                return [i for i in self.available_ports_by_port[port]]
-            if dest_pointport:
-                all_routes = self.system.dispatcher.all_routes_generator(self,
-                                                                         port, dest_pointport[0], dest_pointport[1])
-                _candi = []
-                for r in all_routes:
-                    if set(_candi) == set(self.available_ports_by_port[port]):
-                        return _candi
-                    if r[1][0][1] not in _candi:
-                        _candi.append(r[1][0][1])
-                return _candi
+        mainline_routing_paths = list(self.system.dispatcher.all_routing_paths_generator(self, port, dest_pointport[0], dest_pointport[1], mainline=True))
+        siding_routing_paths = list(self.system.dispatcher.all_routing_paths_generator(self, port, dest_pointport[0], dest_pointport[1], mainline=False))
 
-        _candidate_ports = candidate_ports(port, dest_pointport)
-        trns = [len(self.bigblock_by_port[p].trains)
-                if self.bigblock_by_port.get(p) else 0
-                for p in _candidate_ports]
+        all_routing_paths = mainline_routing_paths + siding_routing_paths
+        _candidate_ports = list(set([rp[1][0][1] for rp in all_routing_paths]))
+        _trn_number_in_bblks = [len(self.bigblock_by_port[p].trains) if self.bigblock_by_port.get(p) else 0 for p in _candidate_ports]
         final_selection = [p for p in _candidate_ports]
         for p in _candidate_ports:
             _candi_bblk = self.bigblock_by_port.get(p)
@@ -205,28 +181,24 @@ class CtrlPoint(InterlockingPoint):
                 continue
             elif not _candi_bblk.routing:
                 continue
-            elif _candi_bblk.routing != ((self, p), (_candi_bblk.get_shooting_point(
-                    point=self), _candi_bblk.get_shooting_port(port=p))):
+            if _candi_bblk.routing != ((self, p), (_candi_bblk.get_shooting_point(point=self), _candi_bblk.get_shooting_port(port=p))):
                 if _candi_bblk.trains:
                     final_selection.remove(p)
                     continue
-            elif _candi_bblk.routing == ((self, p), (_candi_bblk.get_shooting_point(
-                    point=self), _candi_bblk.get_shooting_port(port=p))):
-                if len(_candi_bblk.trains) != min(trns):
+            else:
+                if len(_candi_bblk.trains) != min(_trn_number_in_bblks):
                     final_selection.remove(p)
                     continue
-
         if not final_selection:
             return None
-        else:
-            for p in final_selection:
-                if not self.bigblock_by_port.get(p): return (port, p)
-                if len(self.bigblock_by_port[p].trains) == min(trns):
-                    return (port, p)
-            return (port, final_selection[0])
+        for p in final_selection:
+            if not self.bigblock_by_port.get(p):
+                return (port, p)
+            if len(self.bigblock_by_port[p].trains) == min(_trn_number_in_bblks):
+                return (port, p)
+        return (port, final_selection[0])
 
     def set_bigblock_routing_by_CtrlPoint_route(self, route):
-        assert route
         (x, y) = route
         _in_port, _in_bblk = x, self.bigblock_by_port.get(x)
         _out_port, _out_bblk = y, self.bigblock_by_port.get(y)
@@ -246,8 +218,7 @@ class CtrlPoint(InterlockingPoint):
                                  _in_bblk.get_shooting_port(point=self)), (self, x))
 
     def cancel_bigblock_routing_by_port(self, port):
-        assert port in self.ports
-        _port, _bblk = port, self.bigblock_by_port.get(port)
+        _bblk = self.bigblock_by_port.get(port)
         if _bblk:
             _bblk.routing = None
 

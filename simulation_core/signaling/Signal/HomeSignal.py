@@ -32,7 +32,9 @@ class HomeSignal(Signal):
         self._governed_bigblock = None
 
     def __repr__(self):
-        return 'HomeSig port:{} of {}'.format(str(self.port_idx).rjust(2, ' '), self.sigpoint, )
+        return 'HomeSig port:{} of {}, aspect {}'.format(str(self.port_idx).rjust(2, ' '),
+                                                         self.signal_point,
+                                                         self.aspect)
 
     @property
     def bblks_to_enter(self):

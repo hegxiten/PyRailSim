@@ -14,11 +14,9 @@ class Track(Observable):
         if not rp_seg:  # no routing information (dormant track/bigblock)
             return 0
         elif rp_seg[0][0] and rp_seg[1][0]:
-            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > \
-                    rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
+            if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP > rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
                 return 1
-            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < \
-                    rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
+            elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP < rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP:
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
@@ -26,24 +24,20 @@ class Track(Observable):
         # initiating
         elif not rp_seg[0][0]:
             if rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
-                    min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(
-                                                            rp_seg[1][1])].MP):
+                    min(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return 1
             elif rp_seg[1][0].signal_by_port[rp_seg[1][1]].MP == \
-                    max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(
-                                                            rp_seg[1][1])].MP):
+                    max(rp_seg[1][0].track_by_port[rp_seg[1][0].opposite_port(rp_seg[1][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
         # terminating
         elif not rp_seg[1][0]:
             if rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
-                    max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(
-                                                            rp_seg[0][1])].MP):
+                    max(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return 1
             elif rp_seg[0][0].signal_by_port[rp_seg[0][1]].MP == \
-                    min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(
-                                                            rp_seg[0][1])].MP):
+                    min(rp_seg[0][0].track_by_port[rp_seg[0][0].opposite_port(rp_seg[0][1])].MP):
                 return -1
             else:
                 raise ValueError('Undefined MP direction')
@@ -129,11 +123,12 @@ class Track(Observable):
 
     @routing.setter
     def routing(self, new_routing):
-        '''
+        """
             WARNING:
                 Setting a routing property directly from a track in normal
                 dispatching mode is NOT RECOMMENDED.
-                Please set routing property by track's parental bigblock instance.'''
+                Please set routing property by track's parental bigblock instance.
+        """
         if new_routing:
             for (p, pport) in new_routing:
                 assert p in [self.L_point, self.R_point]
@@ -150,10 +145,11 @@ class Track(Observable):
         return []
 
     def __lt__(self, other):
-        '''
+        """
             Implement __lt__ to sort yards based on their MilePost.
             If MilePosts are the same, compare key in Graphs.
-            MP system of self and other has to be the same: same corridor.'''
+            MP system of self and other has to be the same: same corridor.
+        """
         if getattr(self, 'mainline', False) is True:
             if getattr(self, 'mainline', False) is False:
                 return True
@@ -175,6 +171,9 @@ class Track(Observable):
             if min(self.MP) < min(other.MP):
                 if min(other.MP) - min(self.MP) > max(self.MP) - max(other.MP):
                     return True
+
+    def purge_trains(self):
+        self._trains = []
 
     def get_shooting_point(self, point=None, port=None, sign_MP=None):
         """
