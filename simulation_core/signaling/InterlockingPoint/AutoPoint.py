@@ -3,7 +3,10 @@ from simulation_core.signaling.Signal.AutoSignal import AutoSignal
 
 
 class AutoPoint(InterlockingPoint):
-
+    """
+        Implementation of automatic signal point
+        Signaling method: automatic block.
+    """
     def __init__(self, system, idx, MP=None):
         super().__init__(system, idx, MP)
         self.type = 'at'
@@ -20,8 +23,7 @@ class AutoPoint(InterlockingPoint):
             sig.system = self.system
 
     def __repr__(self):
-        return 'AutoPnt{}'.format(
-            str(self.idx).rjust(2, ' '), )
+        return 'AutoPnt{}'.format(str(self.idx).rjust(2, ' '), )
 
     @property
     def banned_ports_by_port(self) -> dict:
@@ -29,6 +31,10 @@ class AutoPoint(InterlockingPoint):
 
     @property
     def bigblock(self):
+        """
+            For auto signal points, the bigblock for the two tracks on both ports are unique.
+            @return: BigBlock of self.
+        """
         return [t.bigblock for _, t in self.track_by_port.items()][0]
 
     @property
@@ -41,10 +47,18 @@ class AutoPoint(InterlockingPoint):
 
     @property
     def available_ports_by_port(self):
-        return {0: [1], 1: [0]}  # define legal routes
+        """
+            Define legal routes by different ports of the auto signal point.
+            @return: Dictionary of {port: [ports]}
+        """
+        return {0: [1], 1: [0]}
 
     @property
     def current_routes(self):
+        """
+            Infer the current route from the track routing.
+            @return: List of 2-element tuples, specifying the current routes of self.
+        """
         for p, t in self.track_by_port.items():
             # only AutoPoints can assign current routes like this because
             # AutoPoints have only 0, 1 as their ports
@@ -57,7 +71,10 @@ class AutoPoint(InterlockingPoint):
 
     @property
     def current_invalid_routes(self):
-        # Overriding the general cases for simplification
+        """
+            Current invalid routes providing a valid current route. Overriding the general cases for simplification.
+            @return: List of 2-element tuples, specifying the current routes of self.
+        """
         _curr_routes = self.current_routes
         if not _curr_routes:
             return []
@@ -66,19 +83,22 @@ class AutoPoint(InterlockingPoint):
         elif _curr_routes == [(1, 0)]:
             return [(0, 1)]
         else:
-            raise Exception(
-                'illegal route for AutoPoint {}: invalid route calculation error.'
-                    .format(self))
+            raise Exception('illegal route for AutoPoint {}: invalid route calculation error.'.format(self))
 
     @property
     def banned_paths(self):
+        """
+            There is no banned paths for auto signal points.
+            @return: Empty list.
+        """
         return []
 
     def opposite_port(self, port):
-        '''
-            Return the signal port on the other side of the given port of an
-            AutoSignal. Method restricted to AutoSignal instances
-        '''
+        """
+            Return the signal port on the other side of the given port of an AutoSignal.
+            Method restricted to AutoSignal instances
+            @return: int, port index
+        """
         for p in self.ports:
             if p != port:
                 return p

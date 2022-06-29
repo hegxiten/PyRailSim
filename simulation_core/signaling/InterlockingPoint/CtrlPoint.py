@@ -1,6 +1,7 @@
 from collections import defaultdict
 from itertools import permutations
 
+from simulation_core.network.network_utils import collect_banned_paths
 from simulation_core.signaling.InterlockingPoint.InterlockingPoint import InterlockingPoint
 from simulation_core.signaling.Signal.HomeSignal import HomeSignal
 
@@ -21,8 +22,8 @@ class CtrlPoint(InterlockingPoint):
         self._non_mutex_routes_by_route = non_mutex_routes_by_route
         self._current_routes = []
         self.bigblock_by_port = {}
-        # available options for routes, dict[port] = list(options)
-        self._available_ports_by_port = None
+        self._banned_paths = None
+        self._available_ports_by_port = None  # available options for routes, dict[port] = list(options)
         # build up signals
         self.signal_by_port = {}
         for i in self.ports:
@@ -45,14 +46,15 @@ class CtrlPoint(InterlockingPoint):
         self._banned_ports_by_port = val
 
     @property
-    def ports(self): return self._ports
+    def ports(self):
+        return self._ports
 
     @property
     def is_vertex(self) -> bool:
-        '''
+        """
             Property of a Control Point: if it is a vertex (initiating point) of a network
             @return: True/False
-        '''
+        """
         for i in self.ports:
             if not self.track_by_port.get(i):
                 return True
@@ -61,16 +63,6 @@ class CtrlPoint(InterlockingPoint):
     @property
     def non_mutex_routes_by_route(self):
         return self._non_mutex_routes_by_route
-
-    @property
-    def available_ports_by_port(self):
-        if self._available_ports_by_port is None:
-            self._available_ports_by_port = defaultdict(list)
-            for i in self.ports:
-                for j in self.ports:
-                    if j not in self.banned_ports_by_port.get(i, []):
-                        self._available_ports_by_port[i].append(j)
-        return self._available_ports_by_port  # define legal routes
 
     @property
     def all_valid_routes(self):
@@ -100,39 +92,30 @@ class CtrlPoint(InterlockingPoint):
 
     @property
     def banned_paths(self):
-        '''
-            TODO: Refactoring Under Devo
-        '''
+        """
+            The banned paths for each control point in a 3-element tuple
+            (init_point, self, ending_point)
+            @return:
+                tuple
+        """
+        if self._banned_paths is None:
+            self._banned_paths = list(set(collect_banned_paths(self, skeleton=False) + collect_banned_paths(self, skeleton=True)))
+        return self._banned_paths
 
-        def collect_banned_paths(skeleton=False):
-            _banned_collection = []
-            for p in self.ports:
-                if not self.banned_ports_by_port.get(p): continue
-                for bp in self.banned_ports_by_port[p]:
-                    if skeleton == False:
-                        one_end = \
-                            self.track_by_port[p].get_shooting_point(point=self) \
-                                if self.track_by_port.get(p) else None
-                        the_other_end = \
-                            self.track_by_port[bp].get_shooting_point(point=self) \
-                                if self.track_by_port.get(bp) else None
-                    if skeleton == True:
-                        one_end = \
-                            self.bigblock_by_port[p].get_shooting_point(point=self) \
-                                if self.bigblock_by_port.get(p) else None
-                        the_other_end = \
-                            self.bigblock_by_port[bp].get_shooting_point(point=self) \
-                                if self.bigblock_by_port.get(bp) else None
-                    if (one_end, self, the_other_end) not in _banned_collection:
-                        _banned_collection.append((one_end, self, the_other_end))
-                    if (the_other_end, self, one_end) not in _banned_collection:
-                        _banned_collection.append((the_other_end, self, one_end))
-            return _banned_collection
-
-        _banned_path = []
-        _banned_path.extend(collect_banned_paths(skeleton=False))
-        _banned_path.extend(collect_banned_paths(skeleton=True))
-        return _banned_path
+    @property
+    def available_ports_by_port(self):
+        """
+            Define legal routes
+            @return:
+                dictionary of {port: [ports]}
+        """
+        if self._available_ports_by_port is None:
+            self._available_ports_by_port = defaultdict(list)
+            for i in self.ports:
+                for j in self.ports:
+                    if j not in self.banned_ports_by_port.get(i, []):
+                        self._available_ports_by_port[i].append(j)
+        return self._available_ports_by_port
 
     def open_route(self, route):
         if route not in self.current_routes:
@@ -140,7 +123,7 @@ class CtrlPoint(InterlockingPoint):
             if route not in self.all_valid_routes:
                 raise Exception(
                     'illegal route for {}: banned/non-existing routes'
-                        .format(self))
+                    .format(self))
             elif route in self.all_valid_routes:
                 # in all_valid_routes: the route to open is not banned;
                 # the route-to-open is still possible to conflict with

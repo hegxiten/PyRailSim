@@ -32,15 +32,12 @@ class HomeSignal(Signal):
         self._governed_bigblock = None
 
     def __repr__(self):
-        return 'HomeSig port:{} of {}'.format(
-            str(self.port_idx).rjust(2, ' '),
-            self.sigpoint, )
+        return 'HomeSig port:{} of {}'.format(str(self.port_idx).rjust(2, ' '), self.sigpoint, )
 
     @property
     def bblks_to_enter(self):
         if self._bblks_to_enter is None:
-            self._bblks_to_enter = [self.sigpoint.bigblock_by_port[p] for p in
-                                    self.sigpoint.available_ports_by_port[self.port_idx]]
+            self._bblks_to_enter = [self.sigpoint.bigblock_by_port[p] for p in self.sigpoint.available_ports_by_port[self.port_idx]]
         return self._bblks_to_enter
 
     @property

@@ -8,8 +8,8 @@ import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-from simulation_core.network.System.system import System
-from simulation_core.train.train import Train
+from simulation_core.network.System.System import System
+from simulation_core.train.Train import Train
 
 
 def run_with_string_diagram(sys, sys_dos, start_time, end_time):
@@ -401,7 +401,7 @@ if __name__ == '__main__':
     world.signal_points[4].open_route((1, 0))
 
     for n in range(360):
-        T166.update_acc()
-        T165.update_acc()
+        T166.move()
+        T165.move()
         world.sys_time += world.refresh_time
     run_with_string_diagram(world, sim_init_time, sim_term_time)

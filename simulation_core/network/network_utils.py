@@ -22,8 +22,7 @@ from functools import wraps
 import networkx as nx
 
 
-def no_banned_rail_paths_on_cp(func):
-
+def wrapper_no_banned_rail_paths_on_cp(func):
     if func.__name__ == 'all_simple_paths':
         '''
         Parameters
@@ -49,21 +48,20 @@ def no_banned_rail_paths_on_cp(func):
 
         @wraps(func)
         def filter_out_banned_paths(G, source, target, cutoff=None):
-            '''
+            """
                 Filter out the simple paths that contain banned paths inside control points (CPs)
-            '''
+            """
             if source == target:
                 yield [source]
-            raw_simple_path_gen = func(G, source, target, cutoff=None) # Calling the wrapped function
+            raw_simple_path_gen = func(G, source, target, cutoff=None)  # Calling the wrapped function
             for path in raw_simple_path_gen:
                 if len(path) <= 2:
                     yield path
                 elif all([
-                        True if (p0, p1, p2) not in p1.banned_paths \
-                            else False \
-                            for p0, p1, p2 in zip(path[0:], path[1:], path[2:])
-                        ]):
+                    True if (p0, p1, p2) not in p1.banned_paths else False for p0, p1, p2 in zip(path[0:], path[1:], path[2:])
+                ]):
                     yield path
+
         return filter_out_banned_paths
 
     if func.__name__ == 'shortest_path':
@@ -125,32 +123,53 @@ def no_banned_rail_paths_on_cp(func):
                 Find the shortest path that also allowed by individual control points (CPs)
                 (Not in the banned list of any CPs)
             """
-            raw_shortest = func(G, source, target, weight=weight) # Calling the wrapped function
-            if len(list(all_simple_paths(G, source, target, cutoff=None))) == 1:
+            raw_shortest = func(G, source, target, weight=weight)  # Calling the wrapped function
+            if len(list(all_simple_paths(G, source, target, cutoff=None))) == 1:  # If only one path exits
                 return raw_shortest
-            elif len(raw_shortest) <= 2:
+            elif len(raw_shortest) <= 2:  # If shortest path is from track head to track end (both ends of a track)
                 return raw_shortest
             elif all([
-                    True if (p0, p1, p2) not in p1.banned_paths else False 
-                    for p0, p1, p2 in zip(raw_shortest[0:], raw_shortest[1:],
-                                raw_shortest[2:])
-                    ]):
+                True if (p0, p1, p2) not in p1.banned_paths else False for p0, p1, p2 in
+                zip(raw_shortest[0:], raw_shortest[1:], raw_shortest[2:])
+            ]):  # Shortest path must filter out all banned ports for each signal point
                 return raw_shortest
-            else:
-                # DEBUG:
-                # TODO: review the weight logics and determine what to return here. 
+            else:  # No shortest paths found
                 return []
-                # if raw_shortest != func(G, source, target):
-                #     return []
-                # else:
-                #
-                #     raise Exception("Cannot Find a shortest Path Between {} and {}!".format(source, target))
         return filter_banned_cp_path_shortest
 
-@no_banned_rail_paths_on_cp
+
+@wrapper_no_banned_rail_paths_on_cp
 def all_simple_paths(G, source, target, cutoff=None):
     return nx.all_simple_paths(G, source, target, cutoff=cutoff)
 
-@no_banned_rail_paths_on_cp
+
+@wrapper_no_banned_rail_paths_on_cp
 def shortest_path(G, source, target, weight=None):
     return nx.shortest_path(G, source, target, weight=weight)
+
+
+def collect_banned_paths(ctrl_point, skeleton=False):
+    _banned_collection = []
+    for p in ctrl_point.ports:
+        if not ctrl_point.banned_ports_by_port.get(p):
+            continue
+        for bp in ctrl_point.banned_ports_by_port[p]:
+            if skeleton == False:
+                one_end = \
+                    ctrl_point.track_by_port[p].get_shooting_point(point=ctrl_point) \
+                        if ctrl_point.track_by_port.get(p) else None
+                the_other_end = \
+                    ctrl_point.track_by_port[bp].get_shooting_point(point=ctrl_point) \
+                        if ctrl_point.track_by_port.get(bp) else None
+            if skeleton == True:
+                one_end = \
+                    ctrl_point.bigblock_by_port[p].get_shooting_point(point=ctrl_point) \
+                        if ctrl_point.bigblock_by_port.get(p) else None
+                the_other_end = \
+                    ctrl_point.bigblock_by_port[bp].get_shooting_point(point=ctrl_point) \
+                        if ctrl_point.bigblock_by_port.get(bp) else None
+            if (one_end, ctrl_point, the_other_end) not in _banned_collection:
+                _banned_collection.append((one_end, ctrl_point, the_other_end))
+            if (the_other_end, ctrl_point, one_end) not in _banned_collection:
+                _banned_collection.append((the_other_end, ctrl_point, one_end))
+    return _banned_collection

@@ -4,12 +4,13 @@ from simulation_core.observation_model.observe import Observable
 class Track(Observable):
     @staticmethod
     def sign_routing(rp_seg):
-        '''
+        """
             :rp_seg: 2-element-tuple: ((Point, Port),(Point, Port))
                 Routing path segment of a train, describing its direction.
             @return:
                 The sign (+1/-1) of traffic when input with a legal routing
-                path segment of a track/bigblock (describing traffic direction)'''
+                path segment of a track/bigblock (describing traffic direction)
+        """
         if not rp_seg:  # no routing information (dormant track/bigblock)
             return 0
         elif rp_seg[0][0] and rp_seg[1][0]:
@@ -80,7 +81,7 @@ class Track(Observable):
             if kwargs.get('mainline') is None \
             else kwargs.get('mainline')
 
-        self.mainline_weight = float('inf') if self.mainline == False else 0
+        self.mainline_weight = float('inf') if self.mainline == False else 1
         self.tracks = []
         self.__bigblock = None
         self.__curr_routing_path = None
@@ -176,42 +177,33 @@ class Track(Observable):
                     return True
 
     def get_shooting_point(self, point=None, port=None, sign_MP=None):
-        '''
+        """
             Example:
                 [port_0:CP_A:port_1 ----> port_0:CP_B:port_1]
             Given CP_A or port_1,
             @return:
                 CP_B
-        '''
+        """
         if point is not None:
-            assert point in (self.L_point, self.R_point)
             return self.L_point if point == self.R_point else self.R_point
         if port is not None:
-            assert port in (self.L_point_port, self.R_point_port)
             return self.L_point if port == self.R_point_port else self.R_point
         if sign_MP is not None:
-            assert sign_MP in (-1, +1)
             return self.L_point if sign_MP == -1 else self.R_point
         return None
 
     def get_shooting_port(self, point=None, port=None, sign_MP=None):
-        '''
+        """
             Example:
                 [port_0:CP_A:port_1 ----> port_0:CP_B:port_1]
             Given CP_A or port_1,
             @return:
                 port_0
-        '''
+        """
         if point is not None:
-            assert point in (self.L_point, self.R_point)
-            return self.L_point_port \
-                if point == self.R_point else self.R_point_port
+            return self.L_point_port if point == self.R_point else self.R_point_port
         if port is not None:
-            assert port in (self.L_point_port, self.R_point_port)
-            return self.L_point_port \
-                if port == self.R_point_port else self.R_point_port
+            return self.L_point_port if port == self.R_point_port else self.R_point_port
         if sign_MP is not None:
-            assert sign_MP in (-1, +1)
-            return self.L_point_port \
-                if sign_MP == -1 else self.R_point_port
+            return self.L_point_port if sign_MP == -1 else self.R_point_port
         return None

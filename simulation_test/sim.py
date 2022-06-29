@@ -23,8 +23,8 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-import simulation_core.network.System.system
-from simulation_core.network.System.system import System
+import simulation_core.network.System.System
+from simulation_core.network.System.System import System
 
 
 def string_diagram(sys):
@@ -149,8 +149,8 @@ def launch(sys, downtrain=True):
     while sys.sys_time - sys.init_time <= sys.term_time - sys.init_time:
         _semaphore_to_return = False
         for t in sys.trains:
-            t.request_routing()
-            t.update_acc()
+            sys.dispatcher.request_routing(t)
+            t.move()
         if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= simulation_core.network.System.system.headway:
             if downtrain:
                 if not sys.signal_points[0].curr_train_with_route.keys():
