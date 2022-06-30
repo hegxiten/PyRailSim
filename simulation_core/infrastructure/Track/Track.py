@@ -138,8 +138,8 @@ class Track(Observable):
             self._routing = None
 
     @property
-    def curr_routing_paths(self):
-        for rp in self.system.curr_routing_paths:
+    def curr_routing_paths_all(self):
+        for rp in self.system.curr_routing_paths_all:
             if self.routing in rp:
                 return rp
         return []

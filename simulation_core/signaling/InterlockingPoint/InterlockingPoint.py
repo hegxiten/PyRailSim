@@ -16,14 +16,14 @@ class InterlockingPoint(Observable, Observer, ABC):
         self._idx = idx
         self._ports = []
 
-        self._non_mutex_routes_by_route = None
+        self._non_mutex_routes_set_by_route = None
         self._mutex_routes_by_route = None
-        self._banned_ports_by_port = defaultdict(list)
+        self._banned_ports_by_port = defaultdict(set)
 
         self.neighbor_nodes = []
         self.track_by_port = {}
 
-        self._current_routes = []
+        self._curr_routes_set = set()
         self._curr_train_with_route = {}
 
     @property
@@ -33,18 +33,23 @@ class InterlockingPoint(Observable, Observer, ABC):
 
     @property
     @abstractmethod
-    def all_valid_routes(self) -> list:
+    def all_valid_routes_set(self):
         pass
 
     @property
     @abstractmethod
-    def current_routes(self) -> list:
+    def curr_routes_set(self):
         pass
 
     @property
     @abstractmethod
-    def non_mutex_routes_by_route(self) -> dict:
+    def non_mutex_routes_set_by_route(self) -> dict:
         pass
+
+    @property
+    @abstractmethod
+    def banned_ports_by_port(self) -> dict:
+        return self._banned_ports_by_port
 
     @property
     def system(self):
@@ -63,35 +68,26 @@ class InterlockingPoint(Observable, Observer, ABC):
         return self._idx
 
     @property
-    def non_mutex_routes_by_route(self):
-        return self._non_mutex_routes_by_route
-
-    @property
-    def mutex_routes_by_route(self):
-        return self._mutex_routes_by_route
-
-    @property
-    @abstractmethod
-    def banned_ports_by_port(self) -> dict:
-        return self._banned_ports_by_port
+    def non_mutex_routes_set_by_route(self):
+        return self._non_mutex_routes_set_by_route
 
     @property
     def mutex_routes_by_route(self):
         if self._mutex_routes_by_route is None:
-            self._mutex_routes_by_route = defaultdict(list)
-            for valid_route in self.all_valid_routes:
-                _all_valid_routes = self.all_valid_routes.copy()
+            self._mutex_routes_by_route = defaultdict(set)
+            for valid_route in self.all_valid_routes_set:
+                _all_valid_routes = self.all_valid_routes_set.copy()
                 _all_valid_routes.remove(valid_route)
-                self._mutex_routes_by_route[valid_route].extend(_all_valid_routes)
-            for route, non_mutex_route_list in self.non_mutex_routes_by_route.items():
+                self._mutex_routes_by_route[valid_route].update(_all_valid_routes)
+            for route, non_mutex_route_list in self.non_mutex_routes_set_by_route.items():
                 if non_mutex_route_list in self._mutex_routes_by_route[route]:
                     self._mutex_routes_by_route[route].remove(non_mutex_route_list)
         return self._mutex_routes_by_route
 
     @property
-    def current_route_by_port(self):
+    def curr_route_by_port(self):
         _current_route_by_port = {}
-        for r in self.current_routes:
+        for r in self.curr_routes_set:
             _current_route_by_port[r[0]] = r
         return _current_route_by_port
 
@@ -100,33 +96,33 @@ class InterlockingPoint(Observable, Observer, ABC):
         return self._curr_train_with_route
 
     @property
-    def current_invalid_routes(self):
+    def curr_invalid_routes_set(self):
         # General cases. For simplifcation, better be overriden
-        _current_invalid_routes = set()
+        _curr_invalid_routes_set = set()
         # collect all banned routes in a permutation list of 2-element tuples
-        for p, bplist in self.banned_ports_by_port.items():
-            for bp in bplist:
-                _current_invalid_routes.add((p, bp))
-                _current_invalid_routes.add((bp, p))
+        for p, bports in self.banned_ports_by_port.items():
+            for bp in bports:
+                _curr_invalid_routes_set.add((p, bp))
+                _curr_invalid_routes_set.add((bp, p))
         # collect all mutex routes according to currently openned routes
-        for r in self.current_routes:
-            for vr in self.all_valid_routes:
-                if vr not in self.non_mutex_routes_by_route[r]:
-                    _current_invalid_routes.add(vr)
+        for r in self.curr_routes_set:
+            for vr in self.all_valid_routes_set:
+                if vr not in self.non_mutex_routes_set_by_route[r]:
+                    _curr_invalid_routes_set.add(vr)
         # collect all routes currently under trains
-        for r in self.locked_routes_due_to_train:
-            _current_invalid_routes.add(r)
-        return list(_current_invalid_routes)
+        for r in self.locked_routes_due_to_train_set:
+            _curr_invalid_routes_set.add(r)
+        return _curr_invalid_routes_set
 
     @property
-    def locked_routes_due_to_train(self):
-        _locked_routes = []
+    def locked_routes_due_to_train_set(self):
+        _locked_routes = set()
         for _, r in self.curr_train_with_route.items():
-            _locked_routes.append(r)
-            _locked_routes.extend(self.mutex_routes_by_route.get(r))
+            _locked_routes.add(r)
+            _locked_routes.update(self.mutex_routes_by_route.get(r))
         return _locked_routes
 
     @property
     @abstractmethod
-    def banned_paths(self):
+    def banned_paths_set(self):
         raise NotImplementedError("Needed to be implemented in AutoPoint or CtrlPoint")

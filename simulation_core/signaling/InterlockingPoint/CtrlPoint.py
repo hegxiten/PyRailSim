@@ -14,16 +14,16 @@ class CtrlPoint(InterlockingPoint):
                  idx,
                  ports,
                  MP=None,
-                 banned_ports_by_port=defaultdict(list),
-                 non_mutex_routes_by_route=defaultdict(list)):
+                 banned_ports_by_port=defaultdict(set),
+                 non_mutex_routes_set_by_route=defaultdict(set)):
         super().__init__(system, idx, MP)
         self.type = 'cp'
         self._ports = ports
         self.banned_ports_by_port = banned_ports_by_port
-        self._non_mutex_routes_by_route = non_mutex_routes_by_route
-        self._current_routes = []
+        self._non_mutex_routes_set_by_route = non_mutex_routes_set_by_route
+        self._curr_routes_set = set()
         self.bigblock_by_port = {}
-        self._banned_paths = None
+        self._banned_paths_set = None
         self._available_ports_by_port = None  # available options for routes, dict[port] = list(options)
         # build up signals
         self.signal_by_port = {}
@@ -39,11 +39,11 @@ class CtrlPoint(InterlockingPoint):
             str(self.idx).rjust(2, ' '), )
 
     @property
-    def banned_ports_by_port(self) -> dict:
+    def banned_ports_by_port(self):
         return self._banned_ports_by_port
 
     @banned_ports_by_port.setter
-    def banned_ports_by_port(self, val) -> dict:
+    def banned_ports_by_port(self, val):
         self._banned_ports_by_port = val
 
     @property
@@ -62,46 +62,46 @@ class CtrlPoint(InterlockingPoint):
         return False
 
     @property
-    def non_mutex_routes_by_route(self):
-        return self._non_mutex_routes_by_route
+    def non_mutex_routes_set_by_route(self):
+        return self._non_mutex_routes_set_by_route
 
     @property
-    def all_valid_routes(self):
+    def all_valid_routes_set(self):
         # available options for routes, list of routes
-        _all_valid_routes = set()
-        for p, plist in self.available_ports_by_port.items():
-            for rp in plist:
-                _all_valid_routes.add((p, rp))
-                _all_valid_routes.add((rp, p))
-        return list(_all_valid_routes)
+        _all_valid_routes_set = set()
+        for port_0, ports in self.available_ports_by_port.items():
+            for port_1 in ports:
+                _all_valid_routes_set.add((port_0, port_1))
+                _all_valid_routes_set.add((port_1, port_0))
+        return _all_valid_routes_set
 
     @property
-    def current_routes(self):
-        for r1, r2 in permutations(self._current_routes, 2):
+    def curr_routes_set(self):
+        for r1, r2 in permutations(self._curr_routes_set, 2):
             assert r1 not in self.mutex_routes_by_route[r2]
             assert r2 not in self.mutex_routes_by_route[r1]
             assert r1[1] not in self.banned_ports_by_port[r1[0]]
             assert r2[1] not in self.banned_ports_by_port[r2[0]]
-        return self._current_routes
+        return self._curr_routes_set
 
-    @current_routes.setter
-    def current_routes(self, new_route_list):
-        assert isinstance(new_route_list, list)
-        for i in new_route_list:
-            assert i in self.all_valid_routes
-        self._current_routes = new_route_list
+    @curr_routes_set.setter
+    def curr_routes(self, new_routes_set):
+        assert isinstance(new_routes_set, set)
+        for i in new_routes_set:
+            assert i in self.all_valid_routes_set
+        self._curr_routes_set = new_routes_set
 
     @property
-    def banned_paths(self):
+    def banned_paths_set(self):
         """
             The banned paths for each control point in a 3-element tuple
             (init_point, self, ending_point)
             @return:
                 tuple
         """
-        if self._banned_paths is None:
-            self._banned_paths = list(set(collect_banned_paths(self, skeleton=False) + collect_banned_paths(self, skeleton=True)))
-        return self._banned_paths
+        if self._banned_paths_set is None:
+            self._banned_paths_set = set(collect_banned_paths(self, skeleton=False) + collect_banned_paths(self, skeleton=True))
+        return self._banned_paths_set
 
     @property
     def available_ports_by_port(self):
@@ -111,11 +111,11 @@ class CtrlPoint(InterlockingPoint):
                 dictionary of {port: [ports]}
         """
         if self._available_ports_by_port is None:
-            self._available_ports_by_port = defaultdict(list)
+            self._available_ports_by_port = defaultdict(set)
             for i in self.ports:
                 for j in self.ports:
-                    if j not in self.banned_ports_by_port.get(i, []):
-                        self._available_ports_by_port[i].append(j)
+                    if j not in self.banned_ports_by_port.get(i, set()):
+                        self._available_ports_by_port[i].add(j)
         return self._available_ports_by_port
 
     def open_route(self, route):
@@ -123,27 +123,27 @@ class CtrlPoint(InterlockingPoint):
         # BigBlock routing:
         #   (somewhere, someport) -> (self, route[0]) and
         #   (self, route[1]) to (somewhere, someport)
-        if route in self.current_routes:
+        if route in self.curr_routes_set:
             return
         # if not in all_valid routes, the route to open is banned
-        if route not in self.all_valid_routes:
+        if route not in self.all_valid_routes_set:
             raise Exception('illegal route for {}: banned/non-existing routes'.format(self))
-        # in all_valid_routes: the route to open is not banned;
+        # in all_valid_routes_set: the route to open is not banned;
         # the route-to-open is still possible to conflict with existing routes
-        if route in self.current_invalid_routes:
-            conflicting_routes = []
-            for curr_rte in self.current_routes:
-                if route not in self.non_mutex_routes_by_route[curr_rte]:
-                    conflicting_routes.append(curr_rte)
+        if route in self.curr_invalid_routes_set:
+            conflicting_routes = set()
+            for curr_rte in self.curr_routes_set:
+                if route not in self.non_mutex_routes_set_by_route[curr_rte]:
+                    conflicting_routes.add(curr_rte)
             for r in conflicting_routes:
                 self.close_route(r)
-        self.current_routes.append(route)
+        self.curr_routes_set.add(route)
         self.set_bigblock_routing_by_CtrlPoint_route(route)
         print('{0} [INFO]: route {1} of {2} is opened'.format(timestamper(self.system.sys_time), route, self))
 
     def close_route(self, route=None):
         def close_single_route(route):
-            assert route in self.current_routes
+            assert route in self.curr_routes_set
             entry_port = route[0]
             _impacted_bblk = self.bigblock_by_port.get(entry_port)
             _impacted_trns = []
@@ -152,7 +152,7 @@ class CtrlPoint(InterlockingPoint):
                     if trn not in self.curr_train_with_route:
                         _impacted_trns.append(trn)
             if not _impacted_trns or all([trn.curr_route_cancelable for trn in _impacted_trns]):
-                self.current_routes.remove(route)
+                self.curr_routes_set.remove(route)
                 if _impacted_bblk:
                     if not _impacted_bblk.trains:
                         self.cancel_bigblock_routing_by_port(entry_port)
@@ -163,7 +163,7 @@ class CtrlPoint(InterlockingPoint):
         if route:
             close_single_route(route)
         else:
-            for r in self.current_routes:
+            for r in self.curr_routes_set:
                 close_single_route(r)
 
     def find_route_for_port(self, port, dest_pointport=None):

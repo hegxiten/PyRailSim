@@ -109,7 +109,7 @@ class Dispatcher():
             _pending_route_to_open = train.curr_ctrl_point.find_route_for_port(port=train.curr_ctrl_pointport, dest_pointport=train.dest_pointport)
             if _pending_route_to_open is None:
                 return None
-            if _pending_route_to_open not in train.curr_ctrl_point.current_invalid_routes:
+            if _pending_route_to_open not in train.curr_ctrl_point.curr_invalid_routes_set:
                 if not train.curr_track or not train.curr_track.yard:
                     print('{0} [INFO]: {1}, \n\trequested {2} at {3}'
                           .format(timestamper(self.system.sys_time), train, _pending_route_to_open,
@@ -125,7 +125,7 @@ class Dispatcher():
                         return _pending_route_to_open
                     else:
                         for cp in self.system.ctrl_points:
-                            for (entry_port, exit_port) in cp.current_routes:
+                            for (entry_port, exit_port) in cp.curr_routes_set:
                                 if cp.bigblock_by_port.get(exit_port):
                                     if train in cp.bigblock_by_port[exit_port].trains:
                                         _route_to_change = cp.find_route_for_port(port=entry_port, dest_pointport=train.dest_pointport)
@@ -156,7 +156,7 @@ class Dispatcher():
             return False  # not passable when not fully entered yet
         if not (train.max_spd < train.trn_follow_behind.max_spd):
             return False  # not passable if not slower than the one behind
-        if train.rank - train.train_idx >= max_passes:
+        if train.rank - train.train_idx >= max_passes:  # TODO: This logic is naive
             return False  # not passable if has already been passed by once
         if train.curr_track.yard:
             _all_trains = train.curr_track.yard.all_trains
@@ -166,7 +166,7 @@ class Dispatcher():
             if all([trk.trains for trk in train.curr_track.yard.tracks]):
                 if abs(train.max_spd) == min([abs(trn.max_spd) for trn in train.curr_track.yard.all_trains]):
                     return True
-            if train.curr_track.yard.available_tracks >= 1 and train.dist_to_trn_behind <= 10:
+            if train.curr_track.yard.available_tracks >= 1 and train.dist_to_trn_behind <= 10:  # TODO: explain this??????
                 return True
         return False
 

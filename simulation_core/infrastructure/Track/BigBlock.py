@@ -56,7 +56,7 @@ class BigBlock(Track):
                     # If the BigBlock is set with a reversed routing,
                     # close any signal routes leading into its old routing
                     # at the CtrlPoint the old bigblock routing is shooting to.
-                    for r in _curr_shooting_cp.current_routes:
+                    for r in _curr_shooting_cp.curr_routes_set:
                         if _curr_shooting_port == r[0]:
                             _curr_shooting_cp.close_route(r)
             self._routing = new_routing
@@ -68,10 +68,10 @@ class BigBlock(Track):
                 t.routing = None
 
     @property
-    def curr_routing_paths(self):
+    def curr_routing_paths_all(self):
         for i in range(len(self.tracks) - 1):
-            assert self.tracks[i].curr_routing_paths == self.tracks[i + 1].curr_routing_paths
-        return self.tracks[0].curr_routing_paths
+            assert self.tracks[i].curr_routing_paths_all == self.tracks[i + 1].curr_routing_paths_all
+        return self.tracks[0].curr_routing_paths_all
 
     @property
     def individual_routing_paths_list(self):

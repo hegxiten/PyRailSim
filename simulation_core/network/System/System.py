@@ -112,7 +112,7 @@ class System():
         return len(self.trains)
 
     @property
-    def curr_routing_paths(self):
+    def curr_routing_paths_all(self):
         '''
             A list of all currently cleared routing path lists inside the system.
             Each routing path list has the direction and segments information of
@@ -145,9 +145,8 @@ class System():
                 if rp1_tail == None or rp2_head == None:
                     return False
                 elif rp1_tail == rp2_head:
-                    assert rp1_tail.current_routes == rp2_head.current_routes
-                    if (rp1_tail_port,
-                        rp2_head_port) in rp1_tail.current_routes:
+                    assert rp1_tail.curr_routes_set == rp2_head.curr_routes_set
+                    if (rp1_tail_port, rp2_head_port) in rp1_tail.curr_routes_set:
                         return True
             return False
 
@@ -156,8 +155,8 @@ class System():
                 Add routing of initiating/terminalting routing path without a
                 materialized bigblock outside the vertex CtrlPoints.'''
             for cp in self.vertex_points:
-                if cp.current_routes:
-                    for r in cp.current_routes:
+                if cp.curr_routes_set:
+                    for r in cp.curr_routes_set:
                         if cp.track_by_port.get(r[0]):
                             _routing_list.append([((cp, r[1]), (None, None))])
                         if cp.track_by_port.get(r[1]):
@@ -179,9 +178,9 @@ class System():
         return _routing_list
 
     @property
-    def curr_routing_paths_cp(self):
+    def curr_routing_paths_cp_only(self):
         _routing_paths_cp = []
-        for rp in self.curr_routing_paths:
+        for rp in self.curr_routing_paths_all:
             _cp_rp = []
             for ((p1, port1), (p2, port2)) in rp:
                 if p1 is None or isinstance(p1, CtrlPoint):
@@ -224,15 +223,19 @@ class System():
         TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], MP=0.0),
                      1: AutoPoint(self, idx=1, MP=5.0),
                      2: AutoPoint(self, idx=2, MP=10.0),
-                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: [0], 1: [1, 3], 3: [3, 1]},
-                                  MP=15.0),
-                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0], 1: [1]},
-                                  MP=20.0),
+                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]), 
+                                                                                      1: set([1, 3]), 
+                                                                                      3: set([3, 1])}, MP=15.0),
+                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]), 
+                                                                                      2: set([2, 0]),
+                                                                                      1: set([1])}, MP=20.0),
                      5: AutoPoint(self, idx=5, MP=25.0),
-                     6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: [0], 1: [1, 3], 3: [3, 1]},
-                                  MP=30.0),
-                     7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0], 1: [1]},
-                                  MP=35.0),
+                     6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                      1: set([1, 3]),
+                                                                                      3: set([3, 1])}, MP=30.0),
+                     7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                      2: set([2, 0]),
+                                                                                      1: set([1])}, MP=35.0),
                      8: AutoPoint(self, idx=8, MP=40.0),
                      9: AutoPoint(self, idx=9, MP=45.0),
                      10: CtrlPoint(self, idx=10, ports=[0, 1], MP=50.0)
@@ -255,23 +258,44 @@ class System():
 
         TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
 
-        TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], banned_ports_by_port={0: [0], 1: [1]}, MP=0.0),
+        TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], banned_ports_by_port={0: set([0]), 1: set([1])}, MP=0.0),
                      1: AutoPoint(self, idx=1, MP=5.0),
-                     2: CtrlPoint(self, idx=2, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=10.0),
-                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=15.0),
-                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=20.0),
-                     5: CtrlPoint(self, idx=5, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=25.0),
-                     6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=30.0),
-                     7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=35.0),
-                     8: CtrlPoint(self, idx=8, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=40.0),
+                     2: CtrlPoint(self, idx=2, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                      1: set([1, 3]),
+                                                                                      3: set([3, 1])}, MP=10.0),
+                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                      1: set([1, 3]),
+                                                                                      3: set([3, 1])}, MP=15.0),
+                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                      2: set([2, 0]),
+                                                                                      1: set([1])}, MP=20.0),
+                     5: CtrlPoint(self, idx=5, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                      1: set([1, 3]),
+                                                                                      3: set([3, 1])}, MP=25.0),
+                     6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                      1: set([1, 3]),
+                                                                                      3: set([3, 1])}, MP=30.0),
+                     7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                      2: set([2, 0]),
+                                                                                      1: set([1])}, MP=35.0),
+                     8: CtrlPoint(self, idx=8, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                      2: set([2, 0]),
+                                                                                      1: set([1])}, MP=40.0),
                      9: AutoPoint(self, idx=9, MP=45.0),
-                     10: CtrlPoint(self, idx=10, ports=[0, 1], banned_ports_by_port={0: [0], 1: [1]}, MP=50.0),
+                     10: CtrlPoint(self, idx=10, ports=[0, 1], banned_ports_by_port={0: set([0]),
+                                                                                     1: set([1])}, MP=50.0),
                      11: AutoPoint(self, idx=11, MP=30.0),
                      12: AutoPoint(self, idx=12, MP=35.0),
-                     13: CtrlPoint(self, idx=13, ports=[0, 1], banned_ports_by_port={0: [0], 1: [1]}, MP=20.0),
-                     14: CtrlPoint(self, idx=14, ports=[0, 1, 3], banned_ports_by_port={1: [1, 3], 3: [3, 1]}, MP=5.0),
+                     13: CtrlPoint(self, idx=13, ports=[0, 1], banned_ports_by_port={0: set([0]),
+                                                                                     1: set([1])}, MP=20.0),
+                     14: CtrlPoint(self, idx=14, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                        1: set([1, 3]),
+                                                                                        3: set([3, 1])}, MP=5.0),
                      15: AutoPoint(self, idx=15, MP=10.0),
-                     16: CtrlPoint(self, idx=16, ports=[0, 2, 1], banned_ports_by_port={0: [0, 2], 2: [2, 0]}, MP=15.0),
+                     16: CtrlPoint(self, idx=16, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                        2: set([2, 0]),
+                                                                                        1: set([1])},
+                                   MP=15.0),
                      }  # yapf: disable
 
         TEST_TRACK = [
@@ -468,11 +492,11 @@ class System():
                             if trn not in _trains_all:
                                 _trains_all.append(trn)
                             if (trn.curr_routing_path_segment[0][0], trn.curr_routing_path_segment[1][0]) == (
-                            path[node_idx], path[node_idx + 1]):
+                                    path[node_idx], path[node_idx + 1]):
                                 if trn not in _trains_obv_dir:
                                     _trains_obv_dir.append(trn)
                             if (trn.curr_routing_path_segment[0][0], trn.curr_routing_path_segment[1][0]) == (
-                            path[node_idx + 1], path[node_idx]):
+                                    path[node_idx + 1], path[node_idx]):
                                 if trn not in _trains_rev_dir:
                                     _trains_rev_dir.append(trn)
         if obv == True and rev == True:
@@ -497,9 +521,11 @@ class System():
                 if self.sys_time + self.refresh_time - self.last_train_init_time \
                         >= self.headway:
                     if not self.signal_points[0].curr_train_with_route.keys():
-                        if all([t.curr_routing_path_segment != ((None, None), (self.signal_points[0], 0)) for t in self.trains.all_trains]):
+                        if all([t.curr_routing_path_segment != ((None, None), (self.signal_points[0], 0)) for t in
+                                self.trains.all_trains]):
                             if not self.tracks[0].trains:
-                                t = self.dispatcher.generate_train(self.signal_points[0],0,self.signal_points[10],1,length=1)
+                                t = self.dispatcher.generate_train(self.signal_points[0], 0, self.signal_points[10], 1,
+                                                                   length=1)
             self.sys_time += self.refresh_time
         logging.info("Thread %s: finishing", 'simulator')
 
