@@ -1,8 +1,10 @@
 import random
 from datetime import datetime
 
+from simulation_core.network.System.System import System
+
 sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
-sim_term_time = datetime.strptime('2018-01-10 11:55:00', "%Y-%m-%d %H:%M:%S")
+sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
 spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
 acc_container = [0.5 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
 dcc_container = [0.2 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
@@ -53,3 +55,5 @@ max_dcc_list = \
      2.765432098765432e-05,
      2.765432098765432e-05,
      2.765432098765432e-05]
+
+

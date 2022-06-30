@@ -1,6 +1,6 @@
 from simulation_core.network.network_utils import all_simple_paths
 from simulation_core.signaling.InterlockingPoint.CtrlPoint import CtrlPoint
-from simulation_test.sim import timestamper
+from simulation_test.simulation_helpers import timestamper
 
 
 class Train():
@@ -180,19 +180,16 @@ class Train():
             # terminated trains are stopped trains
             self._stopped = True
         elif self.curr_speed == 0 and self.curr_target_spd_abs == 0:
-            #####################
-            # self._stopped = True
-            ##################### old method above: won't have assertion errors but ABS signals won't work
-            ##################### new method below: have assertion errors ABS signals worked
-            if self.curr_spd_lmt_abs > 0:
-                return False
-            # trains with 0 speed and 0 target speed may not be stopped trains: the moment just got clear signal
-            # Note: 0 speed trains with non-zero target speed (clear signal ahead)
-            # are not stopped. Therefore, trains with non-zero acceleration are
-            # not stopped trains.
+            if self.can_acc_before_dcc:
+                # Trains with 0 speed and 0 target speed may not be stopped trains:
+                # Corner case: a train just logically crossed a HomeSig with 0 speed
+                # and the upcoming signal aspect is red
+                self._stopped = False
             else:
+                # Note: 0 speed trains with non-zero target speed (clear signal ahead) are not stopped.
+                # Therefore, trains with non-zero acceleration are not stopped trains.
                 self._stopped = True
-            #####################
+
         else:
             self._stopped = False
         return self._stopped
@@ -573,8 +570,15 @@ class Train():
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs, \
             '\n\tAssertion Error: braking distance {0} at {1} ' \
             '\n\tis greater than distance ({2}) to current signal {3}' \
-            '\n\t{4}'.format(self.curr_brake_distance_abs, self.curr_MP, self.curr_dis_to_curr_sig_abs, self.curr_sig,
-                             self)
+            '\n\t{4}' \
+            '\n\tCurrent accel: {5:.2f} mph/sec/sec' \
+            '\n\tCurrent speed: {6:.2f} mph' \
+            '\n\tWill overshoot by {7:.2f} ft'.format(self.curr_brake_distance_abs, self.curr_MP,
+                                                      self.curr_dis_to_curr_sig_abs, self.curr_sig,
+                                                      self,
+                                                      self.curr_acc * 3600,
+                                                      self.curr_speed * 3600,
+                                                      (self.curr_brake_distance_abs - self.curr_dis_to_curr_sig_abs) * 5280)
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction to find bugs
         _old_speed = self._curr_speed
@@ -608,8 +612,16 @@ class Train():
         assert self.curr_brake_distance_abs <= self.curr_dis_to_curr_sig_abs, \
             '\n\tAssertion Error: braking distance {0} at {1} ' \
             '\n\tis greater than distance ({2}) to current signal {3}' \
-            '\n\t{4}'.format(self.curr_brake_distance_abs, self.curr_MP, self.curr_dis_to_curr_sig_abs, self.curr_sig,
-                             self)
+            '\n\t{4}' \
+            '\n\tCurrent accel: {5:.2f} mph/sec/sec' \
+            '\n\tCurrent speed: {6:.2f} mph' \
+            '\n\tWill overshoot by {7:.2f} ft'.format(self.curr_brake_distance_abs, self.curr_MP,
+                                                      self.curr_dis_to_curr_sig_abs, self.curr_sig,
+                                                      self,
+                                                      self.curr_acc * 3600,
+                                                      self.curr_speed * 3600,
+                                                      (
+                                                                  self.curr_brake_distance_abs - self.curr_dis_to_curr_sig_abs) * 5280)
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction (after newly set speed value) to find bugs
 
@@ -823,7 +835,6 @@ class Train():
                    self.system.dos_period[0] <= self.system.sys_time <= self.system.dos_period[1]
         return False
 
-
     @property
     def can_hold_speed_before_dcc(self):
         '''
@@ -861,10 +872,8 @@ class Train():
             return False
         else:
             _direction_sign = self.sign_MP(self.curr_routing_path_segment)
-            delta_s = spd * self.system.refresh_time + 0.5 * \
-                      (_direction_sign * self.max_acc) * self.system.refresh_time ** 2
-            delta_spd = (_direction_sign * self.max_acc) * \
-                        self.system.refresh_time
+            delta_s = spd * self.system.refresh_time + 0.5 * (_direction_sign * self.max_acc) * self.system.refresh_time ** 2
+            delta_spd = (_direction_sign * self.max_acc) * self.system.refresh_time
             # False, if the train accelerates and its will
             # cross its current facing signal in the upcoming cycle.
             if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:

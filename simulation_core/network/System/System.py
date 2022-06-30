@@ -66,14 +66,19 @@ class System():
         self.headway = 500 if kwargs.get('headway') is None \
             else kwargs.get('headway')
         self.last_train_init_time = self.sys_time
+        # randomized value pools
         self.spd_container = args[0] \
             if args else [random.uniform(_min_spd, _max_spd) for i in range(20)]
         self.acc_container = args[1] \
             if args else [random.uniform(_min_acc, _max_acc) for i in range(20)]
         self.dcc_container = args[2] \
             if args else [random.uniform(self.sys_min_dcc * 1.15, self.sys_min_dcc * 1.25) for i in range(20)]
-        self.dcc_container = [i if i >= self.sys_min_dcc else self.sys_min_dcc
-                              for i in self.dcc_container]
+        self.dcc_container = [i if i >= self.sys_min_dcc else self.sys_min_dcc for i in self.dcc_container]
+        # persisted value collections:
+        self.persisted_spd_list = kwargs.get('persisted_spd_list')
+        self.persisted_acc_list = kwargs.get('persisted_acc_list')
+        self.persisted_dcc_list = kwargs.get('persisted_dcc_list')
+
         self.refresh_time = 1 if kwargs.get('refresh_time') is None \
             else kwargs.get('refresh_time')
         self.dispatcher = Dispatcher(self)
@@ -506,53 +511,3 @@ class System():
         elif rev == True:
             return _trains_rev_dir
         return []
-
-    def launch(self, launch_duration, auto_generate_train=False):
-        logging.info("Thread %s: starting", 'simulator')
-        while self.sys_time - self.init_time <= launch_duration:
-            for t in self.trains:
-                try:
-                    self.dispatcher.request_routing(t)
-                    t.move()
-                except:
-                    print(t)
-                    raise (ValueError('Raise Error to Stop Simulation'))
-            if auto_generate_train:
-                if self.sys_time + self.refresh_time - self.last_train_init_time \
-                        >= self.headway:
-                    if not self.signal_points[0].curr_train_with_route.keys():
-                        if all([t.curr_routing_path_segment != ((None, None), (self.signal_points[0], 0)) for t in
-                                self.trains.all_trains]):
-                            if not self.tracks[0].trains:
-                                t = self.dispatcher.generate_train(self.signal_points[0], 0, self.signal_points[10], 1,
-                                                                   length=1)
-            self.sys_time += self.refresh_time
-        logging.info("Thread %s: finishing", 'simulator')
-
-    def refresh(self):
-        """
-            TODO: Combine dispatcher actions; routing update actions.
-        """
-        # self.generate_train()
-        self.dispatcher.update_routing()
-        for t in self.trains.all_trains:
-            t.move()
-        for i, tr in enumerate(self.trains):
-            tr.rank = i
-        self.sys_time += self.refresh_time
-
-
-sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
-sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")
-spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
-acc_container = [0.5 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15)
-                 for i in range(20)]
-dcc_container = [0.2 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15)
-                 for i in range(20)]
-headway = 300 + random.random() * 400
-sys = System(sim_init_time, spd_container, acc_container, dcc_container,
-             term_time=sim_term_time,
-             dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
-             dos_pos=(15, 20),
-             headway=headway,
-             refresh_time=50)

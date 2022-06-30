@@ -4,7 +4,7 @@ from itertools import permutations
 from simulation_core.network.network_utils import collect_banned_paths
 from simulation_core.signaling.InterlockingPoint.InterlockingPoint import InterlockingPoint
 from simulation_core.signaling.Signal.HomeSignal import HomeSignal
-from simulation_test.sim import timestamper
+from simulation_test.simulation_helpers import timestamper
 
 
 class CtrlPoint(InterlockingPoint):
