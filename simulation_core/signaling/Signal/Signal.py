@@ -139,7 +139,7 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def route(self):
-        return self.signal_point.current_route_by_port.get(self.port_idx)
+        return self.signal_point.curr_route_by_port.get(self.port_idx)
 
     @property
     def MP(self):
@@ -222,7 +222,7 @@ class Signal(Observable, Observer, ABC):
         return True if (self.route and not self.permitted_track) else False
 
     @property
-    def curr_routing_paths(self):
+    def curr_routing_paths_all(self):
         '''
             @return:
                 The list of current routing paths that this signal is part of.
@@ -230,9 +230,9 @@ class Signal(Observable, Observer, ABC):
         _track_rp = []
         if self.permitted_track:
             # Signal has to be permissive to have an active routing path
-            return self.permitted_track.curr_routing_paths
+            return self.permitted_track.curr_routing_paths_all
         elif self.governed_track:
-            _track_rp = self.governed_track.curr_routing_paths
+            _track_rp = self.governed_track.curr_routing_paths_all
             # Signal has to be permissive to have an active routing path
             if self.governed_track.routing[1][0] == self.signal_point:
                 return _track_rp
@@ -245,8 +245,8 @@ class Signal(Observable, Observer, ABC):
                 The list of track segments that consist of the current routing path of this signal.
         '''
         _curr_enroute_tracks = []
-        if self.curr_routing_paths:
-            for ((p1, p1port), (p2, p2port)) in self.curr_routing_paths:
+        if self.curr_routing_paths_all:
+            for ((p1, p1port), (p2, p2port)) in self.curr_routing_paths_all:
                 _curr_enroute_tracks.append(self.system.get_track_by_point_port_pairs(p1, p1port, p2, p2port))
         return _curr_enroute_tracks
 
@@ -260,7 +260,7 @@ class Signal(Observable, Observer, ABC):
         _number = 0
         if self.curr_enroute_tracks:
             if self.governed_track:
-                _governed_trk_idx = self.curr_routing_paths.index(self.governed_track.routing)
+                _governed_trk_idx = self.curr_routing_paths_all.index(self.governed_track.routing)
             else:
                 _governed_trk_idx = -1
 

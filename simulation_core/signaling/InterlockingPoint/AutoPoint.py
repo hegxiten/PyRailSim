@@ -13,7 +13,7 @@ class AutoPoint(InterlockingPoint):
         self._ports = [0, 1]
 
         self._non_mutex_routes_by_route = {}
-        self._banned_ports_by_port = {0: [0], 1: [1]}
+        self._banned_ports_by_port = {0: set([0]), 1: set([1])}
         # build up signals
         self.signal_by_port = {0: AutoSignal(0, self, MP=self.MP),
                                1: AutoSignal(1, self, MP=self.MP)}
@@ -38,11 +38,11 @@ class AutoPoint(InterlockingPoint):
         return [t.bigblock for _, t in self.track_by_port.items()][0]
 
     @property
-    def all_valid_routes(self):
-        return [(0, 1), (1, 0)]
+    def all_valid_routes_set(self):
+        return set([(0, 1), (1, 0)])
 
     @property
-    def non_mutex_routes_by_route(self):
+    def non_mutex_routes_set_by_route(self):
         return self._non_mutex_routes_by_route
 
     @property
@@ -51,10 +51,10 @@ class AutoPoint(InterlockingPoint):
             Define legal routes by different ports of the auto signal point.
             @return: Dictionary of {port: [ports]}
         """
-        return {0: [1], 1: [0]}
+        return {0: set([1]), 1: set([0])}
 
     @property
-    def current_routes(self):
+    def curr_routes_set(self):
         """
             Infer the current route from the track routing.
             @return: List of 2-element tuples, specifying the current routes of self.
@@ -64,34 +64,34 @@ class AutoPoint(InterlockingPoint):
             # AutoPoints have only 0, 1 as their ports
             if t.routing:
                 if p == 0 and p == t.routing[1][1]:
-                    self._current_routes = [(0, 1)]
+                    self._curr_routes_set = set([(0, 1)])
                 elif p == 0 and p == t.routing[0][1]:
-                    self._current_routes = [(1, 0)]
-        return self._current_routes
+                    self._curr_routes_set = set([(1, 0)])
+        return self._curr_routes_set
 
     @property
-    def current_invalid_routes(self):
+    def curr_invalid_routes_set(self):
         """
             Current invalid routes providing a valid current route. Overriding the general cases for simplification.
             @return: List of 2-element tuples, specifying the current routes of self.
         """
-        _curr_routes = self.current_routes
-        if not _curr_routes:
-            return []
-        elif _curr_routes == [(0, 1)]:
-            return [(1, 0)]
-        elif _curr_routes == [(1, 0)]:
-            return [(0, 1)]
+        _curr_routes_set = self.curr_routes_set
+        if not _curr_routes_set:
+            return set([])
+        elif _curr_routes_set == [(0, 1)]:
+            return set([(1, 0)])
+        elif _curr_routes_set == [(1, 0)]:
+            return set([(0, 1)])
         else:
             raise Exception('illegal route for AutoPoint {}: invalid route calculation error.'.format(self))
 
     @property
-    def banned_paths(self):
+    def banned_paths_set(self):
         """
             There is no banned paths for auto signal points.
             @return: Empty list.
         """
-        return []
+        return set()
 
     def opposite_port(self, port):
         """

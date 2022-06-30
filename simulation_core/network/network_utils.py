@@ -58,7 +58,7 @@ def wrapper_no_banned_rail_paths_on_cp(func):
                 if len(path) <= 2:
                     yield path
                 elif all([
-                    True if (p0, p1, p2) not in p1.banned_paths else False for p0, p1, p2 in zip(path[0:], path[1:], path[2:])
+                    True if (p0, p1, p2) not in p1.banned_paths_set else False for p0, p1, p2 in zip(path[0:], path[1:], path[2:])
                 ]):
                     yield path
 
@@ -129,8 +129,7 @@ def wrapper_no_banned_rail_paths_on_cp(func):
             elif len(raw_shortest) <= 2:  # If shortest path is from track head to track end (both ends of a track)
                 return raw_shortest
             elif all([
-                True if (p0, p1, p2) not in p1.banned_paths else False for p0, p1, p2 in
-                zip(raw_shortest[0:], raw_shortest[1:], raw_shortest[2:])
+                True if (p0, p1, p2) not in p1.banned_paths_set else False for p0, p1, p2 in zip(raw_shortest[0:], raw_shortest[1:], raw_shortest[2:])
             ]):  # Shortest path must filter out all banned ports for each signal point
                 return raw_shortest
             else:  # No shortest paths found

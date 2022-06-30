@@ -244,7 +244,7 @@ class Train():
         return self.curr_track.bigblock.routing
 
     @property
-    def curr_routing_paths(self):
+    def curr_routing_paths_all(self):
         """
             A list of tuples describing the current routing of the train.
             Routing segments tuples include both ahead and behind the train.
@@ -252,7 +252,7 @@ class Train():
             shooting to the end of the limit.
             Each tuple is a routing path segment.
         """
-        return self.curr_track.curr_routing_paths if self.curr_track else None
+        return self.curr_track.curr_routing_paths_all if self.curr_track else None
 
     @property
     def curr_routing_path_ahead(self):
@@ -261,8 +261,8 @@ class Train():
             The routing tuples (movement authority limits), even granted behind
             the train, are ignored because of no effects to itself.
         """
-        return self.curr_routing_paths[self.curr_routing_paths.index(self.curr_routing_path_segment):] \
-            if self.curr_routing_paths else None
+        return self.curr_routing_paths_all[self.curr_routing_paths_all.index(self.curr_routing_path_segment):] \
+            if self.curr_routing_paths_all else None
 
     @property
     def curr_routing_path_segment(self):
@@ -663,10 +663,7 @@ class Train():
                 if self.curr_target_spd_abs >= self.curr_spd_lmt_abs:  # 2.1.1
                     self._curr_acc = 0
                 else:  # 2.1.2
-                    if self.hold_speed_before_dcc(self.curr_MP,
-                                                  self.curr_sig.MP,
-                                                  self.curr_speed,
-                                                  self.curr_target_spd_abs):
+                    if self.can_hold_speed_before_dcc:
                         self._curr_acc = 0  # 2.1.2.1
                     else:
                         self._curr_acc = self.max_dcc * \
@@ -680,13 +677,9 @@ class Train():
                         self._curr_acc = self.max_acc * _direction_sign
                     # 2.2.1.3
                     elif self.curr_target_spd_abs <= abs(self.curr_speed):
-                        if self.acc_before_dcc(self.curr_MP, self.curr_sig.MP,
-                                               self.curr_speed,
-                                               self.curr_target_spd_abs):
+                        if self.can_acc_before_dcc:
                             self._curr_acc = self.max_acc * _direction_sign  # 2.2.1.3.1
-                        elif self.hold_speed_before_dcc(
-                                self.curr_MP, self.curr_sig.MP, self.curr_speed,
-                                self.curr_target_spd_abs):
+                        elif self.can_hold_speed_before_dcc:
                             self._curr_acc = 0  # 2.2.1.3.2
                         else:  # 2.2.1.3.3
                             self._curr_acc = self.max_dcc * \
@@ -830,6 +823,59 @@ class Train():
                    self.system.dos_period[0] <= self.system.sys_time <= self.system.dos_period[1]
         return False
 
+
+    @property
+    def can_hold_speed_before_dcc(self):
+        '''
+            Method to determine if the train can hold its current speed
+            for another refreshing cycle at its concurrent properties:
+                MP, target speed, current speed, and target speed
+            @return: True or False
+        '''
+        MP, tgt_MP, spd, tgt_spd = self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs
+        delta_s = spd * self.system.refresh_time
+        # False, when hold the speed and the train will
+        # cross its current facing signal in the upcoming cycle.
+        if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
+            return False
+        # After holding speed within the cycle if the brake distance still hold:
+        # return True
+        # brake distance is by its maximum deceleration value.
+        elif abs(tgt_MP - (MP + delta_s)) > \
+                self.abs_brake_distance(spd, tgt_spd, self.max_dcc) and abs(tgt_MP - MP) > abs(delta_s):
+            return True
+        return False
+
+    @property
+    def can_acc_before_dcc(self):
+        '''
+            Method to determine if the train can accelerate at maximum acceleration
+            for another refreshing cycle at its concurrent properties:
+                MP, target speed, current speed, and target speed
+            @return: True or False
+        '''
+        MP, tgt_MP, spd, tgt_spd = self.curr_MP, self.curr_sig.MP, self.curr_speed, self.curr_target_spd_abs
+        assert self.curr_sig
+        # prerequisite: the train can hold its current speed for another refreshing cycle.
+        if not self.can_hold_speed_before_dcc:
+            return False
+        else:
+            _direction_sign = self.sign_MP(self.curr_routing_path_segment)
+            delta_s = spd * self.system.refresh_time + 0.5 * \
+                      (_direction_sign * self.max_acc) * self.system.refresh_time ** 2
+            delta_spd = (_direction_sign * self.max_acc) * \
+                        self.system.refresh_time
+            # False, if the train accelerates and its will
+            # cross its current facing signal in the upcoming cycle.
+            if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
+                return False
+            # True, after acceleration within the cycle if the brake distance still satisfies.
+            # brake distance is by its maximum deceleration value.
+            elif abs(tgt_MP - (MP + delta_s)) > self.abs_brake_distance(spd + delta_spd, tgt_spd, self.max_dcc) \
+                    and abs(tgt_MP - MP) > abs(delta_s):
+                return True
+        return False
+
     def cross_sigpoint(self, sigpoint, curr_MP, new_MP):
         '''
             Method to update attributes and properties when the train's head
@@ -837,7 +883,7 @@ class Train():
             @return: None
         '''
         # TODO: implement geographical spans within interlocking points
-        assert self.curr_sig.route in sigpoint.current_routes
+        assert self.curr_sig.route in sigpoint.curr_routes_set
         assert self.curr_sig in [
             sig for p, sig in sigpoint.signal_by_port.items()
         ]
@@ -931,54 +977,6 @@ class Train():
         self.curr_occupying_routing_path.pop(-1)
         # TODO:----dispatching logic may need to modify here
         # ---------to determine if further bigblock actions are needed
-
-    def hold_speed_before_dcc(self, MP, tgt_MP, spd, tgt_spd):
-        '''
-            Method to determine if the train can hold its current speed
-            for another refreshing cycle at its concurrent properties:
-                MP, target speed, current speed, and target speed
-            @return: True or False
-        '''
-        delta_s = spd * self.system.refresh_time
-        # False, when hold the speed and the train will
-        # cross its current facing signal in the upcoming cycle.
-        if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
-            return False
-        # After holding speed within the cycle if the brake distance still hold:
-        # return True
-        # brake distance is by its maximum deceleration value.
-        elif abs(tgt_MP - (MP + delta_s)) > \
-                self.abs_brake_distance(spd, tgt_spd, self.max_dcc) and abs(tgt_MP - MP) > abs(delta_s):
-            return True
-        return False
-
-    def acc_before_dcc(self, MP, tgt_MP, spd, tgt_spd):
-        '''
-            Method to determine if the train can accelerate at maximum acceleration
-            for another refreshing cycle at its concurrent properties:
-                MP, target speed, current speed, and target speed
-            @return: True or False
-        '''
-        assert self.curr_sig
-        # prerequisite: the train can hold its current speed for another refreshing cycle.
-        if not self.hold_speed_before_dcc(MP, tgt_MP, spd, tgt_spd):
-            return False
-        else:
-            _direction_sign = self.sign_MP(self.curr_routing_path_segment)
-            delta_s = spd * self.system.refresh_time + 0.5 * \
-                      (_direction_sign * self.max_acc) * self.system.refresh_time ** 2
-            delta_spd = (_direction_sign * self.max_acc) * \
-                        self.system.refresh_time
-            # False, if the train accelerates and its will
-            # cross its current facing signal in the upcoming cycle.
-            if (tgt_MP - MP) * (tgt_MP - (MP + delta_s)) < 0:
-                return False
-            # True, after acceleration within the cycle if the brake distance still satisfies.
-            # brake distance is by its maximum deceleration value.
-            elif abs(tgt_MP - (MP + delta_s)) > self.abs_brake_distance(spd + delta_spd, tgt_spd, self.max_dcc) \
-                    and abs(tgt_MP - MP) > abs(delta_s):
-                return True
-        return False
 
     def move(self):
         """

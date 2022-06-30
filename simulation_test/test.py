@@ -1,15 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import random
-import time
-from datetime import datetime
 
-import matplotlib.dates as mdates
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-
+import matplotlib.dates as mdates
 from simulation_core.network.System.System import System
-from simulation_core.train.Train import Train
+
+from simulation_test.sim import *
+
+from simulation_test.simulation_configs import *
 
 
 def run_with_string_diagram(sys, sys_dos, start_time, end_time):
@@ -48,15 +46,15 @@ def run_with_string_diagram(sys, sys_dos, start_time, end_time):
 
     dos_period = sys_dos.dos_period
     dos_interval = sys_dos.block_intervals[sys_dos.dos_pos]
-    dos_period_ratio = [(dos_period[0] - start_time) / (end_time-start_time),
-                        (dos_period[1] - start_time) / (end_time-start_time)]
+    dos_period_ratio = [(dos_period[0] - start_time) / (end_time - start_time),
+                        (dos_period[1] - start_time) / (end_time - start_time)]
 
     plt.axis([(datetime.fromtimestamp(start_time)),
               (datetime.fromtimestamp(end_time)), 0, sys_length])
 
     plt.gca().axhspan(15, 20, color='yellow', alpha=0.5)
     plt.gca().axhspan(30, 35, color='yellow', alpha=0.5)
-    #plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
+    # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
     labels, label_colors = ['Siding Location'], ['yellow']
     # 用label和color列表生成mpatches.Patch对象，它将作为句柄来生成legend
     patches = [
@@ -153,43 +151,11 @@ def run_with_string_diagram(sys, start_time, end_time):
     #     plt.pause(0.00001)
     # ===============================================================================
     for n in range(len(x)):
-        #assert len(x[n]) == len(y[n]) == t_color[n]
+        # assert len(x[n]) == len(y[n]) == t_color[n]
         plt.plot([mdates.date2num(i) for i in x[n]], y[n], color=t_color[n])
     plt.gca().axhspan(15, 20, color='yellow', alpha=0.5)
     plt.gca().axhspan(30, 35, color='yellow', alpha=0.5)
     #     plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
-    plt.figure(figsize=(18, 16), dpi=80, facecolor='w', edgecolor='k')
-    plt.rcParams['figure.dpi'] = 200
-    import pylab
-    pylab.rcParams['figure.figsize'] = (15.0, 8.0)
-    plt.show()
-    # plt.ioff()
-
-
-def speed_curve(sys, train):
-    '''To draw the speed curve based on a train's mileposts and speed . 
-    '''
-    colors = ['red', 'green', 'purple']
-    mp, spd, spdlmt, tgt_spd = [], [], [], []
-    for i in range(len(train.pos_spd_list)):
-        mp.append(train.pos_spd_list[i][0])
-        spd.append(abs(train.pos_spd_list[i][1] * 3600))
-        spdlmt.append(train.pos_spd_list[i][2] * 3600)
-        tgt_spd.append(train.pos_spd_list[i][3] * 3600)
-
-    min_mp, max_mp = min(mp), max(mp)
-
-    # plt.ion()
-    plt.title('Speed Curve')
-    plt.xticks(rotation=90)
-    plt.grid(True, linestyle="-.", color="r", linewidth="0.1")
-    plt.legend()
-    plt.xlabel('Mile Post/miles')
-    plt.ylabel('MPH')
-    plt.plot(mp, spd, color=colors[1])  # train speed
-    plt.plot(mp, spdlmt, color=colors[0])  # train speed lmt
-    plt.plot(mp, tgt_spd, color=colors[2])  # train tgt speed
-
     plt.figure(figsize=(18, 16), dpi=80, facecolor='w', edgecolor='k')
     plt.rcParams['figure.dpi'] = 200
     import pylab
@@ -272,7 +238,7 @@ def cal_delay(sys, sys_dos, delay_miles):
         delay.append(
             delay_time -
             no_delay_time if delay_time > no_delay_time else no_delay_time -
-            delay_time)
+                                                             delay_time)
 
     return delay
 
@@ -293,115 +259,66 @@ def cal_delay_avg(delay):
     return time.strftime('%H:%M:%S', time.gmtime(sum / len(delay)))
 
 
-def main():
-    sim_init_time = datetime.strptime('2018-01-10 10:00:00',
-                                      "%Y-%m-%d %H:%M:%S")
-    sim_term_time = datetime.strptime('2018-01-10 15:30:00',
-                                      "%Y-%m-%d %H:%M:%S")
-    sp_container = [random.uniform(0.005, 0.025) for i in range(20)]
-    acc_container = [
-        random.uniform(2.78e-05 * 0.85 * 2, 2.78e-05 * 1.15 * 2)
-        for i in range(20)
-    ]
-    headway = 200 * random.random() + 400
-    sys = System(sim_init_time,
-                 sp_container,
-                 acc_container,
-                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
-                 headway=headway,
-                 tracks=[1, 1, 1, 2, 1, 1, 2, 1, 1, 1],
-                 dos_pos=-1)
-    sys_dos = System(sim_init_time,
-                     sp_container,
-                     acc_container,
-                     dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
-                     headway=headway,
-                     tracks=[1, 1, 1, 2, 1, 1, 2, 1, 1, 1],
-                     dos_pos=4)
-    sim_timedelta = sim_term_time - sim_init_time
-    i = 0
-    while (datetime.fromtimestamp(sys.sys_time) -
-           sim_init_time).total_seconds() < sim_timedelta.total_seconds():
-        i += 1
-        sys.refresh()
-        sys_dos.refresh()
-
-    delay = cal_delay(sys, sys_dos, 20)
-    print("Test case 1, train delays = {}".format(
-        [d.total_seconds() for d in delay]))
-    first_delay_train = first_delay_train_idx(delay)
-    print("Test case 1, first delayed train = {}".format(first_delay_train))
-    delay_avg = cal_delay_avg(delay)
-    print("Test case 1, delay_avg = {}".format(delay_avg))
-
-    print("Slowest train Speed = {} mph".format(min(sp_container) * 3600))
-    print("Fastest train Speed = {} mph".format(max(sp_container) * 3600))
-    print("Minimum train Acc = {} mph/min".format(
-        min(acc_container) * 3600 * 60))
-    print("Maximum train Acc = {} mph/min".format(
-        max(acc_container) * 3600 * 60))
+def launch(sys, downtrain=True, same_train_set=True):
+    _exception = None
+    try:
+        spd_list, acc_list, dcc_list = max_spd_list.copy(), max_acc_list.copy(), max_dcc_list.copy()
+        while sys.sys_time - sys.init_time <= sys.term_time - sys.init_time:
+            _semaphore_to_return = False
+            for t in sys.trains:
+                sys.dispatcher.request_routing(t)
+                t.move()
+            if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= sys.headway:
+                if downtrain:
+                    if not sys.signal_points[0].curr_train_with_route.keys():
+                        if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[0], 0)) for t in
+                                sys.trains]):
+                            if not sys.signal_points[0].track_by_port[1].trains:
+                                if same_train_set:
+                                    t = sys.dispatcher.generate_train(
+                                        sys.signal_points[0], 0,
+                                        sys.signal_points[10], 1,
+                                        max_spd=spd_list.pop(0),
+                                        max_acc=acc_list.pop(0),
+                                        max_dcc=dcc_list.pop(0))
+                                else:
+                                    t = sys.dispatcher.generate_train(
+                                        sys.signal_points[0], 0,
+                                        sys.signal_points[10], 1,
+                                        length=1)
+                else:
+                    if not sys.signal_points[10].curr_train_with_route.keys():
+                        if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[10], 1)) for t in
+                                sys.trains]):
+                            if not sys.signal_points[10].track_by_port[0].trains:
+                                if same_train_set:
+                                    t = sys.dispatcher.generate_train(
+                                        sys.signal_points[10], 1,
+                                        sys.signal_points[0], 0,
+                                        max_spd=spd_list.pop(0),
+                                        max_acc=acc_list.pop(0),
+                                        max_dcc=dcc_list.pop(0))
+                                else:
+                                    t = sys.dispatcher.generate_train(
+                                        sys.signal_points[10], 1,
+                                        sys.signal_points[0], 0,
+                                        length=1)
+            sys.sys_time += sys.refresh_time
+    except Exception as e:
+        _exception = e
+        print('{0} [ERROR]: Exception: {1}'.format(timestamper(sys.sys_time), e))
+    return sys, _exception
 
 
 if __name__ == '__main__':
-    sim_init_time = datetime.strptime('2018-01-10 10:00:00',
-                                      "%Y-%m-%d %H:%M:%S")
-    sim_term_time = datetime.strptime('2018-01-10 15:30:00',
-                                      "%Y-%m-%d %H:%M:%S")
-    spd_container = [random.uniform(0.01, 0.02) for i in range(20)]
-    acc_container = [
-        random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
-    ]
-    dcc_container = [
-        random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)
-    ]
-    headway = 200 * random.random() + 400
-    world = System(sim_init_time,
-                 spd_container,
-                 acc_container,
-                 dcc_container,
-                 dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
-                 dos_pos=-1,
+    sys = System(sim_init_time, spd_container, acc_container, dcc_container,
+                 term_time=sim_term_time,
+                 dos_period=dos_period,
+                 dos_pos=dos_pos,
                  headway=headway,
-                 refresh_time=10)
-
-    # K166 = train(idx=sys.train_num,
-    #                   rank=sys.train_num,
-    #                   system=sys,
-    #                   init_time=sys.sys_time,
-    #                   init_segment=((sys.signal_points[1],1), (sys.signal_points[2], 0)),
-    #                   max_sp=sys.sp_container[sys.train_num % len(sys.sp_container)],
-    #                   max_acc=sys.acc_container[sys.train_num % len(sys.acc_container)],
-    #                   max_dcc=sys.dcc_container[sys.train_num % len(sys.dcc_container)])
-
-    T166 = Train(
-        idx=world.train_num,
-        rank=world.train_num,
-        system=world,
-        init_time=world.sys_time,
-        init_segment=((None, None), (world.signal_points[10], 1)),
-        max_sp=world.spd_container[world.train_num % len(world.spd_container)],
-        max_acc=world.acc_container[world.train_num % len(world.acc_container)],
-        max_dcc=world.dcc_container[world.train_num % len(world.dcc_container)],
-        length=1)
-
-    T165 = Train(
-        idx=world.train_num,
-        rank=world.train_num,
-        system=world,
-        init_time=world.sys_time,
-        init_segment=((None, None), (world.signal_points[0], 0)),
-        max_sp=T166.max_spd * 1.6,
-        max_acc=world.acc_container[world.train_num % len(world.acc_container)],
-        max_dcc=world.dcc_container[world.train_num % len(world.dcc_container)],
-        length=1)
-
-    world.signal_points[10].open_route((1, 0))
-    world.signal_points[7].open_route((1, 0))
-    world.signal_points[6].open_route((1, 0))
-    world.signal_points[4].open_route((1, 0))
-
-    for n in range(360):
-        T166.move()
-        T165.move()
-        world.sys_time += world.refresh_time
-    run_with_string_diagram(world, sim_init_time, sim_term_time)
+                 refresh_time=refresh_time)
+    # Init Launch
+    sys, e = launch(sys=sys, downtrain=True, same_train_set=True)
+    # string_diagram(sys)
+    if e:
+        raise e
