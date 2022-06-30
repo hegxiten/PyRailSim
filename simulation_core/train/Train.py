@@ -181,18 +181,18 @@ class Train():
             self._stopped = True
         elif self.curr_speed == 0 and self.curr_target_spd_abs == 0:
             #####################
-            # self._stopped = True
+            self._stopped = True
             ##################### old method above: won't have assertion errors but ABS signals won't work
             ##################### new method below: have assertion errors ABS signals worked
-            if self.curr_spd_lmt_abs > 0:
-                return False
-            # trains with 0 speed and 0 target speed may not be stopped trains: the moment just got clear signal
-            # Note: 0 speed trains with non-zero target speed (clear signal ahead)
-            # are not stopped. Therefore, trains with non-zero acceleration are
-            # not stopped trains.
-            else:
-                self._stopped = True
-            #####################
+            # if self.curr_spd_lmt_abs > 0:
+            #     return False
+            # # trains with 0 speed and 0 target speed may not be stopped trains: the moment just got clear signal
+            # # Note: 0 speed trains with non-zero target speed (clear signal ahead)
+            # # are not stopped. Therefore, trains with non-zero acceleration are
+            # # not stopped trains.
+            # else:
+            #     self._stopped = True
+            # #####################
         else:
             self._stopped = False
         return self._stopped
