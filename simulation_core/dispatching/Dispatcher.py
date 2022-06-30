@@ -22,7 +22,7 @@ import random
 
 from simulation_core.network.network_utils import all_simple_paths, shortest_path
 from simulation_core.train.Train import Train
-from simulation_test.sim import timestamper
+from simulation_test.simulation_helpers import timestamper
 
 
 class Dispatcher():
