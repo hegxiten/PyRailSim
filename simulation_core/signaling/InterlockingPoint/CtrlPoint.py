@@ -157,9 +157,9 @@ class CtrlPoint(InterlockingPoint):
                     if not _impacted_bblk.trains:
                         self.cancel_bigblock_routing_by_port(entry_port)
                 print('{0} [INFO]: route {1} of {2} is closed'.format(timestamper(self.system.sys_time), route, self))
-            else:
-                raise Exception('\troute {} of {} protected: failed to close'.
-                                format(route, self))
+            # TODO: groom the logics below. Relating to the problem of closing a route of control point in front of approaching trains.
+            # else:
+            #     raise Exception('\troute {} of {} protected: failed to close'.format(route, self))
         if route:
             close_single_route(route)
         else:

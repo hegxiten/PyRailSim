@@ -35,7 +35,8 @@ if __name__ == '__main__':
                      refresh_time=refresh_time,
                      persisted_spd_list=max_spd_list,
                      persisted_acc_list=max_acc_list,
-                     persisted_dcc_list=max_dcc_list
+                     persisted_dcc_list=max_dcc_list,
+                     persisted_init_time_list=init_time_list
                      )
     # Init Launch
     simulator_thread = SimulationLauncherThread(target=launch,

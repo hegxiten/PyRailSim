@@ -78,6 +78,7 @@ class System():
         self.persisted_spd_list = kwargs.get('persisted_spd_list')
         self.persisted_acc_list = kwargs.get('persisted_acc_list')
         self.persisted_dcc_list = kwargs.get('persisted_dcc_list')
+        self.persisted_init_time_list = kwargs.get('persisted_init_time_list')
 
         self.refresh_time = 1 if kwargs.get('refresh_time') is None \
             else kwargs.get('refresh_time')
@@ -228,10 +229,10 @@ class System():
         TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], MP=0.0),
                      1: AutoPoint(self, idx=1, MP=5.0),
                      2: AutoPoint(self, idx=2, MP=10.0),
-                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]), 
-                                                                                      1: set([1, 3]), 
+                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                      1: set([1, 3]),
                                                                                       3: set([3, 1])}, MP=15.0),
-                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]), 
+                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
                                                                                       2: set([2, 0]),
                                                                                       1: set([1])}, MP=20.0),
                      5: AutoPoint(self, idx=5, MP=25.0),
@@ -244,7 +245,7 @@ class System():
                      8: AutoPoint(self, idx=8, MP=40.0),
                      9: AutoPoint(self, idx=9, MP=45.0),
                      10: CtrlPoint(self, idx=10, ports=[0, 1], MP=50.0)
-                     }  # yapf: disable
+                     }
 
         TEST_TRACK = [
             Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
@@ -259,72 +260,71 @@ class System():
             Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
             Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
             Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
-        ]  # yapf: disable
+        ]
 
-        TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
-
-        TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], banned_ports_by_port={0: set([0]), 1: set([1])}, MP=0.0),
-                     1: AutoPoint(self, idx=1, MP=5.0),
-                     2: CtrlPoint(self, idx=2, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                      1: set([1, 3]),
-                                                                                      3: set([3, 1])}, MP=10.0),
-                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                      1: set([1, 3]),
-                                                                                      3: set([3, 1])}, MP=15.0),
-                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
-                                                                                      2: set([2, 0]),
-                                                                                      1: set([1])}, MP=20.0),
-                     5: CtrlPoint(self, idx=5, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                      1: set([1, 3]),
-                                                                                      3: set([3, 1])}, MP=25.0),
-                     6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                      1: set([1, 3]),
-                                                                                      3: set([3, 1])}, MP=30.0),
-                     7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
-                                                                                      2: set([2, 0]),
-                                                                                      1: set([1])}, MP=35.0),
-                     8: CtrlPoint(self, idx=8, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
-                                                                                      2: set([2, 0]),
-                                                                                      1: set([1])}, MP=40.0),
-                     9: AutoPoint(self, idx=9, MP=45.0),
-                     10: CtrlPoint(self, idx=10, ports=[0, 1], banned_ports_by_port={0: set([0]),
-                                                                                     1: set([1])}, MP=50.0),
-                     11: AutoPoint(self, idx=11, MP=30.0),
-                     12: AutoPoint(self, idx=12, MP=35.0),
-                     13: CtrlPoint(self, idx=13, ports=[0, 1], banned_ports_by_port={0: set([0]),
-                                                                                     1: set([1])}, MP=20.0),
-                     14: CtrlPoint(self, idx=14, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                        1: set([1, 3]),
-                                                                                        3: set([3, 1])}, MP=5.0),
-                     15: AutoPoint(self, idx=15, MP=10.0),
-                     16: CtrlPoint(self, idx=16, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
-                                                                                        2: set([2, 0]),
-                                                                                        1: set([1])},
-                                   MP=15.0),
-                     }  # yapf: disable
-
-        TEST_TRACK = [
-            Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0, mainline=True),
-            Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0, mainline=True),
-            Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0, mainline=True),
-            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1], mainline=True),
-            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
-            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0, mainline=True),
-            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0, mainline=True),
-            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2], mainline=True),
-            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0, mainline=True),
-            Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0, mainline=True),
-            Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0, mainline=True),
-            Track(self, TEST_NODE[5], 3, TEST_NODE[11], 0, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[11], 1, TEST_NODE[12], 0, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[12], 1, TEST_NODE[8], 2, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[2], 3, TEST_NODE[14], 0, mainline=True),
-            Track(self, TEST_NODE[14], 3, TEST_NODE[15], 0, yard=TEST_SIDINGS[3]),
-            Track(self, TEST_NODE[15], 1, TEST_NODE[16], 2, yard=TEST_SIDINGS[3]),
-            Track(self, TEST_NODE[14], 1, TEST_NODE[16], 0, yard=TEST_SIDINGS[3], mainline=True),
-            Track(self, TEST_NODE[16], 1, TEST_NODE[13], 0, mainline=True),
-        ]  # yapf: disable
+        # TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
+        #
+        # TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], banned_ports_by_port={0: set([0]), 1: set([1])}, MP=0.0),
+        #              1: AutoPoint(self, idx=1, MP=5.0),
+        #              2: CtrlPoint(self, idx=2, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #                                                                               1: set([1, 3]),
+        #                                                                               3: set([3, 1])}, MP=10.0),
+        #              3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #                                                                               1: set([1, 3]),
+        #                                                                               3: set([3, 1])}, MP=15.0),
+        #              4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #                                                                               2: set([2, 0]),
+        #                                                                               1: set([1])}, MP=20.0),
+        #              5: CtrlPoint(self, idx=5, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #                                                                               1: set([1, 3]),
+        #                                                                               3: set([3, 1])}, MP=25.0),
+        #              6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #                                                                               1: set([1, 3]),
+        #                                                                               3: set([3, 1])}, MP=30.0),
+        #              7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #                                                                               2: set([2, 0]),
+        #                                                                               1: set([1])}, MP=35.0),
+        #              8: CtrlPoint(self, idx=8, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #                                                                               2: set([2, 0]),
+        #                                                                               1: set([1])}, MP=40.0),
+        #              9: AutoPoint(self, idx=9, MP=45.0),
+        #              10: CtrlPoint(self, idx=10, ports=[0, 1], banned_ports_by_port={0: set([0]),
+        #                                                                              1: set([1])}, MP=50.0),
+        #              11: AutoPoint(self, idx=11, MP=30.0),
+        #              12: AutoPoint(self, idx=12, MP=35.0),
+        #              13: CtrlPoint(self, idx=13, ports=[0, 1], banned_ports_by_port={0: set([0]),
+        #                                                                              1: set([1])}, MP=20.0),
+        #              14: CtrlPoint(self, idx=14, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #                                                                                 1: set([1, 3]),
+        #                                                                                 3: set([3, 1])}, MP=5.0),
+        #              15: AutoPoint(self, idx=15, MP=10.0),
+        #              16: CtrlPoint(self, idx=16, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #                                                                                 2: set([2, 0]),
+        #                                                                                 1: set([1])}, MP=15.0),
+        #              }
+        #
+        # TEST_TRACK = [
+        #     Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0, mainline=True),
+        #     Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0, mainline=True),
+        #     Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0, mainline=True),
+        #     Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1], mainline=True),
+        #     Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
+        #     Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0, mainline=True),
+        #     Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0, mainline=True),
+        #     Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2], mainline=True),
+        #     Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
+        #     Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0, mainline=True),
+        #     Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0, mainline=True),
+        #     Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0, mainline=True),
+        #     Track(self, TEST_NODE[5], 3, TEST_NODE[11], 0, yard=TEST_SIDINGS[2]),
+        #     Track(self, TEST_NODE[11], 1, TEST_NODE[12], 0, yard=TEST_SIDINGS[2]),
+        #     Track(self, TEST_NODE[12], 1, TEST_NODE[8], 2, yard=TEST_SIDINGS[2]),
+        #     Track(self, TEST_NODE[2], 3, TEST_NODE[14], 0, mainline=True),
+        #     Track(self, TEST_NODE[14], 3, TEST_NODE[15], 0, yard=TEST_SIDINGS[3]),
+        #     Track(self, TEST_NODE[15], 1, TEST_NODE[16], 2, yard=TEST_SIDINGS[3]),
+        #     Track(self, TEST_NODE[14], 1, TEST_NODE[16], 0, yard=TEST_SIDINGS[3], mainline=True),
+        #     Track(self, TEST_NODE[16], 1, TEST_NODE[13], 0, mainline=True),
+        # ]
 
         _node = TEST_NODE if not node else node
         nbunch = [_node[i] for i in range(len(_node))]

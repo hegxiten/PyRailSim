@@ -394,6 +394,9 @@ class Train():
             return True
         if self.curr_target_spd_abs == 0:
             return True
+        # TODO: The followng logics are not complete.
+        if self.abs_brake_distance(self.curr_speed, 0, self.max_dcc) < self.curr_dis_to_curr_sig_abs:
+            return True
         return False
 
     @property
@@ -619,8 +622,7 @@ class Train():
                                                       self,
                                                       self.curr_acc * 3600,
                                                       self.curr_speed * 3600,
-                                                      (
-                                                                  self.curr_brake_distance_abs - self.curr_dis_to_curr_sig_abs) * 5280)
+                                                      (self.curr_brake_distance_abs - self.curr_dis_to_curr_sig_abs) * 5280)
         assert abs(self.curr_speed) <= self.curr_spd_lmt_abs
         # assert always-on braking distance/speed limit satisfaction (after newly set speed value) to find bugs
 
