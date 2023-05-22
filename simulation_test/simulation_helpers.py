@@ -20,6 +20,7 @@
 import time
 from datetime import datetime
 
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -30,8 +31,9 @@ def timestamper(timestamp):
 
 
 def string_diagram(sys):
-    '''To draw the string diagram based on the schedule dictionary for all the trains. 
-    '''
+    """
+    To draw the string diagram based on the schedule dictionary for all the trains.
+    """
     plt.clf()
     plt.rcParams['figure.dpi'] = 200
     plt.ion()
@@ -39,16 +41,11 @@ def string_diagram(sys):
     colors = ['red', 'green', 'blue', 'black', 'orange', 'cyan', 'magenta']
     color_num = len(colors)
     t_color = [colors[i % color_num] for i in range(len(sys.trains))]
-    # x, y = [], []
 
     for i in range(len(sys.trains)):
-        # x.append([mdates.date2num(datetime.fromtimestamp(j)) for (j, _) in sys.trains[i].time_pos_list])
-        # y.append([j for (_, j) in sys.trains[i].time_pos_list])
         hl, = plt.plot([mdates.date2num(datetime.fromtimestamp(j)) for (j, _) in sys.trains[i].time_pos_list],
                        [j for (_, j) in sys.trains[i].time_pos_list],
                        color=t_color[i])
-    # train_idx = list(range(len(sys.trains)))
-    # min_t, max_t = min([i[0] for i in x if i]), max([i[-1] for i in x if i])
 
     plt.title('String Diagram')
     hours = mdates.HourLocator()
@@ -65,69 +62,60 @@ def string_diagram(sys):
     plt.ylabel('Mile Post/miles')
     plt.axis([(datetime.fromtimestamp(start_time - 500)),
               (datetime.fromtimestamp(end_time + 500)), -5, 55])
-    #     ===============================================================================
-    # time_length = int(end_time - start_time)
-    # step_size = 10
-    # for start in range(1, int(time_length + 1), int(step_size)):
-    #     plt.axis([(datetime.fromtimestamp(start_time - 500)), \
-    #         (datetime.fromtimestamp(end_time + 500)), -5 , 55])
-
-    #     for n in range(len(x)-1):
-    #         new_x_y = [[mdates.date2num(datetime.fromtimestamp(i)), j] for i, j in zip(x[n], y[n]) if i < start_time + start and i > start_time + start - 1 - step_size]
-    #         new_x = []
-    #         new_y = []
-    #         for i , j in new_x_y:
-    #             new_x.append(i)
-    #             new_y.append(j)
-    #         if(len(new_x) == 0):
-    #             continue
-    #         plt.plot(new_x, new_y, color=t_color[n])
-    #         # print('==============')
-    #         # print('Length of new_x: {}'.format(len(new_x)))
-    #         # print('Length of new_y: {}'.format(len(new_y)))
-    #     plt.pause(0.00001)
-    #     ===============================================================================
     plt.gca().axhspan(15, 20, color='yellow', alpha=0.5)
     plt.gca().axhspan(30, 35, color='yellow', alpha=0.6)
     plt.gca().axhspan(25, 40, color='orange', alpha=0.3)
     # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
     plt.ioff()
-    plt.show()
 
 
-def speed_curve(sys, train, scatter=False):
-    '''To draw the speed curve based on a train's mileposts and speed . 
-    '''
-    colors = ['red', 'green', 'purple']
-    mp, spd, spdlmt, tgt_spd = [], [], [], []
-    for i in range(len(train.pos_spd_list)):
-        mp.append(train.pos_spd_list[i][0])
-        spd.append(abs(train.pos_spd_list[i][1] * 3600))
-        spdlmt.append(train.pos_spd_list[i][2] * 3600)
-        tgt_spd.append(train.pos_spd_list[i][3] * 3600)
+def speed_curve(sys, marker=None):
+    """
+    To draw the speed curve based on a train's mileposts and speed .
+    """
+    start_time, end_time = sys.init_time, sys.term_time
+    hours = mdates.HourLocator()
+    minutes = mdates.MinuteLocator()
+    seconds = mdates.SecondLocator()
+    dateFmt = mdates.DateFormatter("%H:%M")
+    for train in sys.trains:
+        fig, axs = plt.subplots(2, 1, dpi=80, facecolor='w', edgecolor='k', num="Train {}".format(train.train_idx))
+        axs[0].set_title('Speed Curve by MP')
+        axs[0].set_xlabel('Mile Post/miles')
+        axs[0].set_ylabel('MPH')
 
-    min_mp, max_mp = min(mp), max(mp)
+        axs[1].set_title('Speed Curve by Time')
+        axs[1].set_xlabel('Time')
+        axs[1].set_ylabel('MPH')
+        axs[1].xaxis.set_major_locator(hours)
+        axs[1].xaxis.set_minor_locator(minutes)
+        axs[1].xaxis.set_major_formatter(dateFmt)
 
-    plt.ion()
-    plt.title('Speed Curve')
-    plt.xticks(rotation=90)
-    plt.grid(True, linestyle="-.", color="r", linewidth="0.1")
-    plt.legend()
-    plt.xlabel('Mile Post/miles')
-    plt.ylabel('MPH')
-    if not scatter:
-        plt.plot(mp, spd, color=colors[1])  # train speed
-        plt.plot(mp, spdlmt, color=colors[0])  # train speed lmt
-        # plt.plot(mp, tgt_spd, '--', color=colors[2])  # train tgt speed
-    if scatter:
-        plt.scatter(mp, spd, color=colors[1])  # train speed
-        plt.scatter(mp, spdlmt, color=colors[0])  # train speed lmt
-        # plt.scatter(mp, tgt_spd, color=colors[2])  # train tgt speed
-    plt.figure(figsize=(18, 16), dpi=80, facecolor='w', edgecolor='k')
-    plt.rcParams['figure.dpi'] = 200
-    import pylab;
-    pylab.rcParams['figure.figsize'] = (15.0, 8.0)
-    plt.pause(0.01)
+        colors = ['red', 'green', 'purple']
+        mp, spd, spdlmt, tgt_spd = [], [], [], []
+        for i in range(len(train.pos_spd_list)):
+            mp.append(train.pos_spd_list[i][0])
+            spd.append(abs(train.pos_spd_list[i][1] * 3600))
+            spdlmt.append(train.pos_spd_list[i][2] * 3600)
+            tgt_spd.append(train.pos_spd_list[i][3] * 3600)
+
+        t, t_spd, t_spdlmt, t_tgt_spd = [], [], [], []
+        for i in range(len(train.time_spd_list)):
+            t.append(train.time_spd_list[i][0])
+            t_spd.append(abs(train.time_spd_list[i][1] * 3600))
+            t_spdlmt.append(train.time_spd_list[i][2] * 3600)
+            t_tgt_spd.append(train.time_spd_list[i][3] * 3600)
+
+        axs[0].plot(mp, spdlmt, color=colors[0])  # train speed lmt
+        axs[0].plot(mp, tgt_spd, '--', color=colors[2])  # train tgt speed
+        axs[0].plot(mp, spd, color=colors[1], marker=marker)  # train speed
+
+        axs[1].plot([mdates.date2num(datetime.fromtimestamp(j)) for j in t], t_spdlmt, color=colors[0])  # train speed lmt
+        axs[1].plot([mdates.date2num(datetime.fromtimestamp(j)) for j in t], t_tgt_spd, '--', color=colors[2])  # train tgt speed
+        axs[1].plot([mdates.date2num(datetime.fromtimestamp(j)) for j in t], t_spd, color=colors[1], marker=marker)  # train speed
+        axs[1].axis([(datetime.fromtimestamp(start_time - 500)), (datetime.fromtimestamp(end_time + 500)), -5, 55])
+
+        plt.rcParams['figure.dpi'] = 200
 
 
 def run_with_string_diagram(sys, sys_dos, start_time, end_time):
@@ -176,7 +164,6 @@ def run_with_string_diagram(sys, sys_dos, start_time, end_time):
     plt.gca().axhspan(30, 35, color='yellow', alpha=0.5)
     # plt.gca().axvspan((datetime.fromtimestamp(start_time + 90 * 60)),(datetime.fromtimestamp(start_time + 150 * 60)),color='black',alpha=0.5)
     labels, label_colors = ['Siding Location'], ['yellow']
-    # 用label和color列表生成mpatches.Patch对象，它将作为句柄来生成legend
     patches = [
         mpatches.Patch(color=label_colors[i], label="{:s}".format(labels[i]))
         for i in range(len(label_colors))
@@ -184,7 +171,6 @@ def run_with_string_diagram(sys, sys_dos, start_time, end_time):
     ax = plt.gca()
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width, box.height * 0.8])
-    # 下面一行中bbox_to_anchor指定了legend的位置
     ax.legend(handles=patches, bbox_to_anchor=(0.85, 0.94), ncol=1)  # 生成legend
     for n in range(len(x) - 1):
         #     #assert len(x[n]) == len(y[n]) == t_color[n]
@@ -401,7 +387,7 @@ def cal_delay_avg(delay):
 #         for t in sys.trains:
 #             sys.dispatcher.request_routing(t)
 #             t.move()
-#         if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= simulation_core.network.System.system.headway:
+#         if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= simulation_core.network.system.system.headway:
 #             if downtrain:
 #                 if not sys.signal_points[0].curr_train_with_route.keys():
 #                     if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[0], 0)) for t in

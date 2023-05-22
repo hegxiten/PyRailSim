@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import simulation_core.infrastructure.Track.BigBlock
-import simulation_core.infrastructure.Track.Track
+import simulation_core.infrastructure.track.group_block
+import simulation_core.infrastructure.track.track_segment
 from simulation_core.network.network_utils import all_simple_paths, shortest_path
 
 """
@@ -24,8 +24,8 @@ from simulation_core.network.network_utils import all_simple_paths, shortest_pat
 """
 
 from simulation_core.observation_model.observe import Observable, Observer
-from simulation_core.signaling.Signal.Aspect import Aspect
-from simulation_core.signaling.InterlockingPoint.InterlockingPoint import InterlockingPoint
+from simulation_core.signaling.Signal.aspect import Aspect
+from simulation_core.signaling.InterlockingPoint.base_node import BaseNode
 
 
 class Signal(Observable, Observer, ABC):
@@ -33,45 +33,45 @@ class Signal(Observable, Observer, ABC):
         Base class of a Signal object.
     """
 
-    def __init__(self, port_idx, signal_point, MP=None):
+    def __init__(self, port_idx, node, MP=None):
         super().__init__()
         self.system = None
-        self.signal_point = signal_point
+        self.node = node
         self._MP = MP
         self.port_idx = port_idx
         self._aspect = Aspect('r', self.route)  # Default aspect is red/r
-        self._next_enroute_sigpoint = None
+        self._next_enroute_node = None
 
     @property
     def governed_track(self):
         """
-            Concept of "Governed Track" for a signal:
+            Concept of "Governed TrackSegment" for a signal:
               o-                  o- (<-This signal)   o-
             0:P:1===============0:P:1================0:P:1============
              -o                  -o                   -o
                                   |-> Governed track <-|
-            "0:P:1" - port_0:SigPnt:port_1
+            "0:P:1" - port_0:Node:port_1
             @return:
                 The track object governed by this signal.
         """
-        return self.signal_point.track_by_port.get(self.port_idx)
+        return self.node.track_by_port.get(self.port_idx)
 
     @property
     def permitted_track(self):
         """
-            Concept of "Permitted Track" for a signal:
+            Concept of "Permitted TrackSegment" for a signal:
               o-                    o- (<-This signal, Aspect 'g')     o-
             0:P:1=================0:P:1==============================0:P:1============
              -o                    -o                                 -o
-              |-> Permitted Track <-|-> --------Governed track-------<-|
-            "0:P:1" - port_0:SigPnt:port_1
+              |-> Permitted Track <-|-> --------Governed Track-------<-|
+            "0:P:1" - port_0:Node:port_1
 
             If there is an active route, there is a track segment to which
             this signal permits movement authority.
             @return:
-                The Track object to which the current route of the signal permits.
+                The TrackSegment object to which the current route of the signal permits.
         """
-        return self.signal_point.track_by_port.get(self.route[1]) if self.route else None
+        return self.node.track_by_port.get(self.route[1]) if self.route else None
 
     @property
     def facing_MP_direction_sign(self):
@@ -83,7 +83,7 @@ class Signal(Observable, Observer, ABC):
             MP-0              MP-5               MP-10
                                -> Governed track <-
                                Signal direction: <---- (-1)
-            "0:P:1" - port_0:SigPnt:port_1
+            "0:P:1" - port_0:Node:port_1
             @return:
                 The sign (+1/-1) of the direction w.r.t. the milepost ascending/descending
         """
@@ -97,10 +97,10 @@ class Signal(Observable, Observer, ABC):
                 raise ValueError('Undefined MP direction')
         else:
             # The signal has NO track segment to govern
-            # (still has a neighbor signal point)
-            # infer from the neighbor signal point on the other side
-            return -self.signal_point.signal_by_port[
-                self.signal_point.opposite_port(self.port_idx)
+            # (still has a neighbor signal node)
+            # infer from the neighbor signal node on the other side
+            return -self.node.signal_by_port[
+                self.node.opposite_port(self.port_idx)
             ].facing_MP_direction_sign
 
     @property
@@ -113,7 +113,7 @@ class Signal(Observable, Observer, ABC):
             MP-0              MP-5               MP-10
                                Signal direction (-1): <----
                                Traffic stream:        <---- (upwards)
-            "0:P:1" - port_0:SigPnt:port_1
+            "0:P:1" - port_0:Node:port_1
             Trains bounding for MP-0 are considered "up-bounding trains".
             @return:
                 The sign (+1/-1) of the direction w.r.t. the milepost ascending/descending
@@ -130,7 +130,7 @@ class Signal(Observable, Observer, ABC):
             MP-0              MP-5               MP-10
                                Signal direction (+1): ---->
                                Traffic stream:        ----> (downwards)
-            "0:P:1" - port_0:SigPnt:port_1
+            "0:P:1" - port_0:Node:port_1
             Trains bounding for MP-∞ are considered "down-bounding trains".
             @return:
                 The sign (+1/-1) of the direction w.r.t. the milepost ascending/descending
@@ -139,12 +139,12 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def route(self):
-        return self.signal_point.curr_route_by_port.get(self.port_idx)
+        return self.node.curr_route_by_port.get(self.port_idx)
 
     @property
     def MP(self):
         if not self._MP:
-            self._MP = self.signal_point.MP
+            self._MP = self.node.MP
         return self._MP
 
     @MP.setter
@@ -184,37 +184,38 @@ class Signal(Observable, Observer, ABC):
                 elif self.number_of_blocks_cleared_ahead >= 3:
                     self._aspect.color = 'g'
                 else:
-                    raise ValueError('signal aspect of {}, port: {} not defined ready'.format(self.signal_point, self.port_idx))
+                    raise ValueError('signal aspect of {}, port: {} not defined ready'.format(self.node, self.port_idx))
         return self._aspect
 
     @property
-    def next_enroute_sigpoint(self):
-        '''
+    def next_enroute_node(self):
+        """
             @return:
-                The next signal_point object of this signal to which
+                The next node object of this signal to which
                 its current route is leading.
-        '''
-        return self.permitted_track.get_shooting_point(self.signal_point) \
+        """
+        return self.permitted_track.get_shooting_node(self.node) \
             if self.permitted_track else None
 
     @property
     def next_enroute_signal(self):
-        '''
+        """
             @return:
                 The next Signal object of this signal to which
                 its current route is leading.
-        '''
-        return self.next_enroute_sigpoint.signal_by_port[
-            self.next_enroute_sigpoint_port] if self.permitted_track else None
+        """
+        return self.next_enroute_node.signal_by_port[
+            self.next_enroute_node_port
+        ] if self.permitted_track else None
 
     @property
-    def next_enroute_sigpoint_port(self):
-        '''
+    def next_enroute_node_port(self):
+        """
             @return:
-                The next signal port of the signal_point object to which
+                The next signal port of the node object to which
                 its current route is leading.
-        '''
-        return self.permitted_track.get_shooting_port(point=self.signal_point) \
+        """
+        return self.permitted_track.get_shooting_port(node=self.node) \
             if self.permitted_track else None
 
     @property
@@ -223,10 +224,10 @@ class Signal(Observable, Observer, ABC):
 
     @property
     def curr_routing_paths_all(self):
-        '''
+        """
             @return:
                 The list of current routing paths that this signal is part of.
-        '''
+        """
         _track_rp = []
         if self.permitted_track:
             # Signal has to be permissive to have an active routing path
@@ -234,20 +235,20 @@ class Signal(Observable, Observer, ABC):
         elif self.governed_track:
             _track_rp = self.governed_track.curr_routing_paths_all
             # Signal has to be permissive to have an active routing path
-            if self.governed_track.routing[1][0] == self.signal_point:
+            if self.governed_track.routing[1][0] == self.node:
                 return _track_rp
         return _track_rp
 
     @property
     def curr_enroute_tracks(self):
-        '''
+        """
             @return:
                 The list of track segments that consist of the current routing path of this signal.
-        '''
+        """
         _curr_enroute_tracks = []
         if self.curr_routing_paths_all:
             for ((p1, p1port), (p2, p2port)) in self.curr_routing_paths_all:
-                _curr_enroute_tracks.append(self.system.get_track_by_point_port_pairs(p1, p1port, p2, p2port))
+                _curr_enroute_tracks.append(self.system.get_track_by_node_port_pairs(p1, p1port, p2, p2port))
         return _curr_enroute_tracks
 
     @property
@@ -281,81 +282,81 @@ class Signal(Observable, Observer, ABC):
                 The number of track segments diverging from this Signal that
                 are available for a train to enter.
         """
-        return [self.signal_point.track_by_port[p]
-                for p in self.signal_point.available_ports_by_port[self.port_idx]]
+        return [self.node.track_by_port[p]
+                for p in self.node.available_ports_by_port[self.port_idx]]
 
     @property
-    def following_sigpoints(self):
+    def following_nodes(self):
         """
             @return:
                 A list of signal points this signal can potentially permit (reach) to.
         """
-        _sigpoints = []
+        _nodes = []
         for t in self.tracks_to_enter:
-            for p in [t.L_point, t.R_point]:
-                if p != self.signal_point:
-                    _sigpoints.append(p)
-        return _sigpoints
+            for p in [t.node1, t.node2]:
+                if p != self.node:
+                    _nodes.append(p)
+        return _nodes
 
     def reachable_to(self, other):
         """
-            Determine if another signal point/Signal/Track segment is reachable from this signal.
+            Determine if another signal node/Signal/TrackSegment is reachable from this signal.
             @return:
                 True/False
         """
 
-        def _reachable_sigpoint(p):
-            path_generator = all_simple_paths(self.system.G_origin, self.signal_point, p)
+        def _reachable_nodes(p):
+            path_generator = all_simple_paths(self.system.G_origin, self.node, p)
             while True:
                 try:
-                    if next(path_generator)[1] in self.following_sigpoints:
+                    if next(path_generator)[1] in self.following_nodes:
                         return True
                 except:
                     break
             return False
 
         def _reachable_signal(s):
-            if s.signal_point != self.signal_point:
-                return _reachable_sigpoint(s.signal_point)
+            if s.node != self.node:
+                return _reachable_nodes(s.node)
             else:
-                return True if s.port_idx in self.signal_point.available_ports_by_port[self.port_idx] else False
+                return True if s.port_idx in self.node.available_ports_by_port[self.port_idx] else False
 
         def _reachable_track(t):
-            if self.signal_point in (t.L_point, t.R_point):
+            if self.node in (t.node1, t.node2):
                 if self.governed_track == t: return False
-                for p in self.signal_point.available_ports_by_port[self.port_idx]:
-                    if t == self.signal_point.track_by_port[p]: return True
-            # include AutoPoint's bigblock instance entirely covering the signal
-            for p in (t.L_point, t.R_point):
-                if _reachable_sigpoint(p) is True: return True
+                for n in self.node.available_ports_by_port[self.port_idx]:
+                    if t == self.node.track_by_port[n]: return True
+            # include AutoPoint's group block instance entirely covering the signal
+            for n in (t.node1, t.node2):
+                if _reachable_nodes(n) is True: return True
             return False
 
-        if isinstance(other, InterlockingPoint):
-            return _reachable_sigpoint(other)
+        if isinstance(other, BaseNode):
+            return _reachable_nodes(other)
         if isinstance(other, Signal):
             return _reachable_signal(other)
-        if isinstance(other, simulation_core.Infrastructure.Track.Track.Track):
+        if isinstance(other, simulation_core.infrastructure.track.track_segment.TrackSegment):
             return _reachable_track(other)
-        if isinstance(other, simulation_core.Infrastructure.Track.BigBlock.BigBlock):
+        if isinstance(other, simulation_core.infrastructure.track.group_block.GroupBlock):
             return _reachable_track(other)
         return False
 
     @property
     @abstractmethod
-    def bblks_to_enter(self):
+    def group_blocks_to_enter(self):
         raise NotImplementedError("Needed to be implemented in AutoSignal or \
             HomeSignal")
 
     @property
     @abstractmethod
-    def ctrl_pnts_to_reach(self):
+    def ctrl_points_to_reach(self):
         raise NotImplementedError("Needed to be implemented in AutoSignal or \
             HomeSignal")
 
     # ----------------deprecated----------------#
     def update(self, observable, update_message):
         raise NotImplementedError("Old-version function to be refactored")
-        if observable.type == 'bigblock':
+        if observable.type == 'group block':
             self.change_color_to('r', False)
         elif observable.type == 'track':
             self.change_color_to('r', False)

@@ -4,9 +4,10 @@ from collections import defaultdict
 from simulation_core.observation_model.observe import Observable, Observer
 
 
-class InterlockingPoint(Observable, Observer, ABC):
+class BaseNode(Observable, Observer, ABC):
     """
-        Base Class, a.k.a SignalPoint/Sigpoint
+        Base Class, a.k.a SignalPoint, consisting of Graph nodes; containing signals
+        Child classes include InterlockingPoint, AutoPoint, and ControlPoint, etc.
     """
 
     def __init__(self, system, idx, MP=None):

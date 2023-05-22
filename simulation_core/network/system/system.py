@@ -3,14 +3,14 @@ import random
 import networkx as nx
 from datetime import datetime
 
-from simulation_core.dispatching.Dispatcher import Dispatcher
-from simulation_core.infrastructure.Track.BigBlock import BigBlock
-from simulation_core.infrastructure.Track.Track import Track
-from simulation_core.infrastructure.Yard.Yard import Yard
+from simulation_core.dispatching.dispatcher import Dispatcher
+from simulation_core.infrastructure.track.group_block import GroupBlock
+from simulation_core.infrastructure.track.track_segment import TrackSegment
+from simulation_core.infrastructure.yard.yard import Yard
 from simulation_core.network.network_utils import shortest_path, all_simple_paths, collect_banned_paths
-from simulation_core.signaling.InterlockingPoint.AutoPoint import AutoPoint
-from simulation_core.signaling.InterlockingPoint.CtrlPoint import CtrlPoint
-from simulation_core.signaling.Signal.Aspect import Aspect
+from simulation_core.signaling.InterlockingPoint.automatic_point import AutoPoint
+from simulation_core.signaling.InterlockingPoint.control_point import CtrlPoint
+from simulation_core.signaling.Signal.aspect import Aspect
 from simulation_core.train.TrainList import TrainList
 from simulation_core.train.Train import Train
 
@@ -53,8 +53,8 @@ class System():
         self.vertex_points = [cp for cp in self.ctrl_points if cp.is_vertex == True]
         # list of all Tracks.
         self.tracks = [data['instance'] for (u, v, data) in list(self.G_origin.edges(data=True))]
-        # list of all BigBlocks.
-        self.bigblocks = [data['instance'] for (u, v, data) in list(self.G_skeleton.edges(data=True))]
+        # list of all GroupBlocks.
+        self.group_blocks = [data['instance'] for (u, v, data) in list(self.G_skeleton.edges(data=True))]
 
         self.dos_period = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S").timestamp() for t in kwargs.get('dos_period') if
                            type(t) == str]
@@ -156,10 +156,11 @@ class System():
                         return True
             return False
 
-        def add_cleared_routing_external_virtual_bblk():
-            '''
-                Add routing of initiating/terminalting routing path without a
-                materialized bigblock outside the vertex CtrlPoints.'''
+        def add_cleared_routing_external_virtual_grpblk():
+            """
+                Add routing of initiating/terminating routing path without a
+                materialized group block outside the vertex CtrlPoints.
+            """
             for cp in self.vertex_points:
                 if cp.curr_routes_set:
                     for r in cp.curr_routes_set:
@@ -168,9 +169,9 @@ class System():
                         if cp.track_by_port.get(r[1]):
                             _routing_list.append([((None, None), (cp, r[0]))])
 
-        _routing_list = [i for i in [getattr(_bblk, 'individual_routing_paths_list')
-                                     for _bblk in self.bigblocks] if i]
-        add_cleared_routing_external_virtual_bblk()
+        _routing_list = [i for i in [getattr(_grpblk, 'individual_routing_paths_list')
+                                     for _grpblk in self.group_blocks] if i]
+        add_cleared_routing_external_virtual_grpblk()
         _traversed = []
         while has_repeating_routing_paths(_routing_list, _traversed):
             for i in range(len(_routing_list)):
@@ -213,7 +214,7 @@ class System():
         self.sys_time = self.init_time
         self.last_train_init_time = self.sys_time
 
-    def get_track_by_point_port_pairs(self, p1, p1_port, p2, p2_port):
+    def get_track_by_node_port_pairs(self, p1, p1_port, p2, p2_port):
         return p1.track_by_port.get(p1_port, None) if p1 and p2 else None
 
     def graph_constructor(self, node={}, track={}):
@@ -248,18 +249,18 @@ class System():
                      }
 
         TEST_TRACK = [
-            Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
-            Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
-            Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
-            Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1]),
-            Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
-            Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
-            Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
-            Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
-            Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
-            Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
-            Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
+            TrackSegment(self, TEST_NODE[0], 1, TEST_NODE[1], 0),
+            TrackSegment(self, TEST_NODE[1], 1, TEST_NODE[2], 0),
+            TrackSegment(self, TEST_NODE[2], 1, TEST_NODE[3], 0),
+            TrackSegment(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1]),
+            TrackSegment(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
+            TrackSegment(self, TEST_NODE[4], 1, TEST_NODE[5], 0),
+            TrackSegment(self, TEST_NODE[5], 1, TEST_NODE[6], 0),
+            TrackSegment(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2]),
+            TrackSegment(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
+            TrackSegment(self, TEST_NODE[7], 1, TEST_NODE[8], 0),
+            TrackSegment(self, TEST_NODE[8], 1, TEST_NODE[9], 0),
+            TrackSegment(self, TEST_NODE[9], 1, TEST_NODE[10], 0)
         ]
 
         # TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
@@ -304,26 +305,26 @@ class System():
         #              }
         #
         # TEST_TRACK = [
-        #     Track(self, TEST_NODE[0], 1, TEST_NODE[1], 0, mainline=True),
-        #     Track(self, TEST_NODE[1], 1, TEST_NODE[2], 0, mainline=True),
-        #     Track(self, TEST_NODE[2], 1, TEST_NODE[3], 0, mainline=True),
-        #     Track(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1], mainline=True),
-        #     Track(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
-        #     Track(self, TEST_NODE[4], 1, TEST_NODE[5], 0, mainline=True),
-        #     Track(self, TEST_NODE[5], 1, TEST_NODE[6], 0, mainline=True),
-        #     Track(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2], mainline=True),
-        #     Track(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
-        #     Track(self, TEST_NODE[7], 1, TEST_NODE[8], 0, mainline=True),
-        #     Track(self, TEST_NODE[8], 1, TEST_NODE[9], 0, mainline=True),
-        #     Track(self, TEST_NODE[9], 1, TEST_NODE[10], 0, mainline=True),
-        #     Track(self, TEST_NODE[5], 3, TEST_NODE[11], 0, yard=TEST_SIDINGS[2]),
-        #     Track(self, TEST_NODE[11], 1, TEST_NODE[12], 0, yard=TEST_SIDINGS[2]),
-        #     Track(self, TEST_NODE[12], 1, TEST_NODE[8], 2, yard=TEST_SIDINGS[2]),
-        #     Track(self, TEST_NODE[2], 3, TEST_NODE[14], 0, mainline=True),
-        #     Track(self, TEST_NODE[14], 3, TEST_NODE[15], 0, yard=TEST_SIDINGS[3]),
-        #     Track(self, TEST_NODE[15], 1, TEST_NODE[16], 2, yard=TEST_SIDINGS[3]),
-        #     Track(self, TEST_NODE[14], 1, TEST_NODE[16], 0, yard=TEST_SIDINGS[3], mainline=True),
-        #     Track(self, TEST_NODE[16], 1, TEST_NODE[13], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[0], 1, TEST_NODE[1], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[1], 1, TEST_NODE[2], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[2], 1, TEST_NODE[3], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[3], 1, TEST_NODE[4], 0, edge_key=0, yard=TEST_SIDINGS[1], mainline=True),
+        #     TrackSegment(self, TEST_NODE[3], 3, TEST_NODE[4], 2, edge_key=1, yard=TEST_SIDINGS[1]),
+        #     TrackSegment(self, TEST_NODE[4], 1, TEST_NODE[5], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[5], 1, TEST_NODE[6], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[6], 1, TEST_NODE[7], 0, edge_key=0, yard=TEST_SIDINGS[2], mainline=True),
+        #     TrackSegment(self, TEST_NODE[6], 3, TEST_NODE[7], 2, edge_key=1, yard=TEST_SIDINGS[2]),
+        #     TrackSegment(self, TEST_NODE[7], 1, TEST_NODE[8], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[8], 1, TEST_NODE[9], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[9], 1, TEST_NODE[10], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[5], 3, TEST_NODE[11], 0, yard=TEST_SIDINGS[2]),
+        #     TrackSegment(self, TEST_NODE[11], 1, TEST_NODE[12], 0, yard=TEST_SIDINGS[2]),
+        #     TrackSegment(self, TEST_NODE[12], 1, TEST_NODE[8], 2, yard=TEST_SIDINGS[2]),
+        #     TrackSegment(self, TEST_NODE[2], 3, TEST_NODE[14], 0, mainline=True),
+        #     TrackSegment(self, TEST_NODE[14], 3, TEST_NODE[15], 0, yard=TEST_SIDINGS[3]),
+        #     TrackSegment(self, TEST_NODE[15], 1, TEST_NODE[16], 2, yard=TEST_SIDINGS[3]),
+        #     TrackSegment(self, TEST_NODE[14], 1, TEST_NODE[16], 0, yard=TEST_SIDINGS[3], mainline=True),
+        #     TrackSegment(self, TEST_NODE[16], 1, TEST_NODE[13], 0, mainline=True),
         # ]
 
         _node = TEST_NODE if not node else node
@@ -339,8 +340,8 @@ class System():
             # attribute dictionary as the node in the MultiGraph
 
         for t in ebunch:
-            G.add_edge(t.L_point,
-                       t.R_point,
+            G.add_edge(t.node1,
+                       t.node2,
                        key=t.edge_key,
                        attr=t.__dict__,
                        instance=t)
@@ -348,9 +349,9 @@ class System():
             # attribute dictionary as the edge in the MultiGraph
             # key is the index of parallel edges between two nodes
             t.tracks.append(t)
-            t.L_point.track_by_port[t.L_point_port] = t.R_point.track_by_port[
-                t.R_point_port] = t
-            G[t.L_point][t.R_point][t.edge_key]['weight_mainline'] \
+            t.node1.track_by_port[t.node1_port] = t.node2.track_by_port[
+                t.node2_port] = t
+            G[t.node1][t.node2][t.edge_key]['weight_mainline'] \
                 = t.mainline_weight
 
         for i in G.nodes():  # register neighbor nodes as observers to each node
@@ -361,13 +362,13 @@ class System():
 
     def graph_extractor(self, G):
         """
-        Extract the skeletion MultiGraph with only CtrlPoints and Bigblocks
+        Extract the skeleton MultiGraph with only CtrlPoints and GroupBlocks
         ----------
         Parameter:
-            G: MultiGraph instance of the raw network with Track as edges.
+            G: MultiGraph instance of the raw network with TrackSegment as edges.
         ----------
         Return:
-            F: MultiGraph instance with BigBlock as edges.
+            F: MultiGraph instance with GroupBlock as edges.
         """
         F = G.copy()
 
@@ -376,33 +377,33 @@ class System():
         def _node_vars(node):
             at_neighbor = [j for j in F.neighbors(node)]
             assert len(at_neighbor) == len(F.edges(node)) == 2
-            edgetrk_L_points = [
-                F[at_neighbor[0]][node][0]['instance'].L_point,
-                F[node][at_neighbor[1]][0]['instance'].L_point
+            edgetrk_node1s = [
+                F[at_neighbor[0]][node][0]['instance'].node1,
+                F[node][at_neighbor[1]][0]['instance'].node1
             ]
-            edgetrk_R_points = [
-                F[at_neighbor[0]][node][0]['instance'].R_point,
-                F[node][at_neighbor[1]][0]['instance'].R_point
+            edgetrk_node2s = [
+                F[at_neighbor[0]][node][0]['instance'].node2,
+                F[node][at_neighbor[1]][0]['instance'].node2
             ]
-            edgetrk_L_points.remove(node)
-            edgetrk_R_points.remove(node)
-            new_L_point, new_R_point = edgetrk_L_points[0], edgetrk_R_points[0]
-            old_L_trk = F[new_L_point][node][0]['instance']
-            old_R_trk = F[node][new_R_point][0]['instance']
-            return new_L_point, new_R_point, old_L_trk, old_R_trk
+            edgetrk_node1s.remove(node)
+            edgetrk_node2s.remove(node)
+            new_node1, new_node2 = edgetrk_node1s[0], edgetrk_node2s[0]
+            old_L_trk = F[new_node1][node][0]['instance']
+            old_R_trk = F[node][new_node2][0]['instance']
+            return new_node1, new_node2, old_L_trk, old_R_trk
 
         for i in G.nodes():
             # only use G.nodes() instead of F.nodes() to get original nodes
             # to avoid dictionary size changing issues.
             # all the following graph updates are targeted on F
             if i.type == 'at':
-                new_L_point, new_R_point, old_L_trk, old_R_trk = _node_vars(i)
-                new_track = Track(self,
-                                  new_L_point,
-                                  F[new_L_point][i][0]['instance'].L_point_port,
-                                  new_R_point,
-                                  F[i][new_R_point][0]['instance'].R_point_port,
-                                  edge_key=0)
+                new_node1, new_node2, old_L_trk, old_R_trk = _node_vars(i)
+                new_track = TrackSegment(self,
+                                         new_node1,
+                                         F[new_node1][i][0]['instance'].node1_port,
+                                         new_node2,
+                                         F[i][new_node2][0]['instance'].node2_port,
+                                         edge_key=0)
                 if len(old_L_trk.tracks) == 1 and old_L_trk in old_L_trk.tracks:
                     new_track.tracks.append(old_L_trk)
                 else:
@@ -414,47 +415,47 @@ class System():
                     new_track.tracks.extend([t for t in old_R_trk.tracks
                                              if t not in new_track.tracks])
                 F.remove_node(i)
-                F.add_edge(new_L_point,
-                           new_R_point,
+                F.add_edge(new_node1,
+                           new_node2,
                            attr=new_track.__dict__,
                            instance=new_track)
                 # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
                 # default 0 as mainline, idx as track number
 
         for (u, v, k) in F.edges(keys=True):
-            _L_point, _R_point = \
-                F[u][v][k]['instance'].L_point, F[u][v][k]['instance'].R_point
-            big_block_instance = BigBlock(self,
-                                          _L_point,
-                                          F[u][v][k]['instance'].L_point_port,
-                                          _R_point,
-                                          F[u][v][k]['instance'].R_point_port,
-                                          edge_key=k,
-                                          raw_graph=G,
-                                          cp_graph=F)
-            _L_point.bigblock_by_port[F[u][v][k]
-            ['instance'].L_point_port] = big_block_instance
-            _R_point.bigblock_by_port[F[u][v][k]
-            ['instance'].R_point_port] = big_block_instance
+            _node1, _node2 = \
+                F[u][v][k]['instance'].node1, F[u][v][k]['instance'].node2
+            group_block_instance = GroupBlock(self,
+                                              _node1,
+                                              F[u][v][k]['instance'].node1_port,
+                                              _node2,
+                                              F[u][v][k]['instance'].node2_port,
+                                              edge_key=k,
+                                              raw_graph=G,
+                                              cp_graph=F)
+            _node1.group_block_by_port[F[u][v][k]
+            ['instance'].node1_port] = group_block_instance
+            _node2.group_block_by_port[F[u][v][k]
+            ['instance'].node2_port] = group_block_instance
             for t in F[u][v][k]['instance'].tracks:
-                t.bigblock = big_block_instance
-                if t not in big_block_instance.tracks:
-                    big_block_instance.tracks.append(t)
-            # get the list of track unit components of a bigblock,
+                t.group_block = group_block_instance
+                if t not in group_block_instance.tracks:
+                    group_block_instance.tracks.append(t)
+            # get the list of track unit components of a group block,
             # and record in the instance
-            for t in big_block_instance.tracks:
-                t.bigblock = big_block_instance
-            big_block_instance.mainline = True if all([t.mainline
-                                                       for t in big_block_instance.tracks]) else False
-            F[u][v][k]['attr'] = big_block_instance.__dict__
-            F[u][v][k]['instance'] = big_block_instance
-            F[u][v][k]['weight_mainline'] = big_block_instance.mainline_weight
+            for t in group_block_instance.tracks:
+                t.group_block = group_block_instance
+            group_block_instance.mainline = True if all([t.mainline
+                                                         for t in group_block_instance.tracks]) else False
+            F[u][v][k]['attr'] = group_block_instance.__dict__
+            F[u][v][k]['instance'] = group_block_instance
+            F[u][v][k]['weight_mainline'] = group_block_instance.mainline_weight
 
         return F
 
     def num_occupied_parallel_tracks(self, init_point, dest_point):
         """
-            Determine the number of occupied routing paths from init_point towards dest_point.
+            Determine the number of occupied routing paths from init_node towards dest_node.
             @return: int
             TODO: refactor and revise - not suitable for bi-directional traffic
         """
@@ -465,7 +466,7 @@ class System():
             for trk in trn.curr_tracks:  # remove all the track/edges from the graph that are occupied by trains
                 if trk:
                     try:
-                        test_G.remove_edge(trk.L_point, trk.R_point, key=trk.edge_key)
+                        test_G.remove_edge(trk.node1, trk.node2, key=trk.edge_key)
                     except BaseException as e:
                         pass
             if nx.has_path(test_G, init_point, dest_point):  # if a train does not

@@ -2,12 +2,12 @@ from collections import defaultdict
 from itertools import permutations
 
 from simulation_core.network.network_utils import collect_banned_paths
-from simulation_core.signaling.InterlockingPoint.InterlockingPoint import InterlockingPoint
-from simulation_core.signaling.Signal.HomeSignal import HomeSignal
+from simulation_core.signaling.InterlockingPoint.base_node import BaseNode
+from simulation_core.signaling.Signal.home_signal import HomeSignal
 from simulation_test.simulation_helpers import timestamper
 
 
-class CtrlPoint(InterlockingPoint):
+class CtrlPoint(BaseNode):
 
     def __init__(self,
                  system,
@@ -22,7 +22,7 @@ class CtrlPoint(InterlockingPoint):
         self.banned_ports_by_port = banned_ports_by_port
         self._non_mutex_routes_set_by_route = non_mutex_routes_set_by_route
         self._curr_routes_set = set()
-        self.bigblock_by_port = {}
+        self.group_block_by_port = {}
         self._banned_paths_set = None
         self._available_ports_by_port = None  # available options for routes, dict[port] = list(options)
         # build up signals
@@ -31,7 +31,7 @@ class CtrlPoint(InterlockingPoint):
             self.signal_by_port[i] = HomeSignal(i, self, MP)
         # add the ownership of signals
         for _, sig in self.signal_by_port.items():
-            sig.sigpoint = self
+            sig.node = self
             sig.system = self.system
 
     def __repr__(self):
@@ -53,7 +53,7 @@ class CtrlPoint(InterlockingPoint):
     @property
     def is_vertex(self) -> bool:
         """
-            Property of a Control Point: if it is a vertex (initiating point) of a network
+            Property of a Control Point: if it is a vertex (initiating node) of a network
             @return: True/False
         """
         for i in self.ports:
@@ -94,13 +94,14 @@ class CtrlPoint(InterlockingPoint):
     @property
     def banned_paths_set(self):
         """
-            The banned paths for each control point in a 3-element tuple
-            (init_point, self, ending_point)
+            The banned paths for each control node in a 3-element tuple
+            (init_node, self, ending_node)
             @return:
                 tuple
         """
         if self._banned_paths_set is None:
-            self._banned_paths_set = set(collect_banned_paths(self, skeleton=False) + collect_banned_paths(self, skeleton=True))
+            self._banned_paths_set = set(
+                collect_banned_paths(self, skeleton=False) + collect_banned_paths(self, skeleton=True))
         return self._banned_paths_set
 
     @property
@@ -120,7 +121,7 @@ class CtrlPoint(InterlockingPoint):
 
     def open_route(self, route):
         # CtrlPoint port traffic routing: route[0] -> route[1]
-        # BigBlock routing:
+        # GroupBlock routing:
         #   (somewhere, someport) -> (self, route[0]) and
         #   (self, route[1]) to (somewhere, someport)
         if route in self.curr_routes_set:
@@ -138,89 +139,98 @@ class CtrlPoint(InterlockingPoint):
             for r in conflicting_routes:
                 self.close_route(r)
         self.curr_routes_set.add(route)
-        self.set_bigblock_routing_by_CtrlPoint_route(route)
+        self.set_grpblk_routing_by_ctrlpnt_route(route)
         print('{0} [INFO]: route {1} of {2} is opened'.format(timestamper(self.system.sys_time), route, self))
 
     def close_route(self, route=None):
         def close_single_route(route):
             assert route in self.curr_routes_set
             entry_port = route[0]
-            _impacted_bblk = self.bigblock_by_port.get(entry_port)
+            _impacted_grpblk = self.group_block_by_port.get(entry_port)
             _impacted_trns = []
-            if _impacted_bblk:
-                for trn in _impacted_bblk.trains:
+            if _impacted_grpblk:
+                for trn in _impacted_grpblk.trains:
                     if trn not in self.curr_train_with_route:
                         _impacted_trns.append(trn)
             if not _impacted_trns or all([trn.curr_route_cancelable for trn in _impacted_trns]):
                 self.curr_routes_set.remove(route)
-                if _impacted_bblk:
-                    if not _impacted_bblk.trains:
-                        self.cancel_bigblock_routing_by_port(entry_port)
+                if _impacted_grpblk:
+                    if not _impacted_grpblk.trains:
+                        self.cancel_grpblk_routing_by_port(entry_port)
                 print('{0} [INFO]: route {1} of {2} is closed'.format(timestamper(self.system.sys_time), route, self))
-            # TODO: groom the logics below. Relating to the problem of closing a route of control point in front of approaching trains.
+            # TODO: groom the logics below. Relating to the problem of closing a route of control node in front of approaching trains.
             # else:
             #     raise Exception('\troute {} of {} protected: failed to close'.format(route, self))
+
         if route:
             close_single_route(route)
         else:
             for r in self.curr_routes_set:
                 close_single_route(r)
 
-    def find_route_for_port(self, port, dest_pointport=None):
-        mainline_routing_paths = list(self.system.dispatcher.all_routing_paths_generator(self, port, dest_pointport[0], dest_pointport[1], mainline=True))
-        siding_routing_paths = list(self.system.dispatcher.all_routing_paths_generator(self, port, dest_pointport[0], dest_pointport[1], mainline=False))
+    def find_route_for_port(self, port, dest_node_port=None):
+        mainline_routing_paths = list(
+            self.system.dispatcher.all_routing_paths_generator(self, port, dest_node_port[0], dest_node_port[1],
+                                                               mainline=True))
+        siding_routing_paths = list(
+            self.system.dispatcher.all_routing_paths_generator(self, port, dest_node_port[0], dest_node_port[1],
+                                                               mainline=False))
 
         all_routing_paths = mainline_routing_paths + siding_routing_paths
         _candidate_ports = list(set([rp[1][0][1] for rp in all_routing_paths]))
-        _trn_number_in_bblks = [len(self.bigblock_by_port[p].trains) if self.bigblock_by_port.get(p) else 0 for p in _candidate_ports]
+        _trn_number_in_grpblks = [len(self.group_block_by_port[p].trains) if self.group_block_by_port.get(p) else 0 for
+                                  p in _candidate_ports]
         final_selection = [p for p in _candidate_ports]
         for p in _candidate_ports:
-            _candi_bblk = self.bigblock_by_port.get(p)
-            _candi_track = self.track_by_port.get(p)
-            if not _candi_bblk or not _candi_track:
+            _candidate_grpblk = self.group_block_by_port.get(p)
+            _candidate_track = self.track_by_port.get(p)
+            if not _candidate_grpblk or not _candidate_track:
                 continue
-            elif not _candi_bblk.routing:
+            elif not _candidate_grpblk.routing:
                 continue
-            if _candi_bblk.routing != ((self, p), (_candi_bblk.get_shooting_point(point=self), _candi_bblk.get_shooting_port(port=p))):
-                if _candi_bblk.trains:
+            if _candidate_grpblk.routing != (
+                    (self, p),
+                    (_candidate_grpblk.get_shooting_node(node=self), _candidate_grpblk.get_shooting_port(port=p))
+            ):
+                if _candidate_grpblk.trains:
                     final_selection.remove(p)
                     continue
             else:
-                if len(_candi_bblk.trains) != min(_trn_number_in_bblks):
+                if len(_candidate_grpblk.trains) != min(_trn_number_in_grpblks):
                     final_selection.remove(p)
                     continue
         if not final_selection:
             return None
         for p in final_selection:
-            if not self.bigblock_by_port.get(p):
+            if not self.group_block_by_port.get(p):
                 return (port, p)
-            if len(self.bigblock_by_port[p].trains) == min(_trn_number_in_bblks):
+            if len(self.group_block_by_port[p].trains) == min(_trn_number_in_grpblks):
                 return (port, p)
         return (port, final_selection[0])
 
-    def set_bigblock_routing_by_CtrlPoint_route(self, route):
+    def set_grpblk_routing_by_ctrlpnt_route(self, route):
         (x, y) = route
-        _in_port, _in_bblk = x, self.bigblock_by_port.get(x)
-        _out_port, _out_bblk = y, self.bigblock_by_port.get(y)
-        if _in_bblk and _out_bblk:
-            _in_bblk.routing = ((_in_bblk.get_shooting_point(point=self),
-                                 _in_bblk.get_shooting_port(point=self)), (self, x))
-            _out_bblk.routing = ((self, y),
-                                 (_out_bblk.get_shooting_point(point=self),
-                                  _out_bblk.get_shooting_port(point=self)))
+        _in_port, _in_grpblk = x, self.group_block_by_port.get(x)
+        _out_port, _out_grpblk = y, self.group_block_by_port.get(y)
+        if _in_grpblk and _out_grpblk:
+            _in_grpblk.routing = ((_in_grpblk.get_shooting_node(node=self),
+                                   _in_grpblk.get_shooting_port(node=self)), (self, x))
+            _out_grpblk.routing = ((self, y),
+                                   (_out_grpblk.get_shooting_node(node=self),
+                                    _out_grpblk.get_shooting_port(node=self)))
 
-        elif (not _in_bblk) and _out_bblk:
-            _out_bblk.routing = ((self, y),
-                                 (_out_bblk.get_shooting_point(point=self),
-                                  _out_bblk.get_shooting_port(point=self)))
-        elif _in_bblk and (not _out_bblk):
-            _in_bblk.routing = ((_in_bblk.get_shooting_point(point=self),
-                                 _in_bblk.get_shooting_port(point=self)), (self, x))
+        elif (not _in_grpblk) and _out_grpblk:
+            _out_grpblk.routing = ((self, y),
+                                   (_out_grpblk.get_shooting_node(node=self),
+                                    _out_grpblk.get_shooting_port(node=self)))
+        elif _in_grpblk and (not _out_grpblk):
+            _in_grpblk.routing = ((_in_grpblk.get_shooting_node(node=self),
+                                   _in_grpblk.get_shooting_port(node=self)), (self, x))
 
-    def cancel_bigblock_routing_by_port(self, port):
-        _bblk = self.bigblock_by_port.get(port)
-        if _bblk:
-            _bblk.routing = None
+    def cancel_grpblk_routing_by_port(self, port):
+        _grpblk = self.group_block_by_port.get(port)
+        if _grpblk:
+            _grpblk.routing = None
 
     def opposite_port(self, port):
         assert port in self.ports

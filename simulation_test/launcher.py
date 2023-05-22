@@ -44,5 +44,6 @@ def launch(sys, O_D_pair, downtrain=True, same_train_set=True, debug_timestamp=N
             sys.sys_time += sys.refresh_time
     except Exception as e:
         _exception = e
-        print('{0} [ERROR]: Timestamp: {1} Exception Details: {2}'.format(timestamper(sys.sys_time), sys.sys_time, e))
+        trace = sys.exc_info()
+        print('{0} [ERROR]: Timestamp: {1} Exception Details: {2} Trace: {3}'.format(timestamper(sys.sys_time), sys.sys_time, e, trace))
         raise e

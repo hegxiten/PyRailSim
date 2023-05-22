@@ -18,42 +18,42 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from simulation_core.signaling.Signal.Signal import Signal
+from simulation_core.signaling.Signal.base_signal import Signal
 
 
 class AutoSignal(Signal):
-    '''
+    """
     Automatic Blocking Signal object, inherited from Signal.
-    Serve as the intermediate signals within a BigBlock that governs individual track segments.
+    Serve as the intermediate signals within a GroupBlock that governs individual track segments.
     Used for single directional traffic control only.
     Not used for granting movement authorities.
-    '''
+    """
 
-    def __init__(self, port_idx, signal_point, MP=None):
-        super().__init__(port_idx, signal_point, MP)
+    def __init__(self, port_idx, node, MP=None):
+        super().__init__(port_idx, node, MP)
         self.type = 'auto'
 
-        self._bblks_to_enter = None
-        self._ctrl_pnts_to_reach = None
+        self._group_blocks_to_enter = None
+        self._ctrl_points_to_reach = None
 
     def __repr__(self):
         return 'AutoSig port:{} of {}, aspect {}'.format(str(self.port_idx).rjust(2, ' '),
-                                                         self.signal_point,
+                                                         self.node,
                                                          self.aspect)
 
     @property
-    def bblks_to_enter(self):
-        if self._bblks_to_enter is None:
-            self._bblks_to_enter = [self.signal_point.bigblock]
-        return self._bblks_to_enter
+    def group_blocks_to_enter(self):
+        if self._group_blocks_to_enter is None:
+            self._group_blocks_to_enter = [self.node.group_block]
+        return self._group_blocks_to_enter
 
     @property
-    def ctrl_pnts_to_reach(self):
-        if self._ctrl_pnts_to_reach is None:
+    def ctrl_points_to_reach(self):
+        if self._ctrl_points_to_reach is None:
             if self.downwards:
-                self._ctrl_pnts_to_reach = [self.signal_point.bigblock.R_point]
+                self._ctrl_points_to_reach = [self.node.group_block.node2]
             elif self.upwards:
-                self._ctrl_pnts_to_reach = [self.signal_point.bigblock.L_point]
+                self._ctrl_points_to_reach = [self.node.group_block.node1]
             else:
                 raise Exception("Cannot specify the signal milepost direction: \n\t{}".format(self.__repr__))
-        return self._ctrl_pnts_to_reach
+        return self._ctrl_points_to_reach

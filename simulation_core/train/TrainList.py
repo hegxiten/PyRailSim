@@ -78,9 +78,9 @@ class TrainList(MutableSequence):
         raise Exception("Cannot Set Directly in ")
 
     def insert(self, trn):
-        if trn.uptrain:
+        if trn.is_uptrain:
             self._uptrains.append(trn)
-        if trn.downtrain:
+        if trn.is_downtrain:
             self._downtrains.append(trn)
 
     append = insert

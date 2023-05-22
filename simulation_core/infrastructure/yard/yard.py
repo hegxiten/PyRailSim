@@ -1,9 +1,9 @@
-from simulation_core.infrastructure.Track.Track import Track
+from simulation_core.infrastructure.track.track_segment import TrackSegment
 from simulation_core.observation_model.observe import Observable, Observer
 
 
 class Yard(Observable, Observer):
-    __lt__ = Track.__lt__
+    __lt__ = TrackSegment.__lt__
 
     def __init__(self,sys):
         self.system = sys

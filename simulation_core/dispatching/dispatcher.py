@@ -30,50 +30,50 @@ class Dispatcher():
     def cp_port_leading_to(autopoint, port):
         assert autopoint.__class__.__name__ == 'AutoPoint'
         if autopoint.signal_by_port[port].upwards:
-            return autopoint.bigblock.L_point, autopoint.bigblock.L_point_port
+            return autopoint.group_block.node1, autopoint.group_block.node1_port
         if autopoint.signal_by_port[port].downwards:
-            return autopoint.bigblock.R_point, autopoint.bigblock.R_point_port
+            return autopoint.group_block.node2, autopoint.group_block.node2_port
 
     def __init__(self, sys):
         self.system = sys
         setattr(self.system, 'dispatcher', self)
 
-    def routing_requestable(self, init_point, dest_point):
+    def routing_requestable(self, init_node, dest_node):
         """
-            Determines if a train could currently request routing from init_point towards dest_point.
+            Determines if a train could currently request routing from init_node towards dest_node.
             @return: bool
             TODO: this case now return True for all scenarios because the simulation is uni-directional.
         """
         _parallel_routing_static = len(
-            list(all_simple_paths(self.system.G_origin, source=init_point, target=dest_point)))
-        _outbound_trains = self.system.get_trains_between_points(from_point=init_point, to_point=dest_point, obv=True)
-        _inbound_trains = self.system.get_trains_between_points(from_point=dest_point, to_point=init_point, obv=True)
-        _occupied_parallel_tracks = self.system.num_occupied_parallel_tracks(init_point, dest_point)
+            list(all_simple_paths(self.system.G_origin, source=init_node, target=dest_node)))
+        _outbound_trains = self.system.get_trains_between_points(from_point=init_node, to_point=dest_node, obv=True)
+        _inbound_trains = self.system.get_trains_between_points(from_point=dest_node, to_point=init_node, obv=True)
+        _occupied_parallel_tracks = self.system.num_occupied_parallel_tracks(init_node, dest_node)
         if min(len(_outbound_trains), len(_inbound_trains)) <= _parallel_routing_static - _occupied_parallel_tracks:
             return True
         return False
 
-    def generate_train(self, init_point, init_port, dest_point, dest_port, **kwargs):
+    def generate_train(self, init_node, init_port, dest_node, dest_port, **kwargs):
         """
             Generate train only.
         """
         _new_train = None
-        if self.routing_requestable(init_point, dest_point):
-            init_segment = ((None, None), (init_point, init_port)) \
-                if not init_point.track_by_port.get(init_port) \
-                else ((init_point.track_by_port[init_port]
-                       .get_shooting_point(point=init_point),
-                       init_point.track_by_port[init_port]
-                       .get_shooting_port(point=init_point)),
-                      (init_point, init_port))
-            dest_segment = ((dest_point, dest_port), (None, None)) \
-                if not dest_point.track_by_port.get(dest_port) \
-                else ((dest_point.track_by_port[dest_port]
-                       .get_shooting_point(point=dest_point),
-                       dest_point.track_by_port[dest_port]
-                       .get_shooting_port(point=dest_point)),
-                      (dest_point, dest_port))
-            init_track = self.system.get_track_by_point_port_pairs(
+        if self.routing_requestable(init_node, dest_node):
+            init_segment = ((None, None), (init_node, init_port)) \
+                if not init_node.track_by_port.get(init_port) \
+                else ((init_node.track_by_port[init_port]
+                       .get_shooting_node(node=init_node),
+                       init_node.track_by_port[init_port]
+                       .get_shooting_port(node=init_node)),
+                      (init_node, init_port))
+            dest_segment = ((dest_node, dest_port), (None, None)) \
+                if not dest_node.track_by_port.get(dest_port) \
+                else ((dest_node.track_by_port[dest_port]
+                       .get_shooting_node(node=dest_node),
+                       dest_node.track_by_port[dest_port]
+                       .get_shooting_port(node=dest_node)),
+                      (dest_node, dest_port))
+            init_track = self.system.get_track_by_node_port_pairs(
                 init_segment[0][0], init_segment[0][1],
                 init_segment[1][0], init_segment[1][1]
             )
@@ -94,7 +94,7 @@ class Dispatcher():
             elif not init_track.routing:
                 print('{0} [INFO]: -------------NOT INIT ROUTING-------------'.format(timestamper(self.system.sys_time)))
                 return _new_train
-            elif Train.sign_MP(init_segment) == init_track.sign_routing(init_track.routing):
+            elif Train.directional_sign(init_segment) == init_track.sign_routing(init_track.routing):
                 print('{0} [INFO]: -------------INIT SEGMENT SIGN CONFORMS-------------'.format(timestamper(self.system.sys_time)))
                 return _new_train
         return _new_train
@@ -106,7 +106,7 @@ class Dispatcher():
             @return: None
         """
         if train.is_waiting_route_at_curr_cp and self.determine_paths_enterable_ahead_train(train):
-            _pending_route_to_open = train.curr_ctrl_point.find_route_for_port(port=train.curr_ctrl_pointport, dest_pointport=train.dest_pointport)
+            _pending_route_to_open = train.curr_ctrl_point.find_route_for_port(port=train.curr_ctrl_point_port, dest_node_port=train.dest_node_port)
             if _pending_route_to_open is None:
                 return None
             if _pending_route_to_open not in train.curr_ctrl_point.curr_invalid_routes_set:
@@ -126,9 +126,9 @@ class Dispatcher():
                     else:
                         for cp in self.system.ctrl_points:
                             for (entry_port, exit_port) in cp.curr_routes_set:
-                                if cp.bigblock_by_port.get(exit_port):
-                                    if train in cp.bigblock_by_port[exit_port].trains:
-                                        _route_to_change = cp.find_route_for_port(port=entry_port, dest_pointport=train.dest_pointport)
+                                if cp.group_block_by_port.get(exit_port):
+                                    if train in cp.group_block_by_port[exit_port].trains:
+                                        _route_to_change = cp.find_route_for_port(port=entry_port, dest_node_port=train.dest_node_port)
                                         cp.open_route(_route_to_change)
                                         return _pending_route_to_open
         return None
@@ -179,26 +179,26 @@ class Dispatcher():
             tgt, tgtport = self.cp_port_leading_to(tgt, tgtport)
         routing_path = []
         cp_path = path
-        lambda_get_port_by_bblk_and_cp = lambda bblk, cp: [p for p in cp.ports if cp.bigblock_by_port.get(p) == bblk][0]
+        lambda_get_port_by_grpblk_and_cp = lambda grpblk, cp: [p for p in cp.ports if cp.group_block_by_port.get(p) == grpblk][0]
         for cp1, cp2 in zip(cp_path[0:], cp_path[1:]):
-            _parallel_bblks = [self.system.G_skeleton[cp1][cp2][k]['instance'] for k in self.system.G_skeleton[cp1][cp2].keys()]
-            selected_bblk = min(_parallel_bblks) if mainline else max(_parallel_bblks)
-            rp_seg = ((cp1, lambda_get_port_by_bblk_and_cp(selected_bblk, cp1)),
-                      (cp2, lambda_get_port_by_bblk_and_cp(selected_bblk, cp2)))
+            _parallel_grpblks = [self.system.G_skeleton[cp1][cp2][k]['instance'] for k in self.system.G_skeleton[cp1][cp2].keys()]
+            selected_grpblk = min(_parallel_grpblks) if mainline else max(_parallel_grpblks)
+            rp_seg = ((cp1, lambda_get_port_by_grpblk_and_cp(selected_grpblk, cp1)),
+                      (cp2, lambda_get_port_by_grpblk_and_cp(selected_grpblk, cp2)))
             routing_path.append(rp_seg)
-        if not src.bigblock_by_port.get(srcport):
+        if not src.group_block_by_port.get(srcport):
             routing_path.insert(0, ((None, None), (src, srcport)))
-        if src.bigblock_by_port.get(srcport):
-            init_bblk = src.bigblock_by_port.get(srcport)
-            _p = init_bblk.get_shooting_point(point=src, port=srcport)
-            _port = init_bblk.get_shooting_port(point=src, port=srcport)
+        if src.group_block_by_port.get(srcport):
+            init_grpblk = src.group_block_by_port.get(srcport)
+            _p = init_grpblk.get_shooting_node(node=src, port=srcport)
+            _port = init_grpblk.get_shooting_port(node=src, port=srcport)
             routing_path.insert(0, ((_p, _port), (src, srcport)))
-        if not tgt.bigblock_by_port.get(tgtport):
+        if not tgt.group_block_by_port.get(tgtport):
             routing_path.append(((tgt, tgtport), (None, None)))
-        if tgt.bigblock_by_port.get(tgtport):
-            final_bblk = tgt.bigblock_by_port.get(tgtport)
-            _p = final_bblk.get_shooting_point(point=tgt, port=tgtport)
-            _port = final_bblk.get_shooting_port(point=tgt, port=tgtport)
+        if tgt.group_block_by_port.get(tgtport):
+            final_grpblk = tgt.group_block_by_port.get(tgtport)
+            _p = final_grpblk.get_shooting_node(node=tgt, port=tgtport)
+            _port = final_grpblk.get_shooting_port(node=tgt, port=tgtport)
             routing_path.append(((tgt, tgtport), (_p, _port)))
         return routing_path
 
@@ -232,8 +232,8 @@ class Dispatcher():
             if not trn.curr_sig:
                 pass
             elif not trn.curr_sig.route:
-                if self.routing_requestable(trn.curr_sigpoint, trn.intended_sigpoint):
-                    trn.curr_sigpoint.open_route((trn.curr_sigport, trn.intended_sigport))
+                if self.routing_requestable(trn.curr_node, trn.intended_sigpoint):
+                    trn.curr_node.open_route((trn.curr_port, trn.intended_sigport))
 
     def cp_segment_to_node(self, cp_seg):
         cp1, prt1, cp2, prt2 = cp_seg[0][0], cp_seg[0][1], cp_seg[1][0], cp_seg[1][1]

@@ -20,4 +20,4 @@ To debug: find the intended debug timestamps and add the `debug_timestamp` input
 
 To launch a simulation, do
 
-`python3 ./simulation_test/main_test.py`
+`python3 -m simulation_test.main_test`

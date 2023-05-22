@@ -1,5 +1,7 @@
+from matplotlib import pyplot as plt
+
 from simulation_test.configs import *
-from simulation_test.simulation_helpers import string_diagram, timestamper
+from simulation_test.simulation_helpers import string_diagram, timestamper, speed_curve
 from simulation_test.launcher import launch
 
 if __name__ == '__main__':
@@ -22,8 +24,13 @@ if __name__ == '__main__':
         #        O_D_pair=((sim_sys.signal_points[0], 0), (sim_sys.signal_points[10], 1)),
         #        debug_timestamp=1515615000)
         string_diagram(sim_sys)
+        speed_curve(sim_sys, marker='o')
+        plt.show()
     except Exception as e:
         string_diagram(sim_sys)
+        speed_curve(sim_sys, marker='o')
+        plt.show()
+
         raise e
     print('max speed:\n\t', [t.max_spd for t in sim_sys.trains])
     print('max accel:\n\t', [t.max_acc for t in sim_sys.trains])

@@ -130,7 +130,7 @@ def wrapper_no_banned_rail_paths_on_cp(func):
                 return raw_shortest
             elif all([
                 True if (p0, p1, p2) not in p1.banned_paths_set else False for p0, p1, p2 in zip(raw_shortest[0:], raw_shortest[1:], raw_shortest[2:])
-            ]):  # Shortest path must filter out all banned ports for each signal point
+            ]):  # Shortest path must filter out all banned ports for each signal node
                 return raw_shortest
             else:  # No shortest paths found
                 return []
@@ -155,18 +155,18 @@ def collect_banned_paths(ctrl_point, skeleton=False):
         for bp in ctrl_point.banned_ports_by_port[p]:
             if skeleton == False:
                 one_end = \
-                    ctrl_point.track_by_port[p].get_shooting_point(point=ctrl_point) \
+                    ctrl_point.track_by_port[p].get_shooting_node(node=ctrl_point) \
                         if ctrl_point.track_by_port.get(p) else None
                 the_other_end = \
-                    ctrl_point.track_by_port[bp].get_shooting_point(point=ctrl_point) \
+                    ctrl_point.track_by_port[bp].get_shooting_node(node=ctrl_point) \
                         if ctrl_point.track_by_port.get(bp) else None
             if skeleton == True:
                 one_end = \
-                    ctrl_point.bigblock_by_port[p].get_shooting_point(point=ctrl_point) \
-                        if ctrl_point.bigblock_by_port.get(p) else None
+                    ctrl_point.group_block_by_port[p].get_shooting_node(node=ctrl_point) \
+                        if ctrl_point.group_block_by_port.get(p) else None
                 the_other_end = \
-                    ctrl_point.bigblock_by_port[bp].get_shooting_point(point=ctrl_point) \
-                        if ctrl_point.bigblock_by_port.get(bp) else None
+                    ctrl_point.group_block_by_port[bp].get_shooting_node(node=ctrl_point) \
+                        if ctrl_point.group_block_by_port.get(bp) else None
             if (one_end, ctrl_point, the_other_end) not in _banned_collection:
                 _banned_collection.append((one_end, ctrl_point, the_other_end))
             if (the_other_end, ctrl_point, one_end) not in _banned_collection:
