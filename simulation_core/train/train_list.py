@@ -22,7 +22,7 @@ from collections.abc import MutableSequence
 
 class TrainList(MutableSequence):
     """
-        A list-like container for train instances within a simulation system.
+        A list-like container for train instances within a simulation.
         TODO: implement customized attributes of TrainList: 
             append, insert, __getitem__, __setitem__, __delitem__, etc.
     """

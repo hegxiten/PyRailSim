@@ -2,21 +2,21 @@ from collections import defaultdict
 from itertools import permutations
 
 from simulation_core.network.network_utils import collect_banned_paths
-from simulation_core.signaling.InterlockingPoint.base_node import BaseNode
-from simulation_core.signaling.Signal.home_signal import HomeSignal
+from simulation_core.signaling.node.base_node import BaseNode
+from simulation_core.signaling.signal.home_signal import HomeSignal
 from simulation_test.simulation_helpers import timestamper
 
 
 class CtrlPoint(BaseNode):
 
     def __init__(self,
-                 system,
-                 idx,
+                 network,
+                 uuid,
                  ports,
                  MP=None,
                  banned_ports_by_port=defaultdict(set),
                  non_mutex_routes_set_by_route=defaultdict(set)):
-        super().__init__(system, idx, MP)
+        super().__init__(network, uuid, MP)
         self.type = 'cp'
         self._ports = ports
         self.banned_ports_by_port = banned_ports_by_port
@@ -32,11 +32,10 @@ class CtrlPoint(BaseNode):
         # add the ownership of signals
         for _, sig in self.signal_by_port.items():
             sig.node = self
-            sig.system = self.system
+            sig.network = self.network
 
     def __repr__(self):
-        return 'CtrlPnt{}'.format(
-            str(self.idx).rjust(2, ' '), )
+        return 'CtrlPnt{}'.format(str(self.uuid).rjust(2, ' '), )
 
     @property
     def banned_ports_by_port(self):
@@ -140,7 +139,7 @@ class CtrlPoint(BaseNode):
                 self.close_route(r)
         self.curr_routes_set.add(route)
         self.set_grpblk_routing_by_ctrlpnt_route(route)
-        print('{0} [INFO]: route {1} of {2} is opened'.format(timestamper(self.system.sys_time), route, self))
+        print('{0} [INFO]: route {1} of {2} is opened'.format(timestamper(self.network.sys_time), route, self))
 
     def close_route(self, route=None):
         def close_single_route(route):
@@ -157,7 +156,7 @@ class CtrlPoint(BaseNode):
                 if _impacted_grpblk:
                     if not _impacted_grpblk.trains:
                         self.cancel_grpblk_routing_by_port(entry_port)
-                print('{0} [INFO]: route {1} of {2} is closed'.format(timestamper(self.system.sys_time), route, self))
+                print('{0} [INFO]: route {1} of {2} is closed'.format(timestamper(self.network.sys_time), route, self))
             # TODO: groom the logics below. Relating to the problem of closing a route of control node in front of approaching trains.
             # else:
             #     raise Exception('\troute {} of {} protected: failed to close'.format(route, self))
@@ -170,11 +169,11 @@ class CtrlPoint(BaseNode):
 
     def find_route_for_port(self, port, dest_node_port=None):
         mainline_routing_paths = list(
-            self.system.dispatcher.all_routing_paths_generator(self, port, dest_node_port[0], dest_node_port[1],
-                                                               mainline=True))
+            self.network.dispatcher.all_routing_paths_generator(self, port, dest_node_port[0], dest_node_port[1],
+                                                                mainline=True))
         siding_routing_paths = list(
-            self.system.dispatcher.all_routing_paths_generator(self, port, dest_node_port[0], dest_node_port[1],
-                                                               mainline=False))
+            self.network.dispatcher.all_routing_paths_generator(self, port, dest_node_port[0], dest_node_port[1],
+                                                                mainline=False))
 
         all_routing_paths = mainline_routing_paths + siding_routing_paths
         _candidate_ports = list(set([rp[1][0][1] for rp in all_routing_paths]))

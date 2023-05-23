@@ -18,42 +18,42 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from simulation_core.signaling.Signal.base_signal import Signal
+from simulation_core.signaling.signal.base_signal import Signal
 
 
-class AutoSignal(Signal):
-    """
-    Automatic Blocking Signal object, inherited from Signal.
-    Serve as the intermediate signals within a GroupBlock that governs individual track segments.
-    Used for single directional traffic control only.
-    Not used for granting movement authorities.
-    """
-
+class HomeSignal(Signal):
     def __init__(self, port_idx, node, MP=None):
         super().__init__(port_idx, node, MP)
-        self.type = 'auto'
+        self.node = None
+        self.type = 'home'
 
         self._group_blocks_to_enter = None
         self._ctrl_points_to_reach = None
+        self._governed_group_block = None
 
     def __repr__(self):
-        return 'AutoSig port:{} of {}, aspect {}'.format(str(self.port_idx).rjust(2, ' '),
+        return 'HomeSig port:{} of {}, aspect {}'.format(str(self.port_idx).rjust(2, ' '),
                                                          self.node,
                                                          self.aspect)
 
     @property
     def group_blocks_to_enter(self):
         if self._group_blocks_to_enter is None:
-            self._group_blocks_to_enter = [self.node.group_block]
+            self._group_blocks_to_enter = [self.node.group_block_by_port[p] for p in self.node.available_ports_by_port[self.port_idx]]
         return self._group_blocks_to_enter
 
     @property
     def ctrl_points_to_reach(self):
         if self._ctrl_points_to_reach is None:
-            if self.downwards:
-                self._ctrl_points_to_reach = [self.node.group_block.node2]
-            elif self.upwards:
-                self._ctrl_points_to_reach = [self.node.group_block.node1]
-            else:
-                raise Exception("Cannot specify the signal milepost direction: \n\t{}".format(self.__repr__))
+            self._ctrl_points_to_reach = []
+            for grp_blk in self.group_blocks_to_enter:
+                for p in [grp_blk.node1, grp_blk.node2]:
+                    if p != self.node:
+                        self._ctrl_points_to_reach.append(p)
         return self._ctrl_points_to_reach
+
+    @property
+    def governed_group_block(self):
+        if self._governed_group_block is None:
+            self._governed_group_block = self.node.group_block_by_port.get(self.port_idx)
+        return self._governed_group_block

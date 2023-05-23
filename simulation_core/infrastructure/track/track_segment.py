@@ -43,7 +43,7 @@ class TrackSegment(Observable):
                 raise ValueError('Undefined MP direction')
 
     def __init__(self,
-                 system,
+                 network,
                  node1,
                  node1_port,
                  node2,
@@ -65,7 +65,7 @@ class TrackSegment(Observable):
         self.add_observer(node1)
         self.add_observer(node2)
 
-        self.system = system
+        self.network = network
         self.yard = yard
         if self.yard:
             if self not in self.yard.tracks:
@@ -139,7 +139,7 @@ class TrackSegment(Observable):
 
     @property
     def curr_routing_paths_all(self):
-        for rp in self.system.curr_routing_paths_all:
+        for rp in self.network.curr_routing_paths_all:
             if self.routing in rp:
                 return rp
         return []
@@ -148,7 +148,7 @@ class TrackSegment(Observable):
         """
             Implement __lt__ to sort yards based on their MilePost.
             If MilePosts are the same, compare key in Graphs.
-            MP system of self and other has to be the same: same corridor.
+            MP definition of self and other has to be the same: same corridor.
         """
         if getattr(self, 'mainline', False) is True:
             if getattr(self, 'mainline', False) is False:

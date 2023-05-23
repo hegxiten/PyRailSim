@@ -21,7 +21,7 @@
 import random
 
 from simulation_core.network.network_utils import all_simple_paths, shortest_path
-from simulation_core.train.Train import Train
+from simulation_core.train.train import Train
 from simulation_test.simulation_helpers import timestamper
 
 
@@ -34,9 +34,9 @@ class Dispatcher():
         if autopoint.signal_by_port[port].downwards:
             return autopoint.group_block.node2, autopoint.group_block.node2_port
 
-    def __init__(self, sys):
-        self.system = sys
-        setattr(self.system, 'dispatcher', self)
+    def __init__(self, network):
+        self.network = network
+        setattr(self.network, 'dispatcher', self)
 
     def routing_requestable(self, init_node, dest_node):
         """
@@ -45,10 +45,10 @@ class Dispatcher():
             TODO: this case now return True for all scenarios because the simulation is uni-directional.
         """
         _parallel_routing_static = len(
-            list(all_simple_paths(self.system.G_origin, source=init_node, target=dest_node)))
-        _outbound_trains = self.system.get_trains_between_points(from_point=init_node, to_point=dest_node, obv=True)
-        _inbound_trains = self.system.get_trains_between_points(from_point=dest_node, to_point=init_node, obv=True)
-        _occupied_parallel_tracks = self.system.num_occupied_parallel_tracks(init_node, dest_node)
+            list(all_simple_paths(self.network.G_origin, source=init_node, target=dest_node)))
+        _outbound_trains = self.network.get_trains_between_points(from_point=init_node, to_point=dest_node, obv=True)
+        _inbound_trains = self.network.get_trains_between_points(from_point=dest_node, to_point=init_node, obv=True)
+        _occupied_parallel_tracks = self.network.num_occupied_parallel_tracks(init_node, dest_node)
         if min(len(_outbound_trains), len(_inbound_trains)) <= _parallel_routing_static - _occupied_parallel_tracks:
             return True
         return False
@@ -73,29 +73,29 @@ class Dispatcher():
                        dest_node.track_by_port[dest_port]
                        .get_shooting_port(node=dest_node)),
                       (dest_node, dest_port))
-            init_track = self.system.get_track_by_node_port_pairs(
+            init_track = self.network.get_track_by_node_port_pairs(
                 init_segment[0][0], init_segment[0][1],
                 init_segment[1][0], init_segment[1][1]
             )
             _new_train = Train(
-                system=self.system,
+                network=self.network,
                 init_segment=init_segment,
                 dest_segment=dest_segment,
-                max_spd=kwargs.get('max_spd',random.choice(self.system.spd_container)),
-                max_acc=kwargs.get('max_acc',random.choice(self.system.acc_container)),
-                max_dcc=kwargs.get('max_dcc',random.choice(self.system.dcc_container)),
+                max_spd=kwargs.get('max_spd', random.choice(self.network.spd_container)),
+                max_acc=kwargs.get('max_acc', random.choice(self.network.acc_container)),
+                max_dcc=kwargs.get('max_dcc', random.choice(self.network.dcc_container)),
                 length=kwargs.get('length', 1))
             if not init_track:
-                print("{0} [INFO]: new train generated WITHOUT init track.".format(timestamper(self.system.sys_time)))
+                print("{0} [INFO]: new train generated WITHOUT init track.".format(timestamper(self.network.sys_time)))
                 return _new_train
             # TODO: The logics below are not in use - trains are currently all generated from network vertices.
             elif init_track.is_occupied:
-                print('{0} [WARNING]: cannot generate train: track is occupied. Hold new train for track availability.'.format(timestamper(self.system.sys_time)))
+                print('{0} [WARNING]: cannot generate train: track is occupied. Hold new train for track availability.'.format(timestamper(self.network.sys_time)))
             elif not init_track.routing:
-                print('{0} [INFO]: -------------NOT INIT ROUTING-------------'.format(timestamper(self.system.sys_time)))
+                print('{0} [INFO]: -------------NOT INIT ROUTING-------------'.format(timestamper(self.network.sys_time)))
                 return _new_train
             elif Train.directional_sign(init_segment) == init_track.sign_routing(init_track.routing):
-                print('{0} [INFO]: -------------INIT SEGMENT SIGN CONFORMS-------------'.format(timestamper(self.system.sys_time)))
+                print('{0} [INFO]: -------------INIT SEGMENT SIGN CONFORMS-------------'.format(timestamper(self.network.sys_time)))
                 return _new_train
         return _new_train
 
@@ -112,19 +112,19 @@ class Dispatcher():
             if _pending_route_to_open not in train.curr_ctrl_point.curr_invalid_routes_set:
                 if not train.curr_track or not train.curr_track.yard:
                     print('{0} [INFO]: {1}, \n\trequested {2} at {3}'
-                          .format(timestamper(self.system.sys_time), train, _pending_route_to_open,
+                          .format(timestamper(self.network.sys_time), train, _pending_route_to_open,
                                   train.curr_ctrl_point.MP))
                     train.curr_ctrl_point.open_route(_pending_route_to_open)
                     return _pending_route_to_open
                 elif train.curr_track.yard:
                     if not self.determine_if_hold_to_be_passed(train, max_passes=1):
                         print('{0} [INFO]: {1}, \n\trequested {2} at {3}'
-                              .format(timestamper(self.system.sys_time), train, _pending_route_to_open,
+                              .format(timestamper(self.network.sys_time), train, _pending_route_to_open,
                                       train.curr_ctrl_point.MP))
                         train.curr_ctrl_point.open_route(_pending_route_to_open)
                         return _pending_route_to_open
                     else:
-                        for cp in self.system.ctrl_points:
+                        for cp in self.network.ctrl_points:
                             for (entry_port, exit_port) in cp.curr_routes_set:
                                 if cp.group_block_by_port.get(exit_port):
                                     if train in cp.group_block_by_port[exit_port].trains:
@@ -181,7 +181,7 @@ class Dispatcher():
         cp_path = path
         lambda_get_port_by_grpblk_and_cp = lambda grpblk, cp: [p for p in cp.ports if cp.group_block_by_port.get(p) == grpblk][0]
         for cp1, cp2 in zip(cp_path[0:], cp_path[1:]):
-            _parallel_grpblks = [self.system.G_skeleton[cp1][cp2][k]['instance'] for k in self.system.G_skeleton[cp1][cp2].keys()]
+            _parallel_grpblks = [self.network.G_skeleton[cp1][cp2][k]['instance'] for k in self.network.G_skeleton[cp1][cp2].keys()]
             selected_grpblk = min(_parallel_grpblks) if mainline else max(_parallel_grpblks)
             rp_seg = ((cp1, lambda_get_port_by_grpblk_and_cp(selected_grpblk, cp1)),
                       (cp2, lambda_get_port_by_grpblk_and_cp(selected_grpblk, cp2)))
@@ -208,7 +208,7 @@ class Dispatcher():
             src, srcport = self.cp_port_leading_to(src, srcport)
         if tgt.__class__.__name__ == 'AutoPoint':
             tgt, tgtport = self.cp_port_leading_to(tgt, tgtport)
-        cp_paths = list(all_simple_paths(self.system.G_skeleton, source=src, target=tgt))
+        cp_paths = list(all_simple_paths(self.network.G_skeleton, source=src, target=tgt))
         _routing_path_list = []
         while cp_paths:
             _single_cp_route = cp_paths[0]
@@ -228,7 +228,7 @@ class Dispatcher():
         """
             TODO: Combine dispatcher actions
         """
-        for trn in self.system.trains.all_trains:
+        for trn in self.network.train_list.all_trains:
             if not trn.curr_sig:
                 pass
             elif not trn.curr_sig.route:

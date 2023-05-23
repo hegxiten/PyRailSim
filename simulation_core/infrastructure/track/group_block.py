@@ -3,7 +3,7 @@ from simulation_core.infrastructure.track.track_segment import TrackSegment
 
 class GroupBlock(TrackSegment):
     def __init__(self,
-                 system,
+                 network,
                  L_cp,
                  L_cp_port,
                  R_cp,
@@ -11,7 +11,7 @@ class GroupBlock(TrackSegment):
                  edge_key=0,
                  raw_graph=None,
                  cp_graph=None):
-        super().__init__(system, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=edge_key)
+        super().__init__(network, L_cp, L_cp_port, R_cp, R_cp_port, edge_key=edge_key)
         self.type = 'group block'
         self._routing = None
         self.tracks = []

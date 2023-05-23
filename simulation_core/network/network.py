@@ -8,14 +8,14 @@ from simulation_core.infrastructure.track.group_block import GroupBlock
 from simulation_core.infrastructure.track.track_segment import TrackSegment
 from simulation_core.infrastructure.yard.yard import Yard
 from simulation_core.network.network_utils import shortest_path, all_simple_paths, collect_banned_paths
-from simulation_core.signaling.InterlockingPoint.automatic_point import AutoPoint
-from simulation_core.signaling.InterlockingPoint.control_point import CtrlPoint
-from simulation_core.signaling.Signal.aspect import Aspect
-from simulation_core.train.TrainList import TrainList
-from simulation_core.train.Train import Train
+from simulation_core.signaling.node.automatic_point import AutoPoint
+from simulation_core.signaling.node.control_point import CtrlPoint
+from simulation_core.signaling.signal.aspect import Aspect
+from simulation_core.train.train_list import TrainList
+from simulation_core.train.train import Train
 
 
-class System():
+class Network():
     """
         Parameters
         ----------
@@ -60,7 +60,7 @@ class System():
                            type(t) == str]
         self.dos_pos = (None, None) if kwargs.get('dos_pos') is None else kwargs.get('dos_pos')
 
-        self._trains = TrainList()
+        self._train_list = TrainList()
         _min_spd, _max_spd, _min_acc, _max_acc = \
             0.01, 0.02, 2.78e-05 * 0.85, 2.78e-05 * 1.15
         self.headway = 500 if kwargs.get('headway') is None \
@@ -88,12 +88,13 @@ class System():
 
     @property
     def sys_min_dcc(self):
-        '''
+        """
             Absolute value, minimum brake acceleration of all trains required by
-            the system setup. If train's maximum braking deceleration is smaller
+            the network setup. If train's maximum braking deceleration is smaller
             than this value, it may violate some signal/speed limits at extreme
             scenarios. When violated, the program will throw AssertionErrors at
-            braking distance/speed limit check.'''
+            braking distance/speed limit check.
+        """
         _signal_speeds = sorted(
             [spd for _, spd in Aspect.COLOR_SPD_MAP.items()])
         _speed_diff_pairs = [(_signal_speeds[i], _signal_speeds[i + 1])
@@ -104,23 +105,24 @@ class System():
         return _max_diff_square_of_spd / (2 * _min_track_length)
 
     @property
-    def trains(self):
-        '''
-            List of all trains inside the system.'''
-        return self._trains
+    def train_list(self):
+        """
+            List of all trains inside the network.
+        """
+        return self._train_list
 
-    @trains.setter
-    def trains(self, other):
-        self._trains = other
+    @train_list.setter
+    def train_list(self, other):
+        self._train_list = other
 
     @property
     def train_num(self):
-        return len(self.trains)
+        return len(self.train_list)
 
     @property
     def curr_routing_paths_all(self):
         '''
-            A list of all currently cleared routing path lists inside the system.
+            A list of all currently cleared routing path lists inside the network.
             Each routing path list has the direction and segments information of
             the limit of movement authority cleared for a certain train.
             Each routing path list consists of routing tuples (2-element-tuple)'''
@@ -227,25 +229,25 @@ class System():
         # TODO: to be achieved in network_constructor.py
         TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self)]
 
-        TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], MP=0.0),
-                     1: AutoPoint(self, idx=1, MP=5.0),
-                     2: AutoPoint(self, idx=2, MP=10.0),
-                     3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                      1: set([1, 3]),
-                                                                                      3: set([3, 1])}, MP=15.0),
-                     4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
-                                                                                      2: set([2, 0]),
-                                                                                      1: set([1])}, MP=20.0),
-                     5: AutoPoint(self, idx=5, MP=25.0),
-                     6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
-                                                                                      1: set([1, 3]),
-                                                                                      3: set([3, 1])}, MP=30.0),
-                     7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
-                                                                                      2: set([2, 0]),
-                                                                                      1: set([1])}, MP=35.0),
-                     8: AutoPoint(self, idx=8, MP=40.0),
-                     9: AutoPoint(self, idx=9, MP=45.0),
-                     10: CtrlPoint(self, idx=10, ports=[0, 1], MP=50.0)
+        TEST_NODE = {0: CtrlPoint(self, uuid=0, ports=[0, 1], MP=0.0),
+                     1: AutoPoint(self, uuid=1, MP=5.0),
+                     2: AutoPoint(self, uuid=2, MP=10.0),
+                     3: CtrlPoint(self, uuid=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                       1: set([1, 3]),
+                                                                                       3: set([3, 1])}, MP=15.0),
+                     4: CtrlPoint(self, uuid=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                       2: set([2, 0]),
+                                                                                       1: set([1])}, MP=20.0),
+                     5: AutoPoint(self, uuid=5, MP=25.0),
+                     6: CtrlPoint(self, uuid=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+                                                                                       1: set([1, 3]),
+                                                                                       3: set([3, 1])}, MP=30.0),
+                     7: CtrlPoint(self, uuid=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+                                                                                       2: set([2, 0]),
+                                                                                       1: set([1])}, MP=35.0),
+                     8: AutoPoint(self, uuid=8, MP=40.0),
+                     9: AutoPoint(self, uuid=9, MP=45.0),
+                     10: CtrlPoint(self, uuid=10, ports=[0, 1], MP=50.0)
                      }
 
         TEST_TRACK = [
@@ -265,41 +267,41 @@ class System():
 
         # TEST_SIDINGS = [Yard(self), Yard(self), Yard(self), Yard(self), Yard(self), Yard(self)]
         #
-        # TEST_NODE = {0: CtrlPoint(self, idx=0, ports=[0, 1], banned_ports_by_port={0: set([0]), 1: set([1])}, MP=0.0),
-        #              1: AutoPoint(self, idx=1, MP=5.0),
-        #              2: CtrlPoint(self, idx=2, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        # TEST_NODE = {0: CtrlPoint(self, uuid=0, ports=[0, 1], banned_ports_by_port={0: set([0]), 1: set([1])}, MP=0.0),
+        #              1: AutoPoint(self, uuid=1, MP=5.0),
+        #              2: CtrlPoint(self, uuid=2, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
         #                                                                               1: set([1, 3]),
         #                                                                               3: set([3, 1])}, MP=10.0),
-        #              3: CtrlPoint(self, idx=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #              3: CtrlPoint(self, uuid=3, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
         #                                                                               1: set([1, 3]),
         #                                                                               3: set([3, 1])}, MP=15.0),
-        #              4: CtrlPoint(self, idx=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #              4: CtrlPoint(self, uuid=4, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
         #                                                                               2: set([2, 0]),
         #                                                                               1: set([1])}, MP=20.0),
-        #              5: CtrlPoint(self, idx=5, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #              5: CtrlPoint(self, uuid=5, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
         #                                                                               1: set([1, 3]),
         #                                                                               3: set([3, 1])}, MP=25.0),
-        #              6: CtrlPoint(self, idx=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #              6: CtrlPoint(self, uuid=6, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
         #                                                                               1: set([1, 3]),
         #                                                                               3: set([3, 1])}, MP=30.0),
-        #              7: CtrlPoint(self, idx=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #              7: CtrlPoint(self, uuid=7, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
         #                                                                               2: set([2, 0]),
         #                                                                               1: set([1])}, MP=35.0),
-        #              8: CtrlPoint(self, idx=8, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #              8: CtrlPoint(self, uuid=8, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
         #                                                                               2: set([2, 0]),
         #                                                                               1: set([1])}, MP=40.0),
-        #              9: AutoPoint(self, idx=9, MP=45.0),
-        #              10: CtrlPoint(self, idx=10, ports=[0, 1], banned_ports_by_port={0: set([0]),
+        #              9: AutoPoint(self, uuid=9, MP=45.0),
+        #              10: CtrlPoint(self, uuid=10, ports=[0, 1], banned_ports_by_port={0: set([0]),
         #                                                                              1: set([1])}, MP=50.0),
-        #              11: AutoPoint(self, idx=11, MP=30.0),
-        #              12: AutoPoint(self, idx=12, MP=35.0),
-        #              13: CtrlPoint(self, idx=13, ports=[0, 1], banned_ports_by_port={0: set([0]),
+        #              11: AutoPoint(self, uuid=11, MP=30.0),
+        #              12: AutoPoint(self, uuid=12, MP=35.0),
+        #              13: CtrlPoint(self, uuid=13, ports=[0, 1], banned_ports_by_port={0: set([0]),
         #                                                                              1: set([1])}, MP=20.0),
-        #              14: CtrlPoint(self, idx=14, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
+        #              14: CtrlPoint(self, uuid=14, ports=[0, 1, 3], banned_ports_by_port={0: set([0]),
         #                                                                                 1: set([1, 3]),
         #                                                                                 3: set([3, 1])}, MP=5.0),
-        #              15: AutoPoint(self, idx=15, MP=10.0),
-        #              16: CtrlPoint(self, idx=16, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
+        #              15: AutoPoint(self, uuid=15, MP=10.0),
+        #              16: CtrlPoint(self, uuid=16, ports=[0, 2, 1], banned_ports_by_port={0: set([0, 2]),
         #                                                                                 2: set([2, 0]),
         #                                                                                 1: set([1])}, MP=15.0),
         #              }
@@ -420,7 +422,7 @@ class System():
                            attr=new_track.__dict__,
                            instance=new_track)
                 # MultiGraph parallel edges are auto-keyed (0, 1, 2...)
-                # default 0 as mainline, idx as track number
+                # default 0 as mainline, uuid as track number
 
         for (u, v, k) in F.edges(keys=True):
             _node1, _node2 = \
@@ -479,7 +481,7 @@ class System():
                                   obv=False,
                                   rev=False):
         """
-            Given a pair of O-D in the system, return all trains running between
+            Given a pair of O-D in the network, return all trains running between
             this pair of O-D nodes.
             @option: filter trains running at the obversed/reversed direction
             compared with the from-to path.

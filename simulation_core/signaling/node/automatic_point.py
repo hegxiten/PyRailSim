@@ -1,5 +1,5 @@
-from simulation_core.signaling.InterlockingPoint.base_node import BaseNode
-from simulation_core.signaling.Signal.automatic_signal import AutoSignal
+from simulation_core.signaling.node.base_node import BaseNode
+from simulation_core.signaling.signal.automatic_signal import AutoSignal
 
 
 class AutoPoint(BaseNode):
@@ -7,8 +7,8 @@ class AutoPoint(BaseNode):
         Implementation of automatic signal node
         Signaling method: automatic block.
     """
-    def __init__(self, system, idx, MP=None):
-        super().__init__(system, idx, MP)
+    def __init__(self, network, uuid, MP=None):
+        super().__init__(network, uuid, MP)
         self.type = 'at'
         self._ports = [0, 1]
 
@@ -20,10 +20,10 @@ class AutoPoint(BaseNode):
         # register the AutoPoint's ownership over the signals
         for _, sig in self.signal_by_port.items():
             sig.node = self
-            sig.system = self.system
+            sig.network = self.network
 
     def __repr__(self):
-        return 'AutoPnt{}'.format(str(self.idx).rjust(2, ' '), )
+        return 'AutoPnt{}'.format(str(self.uuid).rjust(2, ' '), )
 
     @property
     def banned_ports_by_port(self) -> dict:

@@ -30,21 +30,21 @@ def timestamper(timestamp):
     return '[' + time_str + ']'
 
 
-def string_diagram(sys):
+def string_diagram(network):
     """
     To draw the string diagram based on the schedule dictionary for all the trains.
     """
     plt.clf()
     plt.rcParams['figure.dpi'] = 200
     plt.ion()
-    start_time, end_time = sys.init_time, sys.term_time
+    start_time, end_time = network.init_time, network.term_time
     colors = ['red', 'green', 'blue', 'black', 'orange', 'cyan', 'magenta']
     color_num = len(colors)
-    t_color = [colors[i % color_num] for i in range(len(sys.trains))]
+    t_color = [colors[i % color_num] for i in range(len(network.train_list))]
 
-    for i in range(len(sys.trains)):
-        hl, = plt.plot([mdates.date2num(datetime.fromtimestamp(j)) for (j, _) in sys.trains[i].time_pos_list],
-                       [j for (_, j) in sys.trains[i].time_pos_list],
+    for i in range(len(network.train_list)):
+        hl, = plt.plot([mdates.date2num(datetime.fromtimestamp(j)) for (j, _) in network.train_list[i].time_pos_list],
+                       [j for (_, j) in network.train_list[i].time_pos_list],
                        color=t_color[i])
 
     plt.title('String Diagram')
@@ -69,16 +69,16 @@ def string_diagram(sys):
     plt.ioff()
 
 
-def speed_curve(sys, marker=None):
+def speed_curve(network, marker=None):
     """
     To draw the speed curve based on a train's mileposts and speed .
     """
-    start_time, end_time = sys.init_time, sys.term_time
+    start_time, end_time = network.init_time, network.term_time
     hours = mdates.HourLocator()
     minutes = mdates.MinuteLocator()
     seconds = mdates.SecondLocator()
     dateFmt = mdates.DateFormatter("%H:%M")
-    for train in sys.trains:
+    for train in network.train_list:
         fig, axs = plt.subplots(2, 1, dpi=80, facecolor='w', edgecolor='k', num="Train {}".format(train.train_idx))
         axs[0].set_title('Speed Curve by MP')
         axs[0].set_xlabel('Mile Post/miles')
@@ -118,13 +118,13 @@ def speed_curve(sys, marker=None):
         plt.rcParams['figure.dpi'] = 200
 
 
-def run_with_string_diagram(sys, sys_dos, start_time, end_time):
+def run_with_string_diagram(network, network_dos, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains.
     '''
     colors = ['red', 'green', 'blue', 'black', 'orange', 'cyan', 'magenta']
     color_num = len(colors)
-    x, y = process_data(sys)
-    x_dos, y_dos = process_data(sys_dos)
+    x, y = process_data(network)
+    x_dos, y_dos = process_data(network_dos)
 
     t_color = [colors[x.index(i) % color_num] for i in x]
 
@@ -146,14 +146,14 @@ def run_with_string_diagram(sys, sys_dos, start_time, end_time):
     start_time = int(start_time.timestamp())
     end_time = int(end_time.timestamp())
 
-    sys_length = sys.block_intervals[-1][1]
+    sys_length = network.block_intervals[-1][1]
     multi_track_blk_intervals = []
-    for i, blk in enumerate(sys.blocks):
+    for i, blk in enumerate(network.blocks):
         if blk.track_number > 1:
-            multi_track_blk_intervals.append(sys.block_intervals[i])
+            multi_track_blk_intervals.append(network.block_intervals[i])
 
-    dos_period = sys_dos.dos_period
-    dos_interval = sys_dos.block_intervals[sys_dos.dos_pos]
+    dos_period = network_dos.dos_period
+    dos_interval = network_dos.block_intervals[network_dos.dos_pos]
     dos_period_ratio = [(dos_period[0] - start_time) / (end_time - start_time),
                         (dos_period[1] - start_time) / (end_time - start_time)]
 
@@ -193,21 +193,21 @@ def run_with_string_diagram(sys, sys_dos, start_time, end_time):
     plt.show()
 
 
-def run_with_string_diagram(sys, start_time, end_time):
+def run_with_string_diagram(network, start_time, end_time):
     '''To draw the string diagram based on the schedule dictionary for all the trains.
     '''
     colors = ['red', 'green', 'blue', 'black', 'orange', 'cyan', 'magenta']
     color_num = len(colors)
     x, y = [], []
-    for i in range(len(sys.trains)):
+    for i in range(len(network.train_list)):
         x.append([])
         y.append([])
-        for j in range(len(sys.trains[i].time_pos_list)):
+        for j in range(len(network.train_list[i].time_pos_list)):
             x[i].append(
-                datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]))
-            y[i].append(sys.trains[i].time_pos_list[j][1])
-            # x[i].append(sys.trains[i].time_pos_list[j][0])
-            # y[i].append(sys.trains[i].time_pos_list[j][1])
+                datetime.fromtimestamp(network.train_list[i].time_pos_list[j][0]))
+            y[i].append(network.train_list[i].time_pos_list[j][1])
+            # x[i].append(network.trains[i].time_pos_list[j][0])
+            # y[i].append(network.trains[i].time_pos_list[j][1])
 
     assert len(x) == len(y)
     for i in range(len(x)):
@@ -270,18 +270,18 @@ def run_with_string_diagram(sys, start_time, end_time):
     # plt.ioff()
 
 
-def process_data(sys):
+def process_data(network):
     x = []
     y = []
-    for i in range(len(sys.trains) - 1):
+    for i in range(len(network.train_list) - 1):
         x.append([])
         y.append([])
-        for j in range(len(sys.trains[i].time_pos_list) - 1):
+        for j in range(len(network.train_list[i].time_pos_list) - 1):
             x[i].append(
-                datetime.fromtimestamp(sys.trains[i].time_pos_list[j][0]))
-            y[i].append(sys.trains[i].time_pos_list[j][1])
-            # x[i].append(sys.trains[i].time_pos_list[j][0])
-            # y[i].append(sys.trains[i].time_pos_list[j][1])
+                datetime.fromtimestamp(network.train_list[i].time_pos_list[j][0]))
+            y[i].append(network.train_list[i].time_pos_list[j][1])
+            # x[i].append(network.trains[i].time_pos_list[j][0])
+            # y[i].append(network.trains[i].time_pos_list[j][1])
 
     y = [i for _, i in sorted(zip([i[0] for i in x], y))]
     x = sorted(x, key=lambda x: x[0])
@@ -289,11 +289,11 @@ def process_data(sys):
     return x, y
 
 
-def cal_delay(sys, sys_dos, delay_miles):
+def cal_delay(network, network_dos, delay_miles):
     x_sys = []
     y_sys = []
 
-    no_delay_sorted_train = sorted(sys.trains,
+    no_delay_sorted_train = sorted(network.train_list,
                                    key=lambda train: train.train_idx)
     for i in range(len(no_delay_sorted_train) - 1):
         x_sys.append([])
@@ -308,7 +308,7 @@ def cal_delay(sys, sys_dos, delay_miles):
 
     x_sys_dos = []
     y_sys_dos = []
-    delay_sorted_train = sorted(sys_dos.trains,
+    delay_sorted_train = sorted(network_dos.train_list,
                                 key=lambda train: train.train_idx)
     for i in range(len(delay_sorted_train) - 1):
         x_sys_dos.append([])
@@ -371,40 +371,40 @@ def cal_delay_avg(delay):
 #     acc_container = [0.5 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
 #     dcc_container = [0.2 * random.uniform(2.78e-05 * 0.85, 2.78e-05 * 1.15) for i in range(20)]
 #     headway = 300 + random.random() * 400
-#     sys = System(sim_init_time, spd_container, acc_container, dcc_container,
+#     network = Network(sim_init_time, spd_container, acc_container, dcc_container,
 #                  term_time=sim_term_time,
 #                  dos_period=['2018-01-10 11:30:00', '2018-01-10 12:30:00'],
 #                  dos_pos=(15, 20),
 #                  headway=headway,
 #                  refresh_time=50)
-#     dp = Dispatcher(sys)
-#     return sys
+#     dp = Dispatcher(network)
+#     return network
 
 #
-# def launch(sys, downtrain=True):
-#     while sys.sys_time - sys.init_time <= sys.term_time - sys.init_time:
+# def launch(network, downtrain=True):
+#     while network.sys_time - network.init_time <= network.term_time - network.init_time:
 #         _semaphore_to_return = False
-#         for t in sys.trains:
-#             sys.dispatcher.request_routing(t)
+#         for t in network.trains:
+#             network.dispatcher.request_routing(t)
 #             t.move()
-#         if sys.sys_time + sys.refresh_time - sys.last_train_init_time >= simulation_core.network.system.system.headway:
+#         if network.sys_time + network.refresh_time - network.last_train_init_time >= simulation_core.network.network.network.headway:
 #             if downtrain:
-#                 if not sys.signal_points[0].curr_train_with_route.keys():
-#                     if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[0], 0)) for t in
-#                             sys.trains]):
-#                         if not sys.signal_points[0].track_by_port[1].trains:
-#                             t = sys.generate_train(sys.signal_points[0], 0,
-#                                                    sys.signal_points[10], 1,
+#                 if not network.signal_points[0].curr_train_with_route.keys():
+#                     if all([t.curr_routing_path_segment != ((None, None), (network.signal_points[0], 0)) for t in
+#                             network.trains]):
+#                         if not network.signal_points[0].track_by_port[1].trains:
+#                             t = network.generate_train(network.signal_points[0], 0,
+#                                                    network.signal_points[10], 1,
 #                                                    length=1)
 #             else:
-#                 if not sys.signal_points[10].curr_train_with_route.keys():
-#                     if all([t.curr_routing_path_segment != ((None, None), (sys.signal_points[10], 1)) for t in
-#                             sys.trains]):
-#                         if not sys.signal_points[10].track_by_port[0].trains:
-#                             t = sys.generate_train(sys.signal_points[10], 1,
-#                                                    sys.signal_points[0], 0,
+#                 if not network.signal_points[10].curr_train_with_route.keys():
+#                     if all([t.curr_routing_path_segment != ((None, None), (network.signal_points[10], 1)) for t in
+#                             network.trains]):
+#                         if not network.signal_points[10].track_by_port[0].trains:
+#                             t = network.generate_train(network.signal_points[10], 1,
+#                                                    network.signal_points[0], 0,
 #                                                    length=1)
-#         sys.sys_time += sys.refresh_time
+#         network.sys_time += network.refresh_time
 #
 
 if __name__ == "__main__":

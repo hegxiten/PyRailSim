@@ -5,8 +5,8 @@ from simulation_core.observation_model.observe import Observable, Observer
 class Yard(Observable, Observer):
     __lt__ = TrackSegment.__lt__
 
-    def __init__(self,sys):
-        self.system = sys
+    def __init__(self, network):
+        self.network = network
         self.tracks = []
 
     @property

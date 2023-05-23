@@ -7,14 +7,14 @@ from simulation_core.observation_model.observe import Observable, Observer
 class BaseNode(Observable, Observer, ABC):
     """
         Base Class, a.k.a SignalPoint, consisting of Graph nodes; containing signals
-        Child classes include InterlockingPoint, AutoPoint, and ControlPoint, etc.
+        Child classes include AutoPoint and ControlPoint, etc.
     """
 
-    def __init__(self, system, idx, MP=None):
+    def __init__(self, network, uuid, MP=None):
         super().__init__()
-        self._system = system
+        self._network = network
         self._MP = MP
-        self._idx = idx
+        self._uuid = uuid
         self._ports = []
 
         self._non_mutex_routes_set_by_route = None
@@ -53,8 +53,8 @@ class BaseNode(Observable, Observer, ABC):
         return self._banned_ports_by_port
 
     @property
-    def system(self):
-        return self._system
+    def network(self):
+        return self._network
 
     @property
     def ports(self):
@@ -65,12 +65,8 @@ class BaseNode(Observable, Observer, ABC):
         return self._MP
 
     @property
-    def idx(self):
-        return self._idx
-
-    @property
-    def non_mutex_routes_set_by_route(self):
-        return self._non_mutex_routes_set_by_route
+    def uuid(self):
+        return self._uuid
 
     @property
     def mutex_routes_by_route(self):
@@ -98,14 +94,14 @@ class BaseNode(Observable, Observer, ABC):
 
     @property
     def curr_invalid_routes_set(self):
-        # General cases. For simplifcation, better be overriden
+        # General cases. For simplification, better be overriden
         _curr_invalid_routes_set = set()
         # collect all banned routes in a permutation list of 2-element tuples
         for p, bports in self.banned_ports_by_port.items():
             for bp in bports:
                 _curr_invalid_routes_set.add((p, bp))
                 _curr_invalid_routes_set.add((bp, p))
-        # collect all mutex routes according to currently openned routes
+        # collect all mutex routes according to currently opened routes
         for r in self.curr_routes_set:
             for vr in self.all_valid_routes_set:
                 if vr not in self.non_mutex_routes_set_by_route[r]:

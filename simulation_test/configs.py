@@ -1,8 +1,6 @@
 import random
 from datetime import datetime
 
-from simulation_core.network.system.system import System
-
 sim_init_time = datetime.strptime('2018-01-10 10:00:00', "%Y-%m-%d %H:%M:%S")
 sim_term_time = datetime.strptime('2018-01-11 08:25:00', "%Y-%m-%d %H:%M:%S")  # 70 trains
 sim_term_time = datetime.strptime('2018-01-10 15:30:00', "%Y-%m-%d %H:%M:%S")

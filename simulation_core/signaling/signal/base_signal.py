@@ -24,8 +24,8 @@ from simulation_core.network.network_utils import all_simple_paths, shortest_pat
 """
 
 from simulation_core.observation_model.observe import Observable, Observer
-from simulation_core.signaling.Signal.aspect import Aspect
-from simulation_core.signaling.InterlockingPoint.base_node import BaseNode
+from simulation_core.signaling.signal.aspect import Aspect
+from simulation_core.signaling.node.base_node import BaseNode
 
 
 class Signal(Observable, Observer, ABC):
@@ -35,7 +35,7 @@ class Signal(Observable, Observer, ABC):
 
     def __init__(self, port_idx, node, MP=None):
         super().__init__()
-        self.system = None
+        self.network = None
         self.node = node
         self._MP = MP
         self.port_idx = port_idx
@@ -107,12 +107,12 @@ class Signal(Observable, Observer, ABC):
     def upwards(self):
         """
             Concept of "upward traffic stream" for a signal:
-             o-                o- (<-This signal) o-
-            0:P:1===============0:P:1================0:P:1============
-            -o                -o                 -o
+              o-                o- (<-This signal) o-
+            0:P:1=============0:P:1==============0:P:1============
+             -o                -o                 -o
             MP-0              MP-5               MP-10
-                               Signal direction (-1): <----
-                               Traffic stream:        <---- (upwards)
+                           Signal direction (-1): <----
+                           Traffic stream:        <---- (upwards)
             "0:P:1" - port_0:Node:port_1
             Trains bounding for MP-0 are considered "up-bounding trains".
             @return:
@@ -125,7 +125,7 @@ class Signal(Observable, Observer, ABC):
         """
             Concept of "downward traffic stream" for a signal:
              o-                o-                 o-
-            0:P:1===============0:P:1================0:P:1============
+            0:P:1============0:P:1==============0:P:1============
             -o                -o (<-This signal) -o
             MP-0              MP-5               MP-10
                                Signal direction (+1): ---->
@@ -164,10 +164,10 @@ class Signal(Observable, Observer, ABC):
             self._aspect.color = 'r'
         # if current routing of the signal has been set, whereas a route is available:
         else:
-            # if exiting the system
+            # if exiting the network
             if self.is_cleared_signal_to_exit_system:
                 self._aspect.color = 'g'
-            # if not exiting the system
+            # if not exiting the network
             else:
                 if self.number_of_blocks_cleared_ahead == 0:
                     self._aspect.color = 'r'
@@ -248,7 +248,7 @@ class Signal(Observable, Observer, ABC):
         _curr_enroute_tracks = []
         if self.curr_routing_paths_all:
             for ((p1, p1port), (p2, p2port)) in self.curr_routing_paths_all:
-                _curr_enroute_tracks.append(self.system.get_track_by_node_port_pairs(p1, p1port, p2, p2port))
+                _curr_enroute_tracks.append(self.network.get_track_by_node_port_pairs(p1, p1port, p2, p2port))
         return _curr_enroute_tracks
 
     @property
@@ -306,7 +306,7 @@ class Signal(Observable, Observer, ABC):
         """
 
         def _reachable_nodes(p):
-            path_generator = all_simple_paths(self.system.G_origin, self.node, p)
+            path_generator = all_simple_paths(self.network.G_origin, self.node, p)
             while True:
                 try:
                     if next(path_generator)[1] in self.following_nodes:

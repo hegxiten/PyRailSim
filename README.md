@@ -12,9 +12,9 @@ To config the simulation, edit values in:
 
 `./simulation_test/configs.py`
 
-To change the network topology, edit the props in System class in 
+To change the network topology, edit the props in Network class in 
 
-`./simulation_core/network/System/System.py`
+`./simulation_core/network/network.py`
 
 To debug: find the intended debug timestamps and add the `debug_timestamp` input argument in launch(), such as `debug_timestamp=1515615000` and add breakpoint at `line #19`
 
